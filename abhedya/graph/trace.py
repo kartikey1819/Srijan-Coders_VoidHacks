@@ -15,8 +15,10 @@ Receivers of cash-out edges (wallet/crypto) are L3 and are not expanded further.
 from __future__ import annotations
 
 import heapq
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from itertools import chain
 
 from abhedya import config
 from abhedya.graph.build import Graph
@@ -75,23 +77,24 @@ class TraceCore:
         return "L3" if u in self.terminal_in else "L2"
 
 
-def _priority(live: list[Lot], amount: int, t: int, order: tuple[str, ...]) -> list[tuple[Lot, str]]:
+def _priority(live: list[Lot], amount: int, t: int, order: tuple[str, ...]) -> Iterator[tuple[Lot, str]]:
+    """Yield (lot, rule) in spending priority, lazily: the caller stops once the outflow is covered.
+    `live` is in arrival order (an account's lots are appended in time order)."""
     lo_s, hi_s = config.PT_WINDOW_S
-    tests = {
-        "window": lambda l: lo_s <= t - l.t <= hi_s,
-        # one outflow carrying >= 90% of an inflow (not of a leftover residue) is a pass-through of it
-        "amount_match": lambda l: config.AMOUNT_MATCH_MIN * l.original <= amount <= l.remaining,
-        "oldest": lambda l: True,
-    }
-    live = sorted(live, key=lambda l: (not l.tainted, l.t))  # fallback = tainted-first, oldest first
-    picked: list[tuple[Lot, str]] = []
-    seen: set[int] = set()
+    used: set[int] = set()
     for rule in order + (() if "oldest" in order else ("oldest",)):
-        for l in (live if rule == "oldest" else sorted(live, key=lambda l: l.t)):
-            if id(l) not in seen and tests[rule](l):
-                seen.add(id(l))
-                picked.append((l, rule))
-    return picked
+        if rule == "window":
+            cands = (i for i, l in enumerate(live) if lo_s <= t - l.t <= hi_s)
+        elif rule == "amount_match":
+            # one outflow carrying >= 90% of an inflow (not of a leftover residue) is a pass-through of it
+            cands = (i for i, l in enumerate(live) if config.AMOUNT_MATCH_MIN * l.original <= amount <= l.remaining)
+        else:  # oldest: tainted lots first, then clean lots, each oldest first
+            cands = chain((i for i, l in enumerate(live) if l.tainted),
+                          (i for i, l in enumerate(live) if not l.tainted))
+        for i in cands:
+            if i not in used:
+                used.add(i)
+                yield live[i], rule
 
 
 def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
@@ -115,7 +118,8 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
         t, x, d, a = int(ts[k]), int(txn[k]), int(peer[k]), int(amt[k])
         if a <= 0 or d == u:
             return
-        live = [l for l in core.lots[u] if l.remaining > 0 and l.t <= t and (l.spendable or not l.tainted)]
+        lots = core.lots[u]
+        live = [l for l in lots if l.remaining > 0 and l.t <= t and (l.spendable or not l.tainted)]
         if not live:
             return
         need = a
@@ -128,6 +132,8 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
                 tparts.append((lot, rule, take))
             if need == 0:
                 break
+        if len(lots) > 32 and len(lots) > 2 * len(live):
+            lots[:] = [l for l in lots if l.remaining > 0]   # drop spent lots (in place: callers hold this list)
         if not tparts:
             return
         attributed = sum(p[2] for p in tparts)

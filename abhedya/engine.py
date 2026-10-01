@@ -22,6 +22,12 @@ _TXN_FIELDS = ("txn_idx", "transaction_id", "sender", "receiver", "sender_ifsc",
                "ts", "mode", "narration", "narr_category", "ip", "ip_class", "device", "device_class", "dq_flags")
 
 
+def _ints_sql(values) -> str:
+    """Inline integer list for SQL `IN (...)`. DuckDB binds a Python list parameter at ~1 ms per element
+    (1.1 s for 1,174 ids); inlined integers take ~10 ms. int() makes this injection-safe."""
+    return ",".join(str(int(x)) for x in values)
+
+
 class UnknownAccount(KeyError):
     """Account id not present in the ingested data (the API maps this to HTTP 404)."""
 
@@ -67,8 +73,8 @@ class Engine:
         info = {}
         if idxs:
             info = {r[0]: r[1:] for r in cur.execute(
-                """SELECT txn_idx, transaction_id, strftime(ts, '%Y-%m-%d %H:%M:%S'), mode, narr_category
-                   FROM txn WHERE txn_idx IN (SELECT unnest(?::INTEGER[]))""", [idxs]).fetchall()}
+                f"""SELECT txn_idx, transaction_id, strftime(ts, '%Y-%m-%d %H:%M:%S'), mode, narr_category
+                    FROM txn WHERE txn_idx IN ({_ints_sql(idxs)})""").fetchall()}
         A = lambda i: str(self.g.accounts[i])  # noqa: E731
         edges = [
             TraceEdge(txn_idx=e.txn_idx, transaction_id=info[e.txn_idx][0], src=A(e.src), dst=A(e.dst),
@@ -136,8 +142,7 @@ class Engine:
         if not txn_idxs:
             return []
         rows = self.cursor().execute(
-            f"SELECT {_TXN_COLS} FROM txn WHERE txn_idx IN (SELECT unnest(?::INTEGER[])) ORDER BY ts, txn_idx",
-            [list(txn_idxs)]).fetchall()
+            f"SELECT {_TXN_COLS} FROM txn WHERE txn_idx IN ({_ints_sql(txn_idxs)}) ORDER BY ts, txn_idx").fetchall()
         return [TxnRow(**dict(zip(_TXN_FIELDS, r))) for r in rows]
 
     # ---- ring ----
@@ -153,10 +158,10 @@ class Engine:
             ids = {self.g.index[a] for a in flagged if a in self.g.index}
             return ids, self.risk_many(cur, list(flagged))
         if self._fallback_suspects is None:
+            cats = ", ".join(f"'{c}'" for c in config.TERMINAL_CATEGORIES)  # constants from config
             rows = cur.execute(
-                """SELECT DISTINCT src_id FROM txn WHERE device_class = 'script' OR ip_class = 'foreign_proxy'
-                   UNION SELECT DISTINCT dst_id FROM txn WHERE narr_category IN (SELECT unnest(?::VARCHAR[]))""",
-                [list(config.TERMINAL_CATEGORIES)]).fetchall()
+                f"""SELECT DISTINCT src_id FROM txn WHERE device_class = 'script' OR ip_class = 'foreign_proxy'
+                    UNION SELECT DISTINCT dst_id FROM txn WHERE narr_category IN ({cats})""").fetchall()
             self._fallback_suspects = {r[0] for r in rows}
         return self._fallback_suspects, {}
 

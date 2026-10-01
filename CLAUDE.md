@@ -18,6 +18,7 @@ Files marked `STUB` were created by A only so imports work; their owner replaces
 - Data-quality flags never feed the risk score.
 - Raw narration is never sent to the LLM. The LLM never writes numbers, account IDs or transaction IDs.
 - Don't claim any timing that isn't in `bench/results.md`.
+- DuckDB performance trap: never bind a Python list as a query parameter (`IN (SELECT unnest(?))`, `= ANY(?)`). It costs about 1 ms per element (1.1 s for 1,174 ids). Inline integer lists instead (see `_ints_sql` in `abhedya/engine.py`), and map account strings to `acct_id` integers first.
 
 ## Engine API for B and C (`abhedya/engine.py`)
 `get_engine()` provides `.trace(victim)`, `.account(acct)`, `.account_txns(acct)`, `.txns(idxs)`, `.ring(seed)`, `.search(prefix)` and `.cursor()` (a DuckDB cursor, read-only). They return the models in `contracts/models.py`.
