@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abhedya"
+version = "0.1.0"
+description = "Offline money-mule investigation workstation (Void Hacks 8.0, Operation Abhedya-Chakra)"
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb>=1.1",
+    "numpy>=2.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "orjson>=3.10",
+    "jinja2>=3.1",
+    "httpx>=0.27",
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["abhedya*", "contracts*"]
+
+[tool.setuptools.package-data]
+"abhedya.docs" = ["templates/*.j2"]
+"contracts" = ["fixtures/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,2 @@
+# evidence files must stay byte-identical (no line-ending conversion)
+*.csv -text

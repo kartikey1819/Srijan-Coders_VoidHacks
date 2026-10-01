@@ -1,0 +1,27 @@
+# data: the official CSV is evidence and never goes to git (287 MB > GitHub limit)
+data/*
+!data/sample.csv
+*.duckdb
+*.duckdb.wal
+*.npy
+*.zip
+cases/
+testdata/
+scratch*
+
+# python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# web
+web/node_modules/
+web/dist/
+
+# editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
