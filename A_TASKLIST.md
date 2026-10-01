@@ -1,7 +1,7 @@
 # A: Task List and Progress (main PC)
 
 Status: ⬜ todo · 🔄 in progress · ✅ done · ⚠️ blocked/issue
-Updated by Claude as work proceeds. Brief: `plan/A_ENGINE.md`. B and C work in their own repos; we merge their work at the end (A11).
+Updated as work proceeds. Brief: `plan/A_ENGINE.md`. B and C work in their own repos; we merge their work at the end (A11).
 
 ## M0: Bootstrap ✅
 - ✅ A0.1 Repo layout, `.gitignore`, `.gitattributes` (CSV kept byte-exact), `pyproject.toml`, venv + deps
