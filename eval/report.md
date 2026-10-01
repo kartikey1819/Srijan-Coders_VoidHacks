@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-10-02 02:32 by `python -m eval.evaluate`. Data: `VoidHacks8_MuleAccount_2M_Transactions.csv` (sha256 `2c9f81fd34f728c0…`). Ground truth: `ground_truth.json` (1,073 mules, 300 victims), built from the generator's own markers.
+Generated 2026-10-02 02:54 by `python -m eval.evaluate`. Data: `VoidHacks8_MuleAccount_2M_Transactions.csv` (sha256 `2c9f81fd34f728c0…`). Ground truth: `ground_truth.json` (1,073 mules, 300 victims), built from the generator's own markers.
 
 ## 1. Detection (jury criterion: precision and recall, 30%)
 Flagged (band HIGH, score >= 70): **1,073** accounts.
@@ -50,7 +50,7 @@ out-of-sample. They are reported to show the result does not depend on a lucky s
 | Group | 0 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | mule | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 843 | 101 | 129 | 0 |
-| other | 20468 | 2757 | 65 | 202 | 8 | 0 | 0 | 0 | 0 | 0 | 0 |
+| other | 20340 | 2742 | 208 | 202 | 8 | 0 | 0 | 0 | 0 | 0 | 0 |
 | victim | 0 | 0 | 0 | 0 | 300 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ### False positives (top 30)
@@ -63,4 +63,5 @@ out-of-sample. They are reported to show the result does not depend on a lucky s
 Every victim traced with `Engine.trace`; layers and transactions compared with the ground truth.
 
 - Exact match (same L1, L2, L3 accounts and the same transactions): **300 / 300**
-- Trace latency in-process: p50 14.6 ms, max 53.0 ms
+- Mean Jaccard overlap with the true layer: L1 1.000, L2 1.000, L3 1.000
+- Trace latency in-process: p50 4.1 ms, max 16.6 ms

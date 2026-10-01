@@ -15,10 +15,8 @@ Receivers of cash-out edges (wallet/crypto) are L3 and are not expanded further.
 from __future__ import annotations
 
 import heapq
-from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from itertools import chain
 
 from abhedya import config
 from abhedya.graph.build import Graph
@@ -32,6 +30,7 @@ class Lot:
     spendable: bool      # tainted and allowed to move further (not cashed out, below max hops)
     tainted: bool = True
     original: int = 0    # amount when the lot arrived (amount_match compares against this)
+    src: int = -1        # txn_idx of the inflow that created it (one inflow can be part tainted, part clean)
 
     def __post_init__(self):
         if not self.original:
@@ -65,6 +64,7 @@ class TraceCore:
     first_in: dict[int, int]
     returned: int
     warnings: list[str] = field(default_factory=list)
+    ambiguous: int = 0   # outflows the rules could fund from this victim's money or from other money
 
     def held(self, u: int) -> int:
         return sum(l.remaining for l in self.lots.get(u, ()) if l.tainted)
@@ -77,24 +77,56 @@ class TraceCore:
         return "L3" if u in self.terminal_in else "L2"
 
 
-def _priority(live: list[Lot], amount: int, t: int, order: tuple[str, ...]) -> Iterator[tuple[Lot, str]]:
-    """Yield (lot, rule) in spending priority, lazily: the caller stops once the outflow is covered.
-    `live` is in arrival order (an account's lots are appended in time order)."""
-    lo_s, hi_s = config.PT_WINDOW_S
-    used: set[int] = set()
-    for rule in order + (() if "oldest" in order else ("oldest",)):
-        if rule == "window":
-            cands = (i for i, l in enumerate(live) if lo_s <= t - l.t <= hi_s)
-        elif rule == "amount_match":
-            # one outflow carrying >= 90% of an inflow (not of a leftover residue) is a pass-through of it
-            cands = (i for i, l in enumerate(live) if config.AMOUNT_MATCH_MIN * l.original <= amount <= l.remaining)
-        else:  # oldest: tainted lots first, then clean lots, each oldest first
-            cands = chain((i for i, l in enumerate(live) if l.tainted),
-                          (i for i, l in enumerate(live) if not l.tainted))
-        for i in cands:
-            if i not in used:
-                used.add(i)
-                yield live[i], rule
+def _bundles(rule: str, live: list[Lot], amount: int, t: int) -> list[list[int]]:
+    """Candidate bundles (lists of indexes into live) that satisfy `rule`, in priority order.
+    amount_match judges a whole inflow transaction (its tainted and clean parts together)."""
+    if rule == "window":
+        lo, hi = config.PT_WINDOW_S
+        return [[i] for i, l in enumerate(live) if lo <= t - l.t <= hi]
+    if rule == "amount_match":
+        groups: dict[int, list[int]] = {}
+        for i, l in enumerate(live):
+            key = l.src if l.src >= 0 else -1 - i
+            g = groups.get(key)
+            if g is None:
+                groups[key] = [i]
+            else:
+                g.append(i)
+        ratio = config.AMOUNT_MATCH_MIN
+        out = []
+        for idxs in groups.values():
+            if len(idxs) == 1:
+                l = live[idxs[0]]
+                orig, rem = l.original, l.remaining
+            else:
+                orig = rem = 0
+                for i in idxs:
+                    orig += live[i].original
+                    rem += live[i].remaining
+            m = ratio * orig
+            # one outflow carrying 90-100% of an inflow that is still (>= 90%) unspent is a pass-through of it
+            if rem >= m and m <= amount <= orig:
+                out.append(idxs)
+        return out
+    # fallback (lowest-intermediate-balance presumption): the holder's own (clean) money is spent first
+    return [[i] for i, l in enumerate(live) if not l.tainted] + [[i] for i, l in enumerate(live) if l.tainted]
+
+
+def _split(total: int, lots: list[Lot]) -> list[int]:
+    """Take `total` from a bundle pro rata to what each lot still holds (exact integer paise)."""
+    rem = [l.remaining for l in lots]
+    avail = sum(rem)
+    if total >= avail:
+        return rem
+    takes = [total * r // avail for r in rem]
+    short = total - sum(takes)
+    for i in sorted(range(len(lots)), key=lambda i: -rem[i]):
+        if short == 0:
+            break
+        if takes[i] < rem[i]:
+            takes[i] += 1
+            short -= 1
+    return takes
 
 
 def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
@@ -110,6 +142,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
     ocur: dict[int, int] = {}                    # account -> next out-edge not yet applied to its ledger
     icur: dict[int, int] = {}                    # account -> next in-edge not yet applied to its ledger
     trail_in: dict[int, dict[int, int]] = {}     # account -> {txn_idx: tainted amount delivered by it}
+    rules = order + (() if "oldest" in order else ("oldest",))
     ties = 0
 
     def process_out(u: int, k: int) -> None:
@@ -124,12 +157,32 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
             return
         need = a
         tparts: list[tuple[Lot, str, int]] = []      # tainted parts only; clean parts just shrink
-        for lot, rule in _priority(live, a, t, order):
-            take = min(need, lot.remaining)
-            lot.remaining -= take
-            need -= take
-            if lot.tainted:
-                tparts.append((lot, rule, take))
+        used: set[int] = set()
+        deciding = True
+        for rule in rules:                           # each rule's candidates are built at most once, lazily
+            cands = _bundles(rule, live, a, t)
+            if deciding and cands:
+                deciding = False                     # could the deciding rule be met by this victim's money
+                if rule != "oldest" and len(cands) > 1:  # AND by other money? Then say so.
+                    has_t = any(live[i].tainted for b in cands for i in b)
+                    has_c = any(not live[i].tainted for b in cands for i in b)
+                    if has_t and has_c:
+                        core.ambiguous += 1
+            for idxs in cands:
+                fresh = [i for i in idxs if i not in used]
+                if not fresh:
+                    continue
+                used.update(fresh)
+                bundle = [live[i] for i in fresh]
+                for lot, take in zip(bundle, _split(need, bundle)):
+                    if take <= 0:
+                        continue
+                    lot.remaining -= take
+                    need -= take
+                    if lot.tainted:
+                        tparts.append((lot, rule, take))
+                if need == 0:
+                    break
             if need == 0:
                 break
         if len(lots) > 32 and len(lots) > 2 * len(live):
@@ -160,7 +213,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
                 icur[u] = ip + 1
                 rest = int(iamt[ip]) - trail_in.get(u, {}).get(ik[1], 0)
                 if rest > 0:
-                    lots.append(Lot(rest, ik[0], 0, False, False))
+                    lots.append(Lot(rest, ik[0], 0, False, False, src=ik[1]))
             elif ok is not None and ok < (t, x):
                 ocur[u] = op + 1
                 process_out(u, op)
@@ -183,7 +236,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
             advance(u, t, x)  # bring u's own balance up to this moment first
         tin = trail_in.setdefault(u, {})
         tin[x] = tin.get(x, 0) + amount
-        core.lots[u].append(Lot(amount, t, hop, spendable))
+        core.lots[u].append(Lot(amount, t, hop, spendable, src=x))
         core.received[u] = core.received.get(u, 0) + amount
         if hop < core.min_hop.get(u, 1 << 30):
             core.min_hop[u] = hop
@@ -230,6 +283,11 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
         core.warnings.append("Part of the traced money flowed back to the victim account.")
     if ties:
         core.warnings.append(f"{ties} transfer(s) spent money that arrived in the same second (ordered by file row).")
+    if core.ambiguous:
+        core.warnings.append(
+            f"{core.ambiguous} transfer(s) could be funded by this victim's money or by other money that arrived "
+            "at the same account in the same way (e.g. several victims within 15 minutes); the earliest inflow "
+            "was used. Review these accounts before freezing.")
     return core
 
 

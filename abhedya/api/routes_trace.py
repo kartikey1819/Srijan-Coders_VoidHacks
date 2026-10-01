@@ -30,8 +30,10 @@ def search(q: str = "", limit: int = Query(20, ge=1, le=100)):
 
 
 @router.get("/trace/{victim}", response_model=TraceResult)
-def trace(victim: str, max_hops: int = Query(config.MAX_HOPS, ge=1, le=8)):
-    return get_engine().trace(victim, max_hops=max_hops)
+def trace(victim: str, max_hops: int = Query(config.MAX_HOPS, ge=1, le=8),
+          seed_txn: list[int] | None = Query(None, description="txn_idx of the disputed transaction(s); "
+                                                                 "default: all of the victim's outflows")):
+    return get_engine().trace(victim, max_hops=max_hops, seed_txns=set(seed_txn) if seed_txn else None)
 
 
 @router.get("/account/{acct}", response_model=AccountSummary)

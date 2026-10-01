@@ -10,7 +10,7 @@ REASON_LABELS: dict[str, str] = {
     "TERM_IN_FROM_SCRIPT_OR_FOREIGN": "Received wallet / crypto money sent from a script device or foreign proxy IP",
     "SCRIPT_DEVICE_OUT": "Sent money from a headless script device (Web_Emulator / Linux_Script) (transfers)",
     "FOREIGN_PROXY_IP_OUT": "Sent money from a foreign proxy IP (185.x / 194.x) (transfers)",
-    "CYCLE": "Money returned to this account in a loop within 24 hours (loops)",
+    "CYCLE": "Money went round the same ring of accounts within 24 hours (repetitions)",
     "SINK": "Keeps almost everything it receives (share kept)",
     "LINKED_TO_FLAGGED": "Large share of money came from / went to suspect accounts (share)",
 }

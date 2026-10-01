@@ -124,3 +124,32 @@ def test_no_generator_knowledge_in_engine():
     assert not hits, hits
     detect_src = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "abhedya" / "detect").rglob("*.py"))
     assert "dq_flags" not in detect_src, "data-quality flags must never feed the risk score"
+
+
+# ---- statement patterns that are evidence on their own ----
+
+def test_cashout_sent_from_script_device_is_flagged(tmp_path):
+    e = make_engine(tmp_path, [
+        row(1, "AXIS10000004", "PUNB10000007", "980.00", at(0), "UPI/WALLET_LOAD/X_1", "UPI", "103.1.1.1", "Linux_Script"),
+        row(2, "AXIS10000004", "PUNB10000008", "120.00", at(9000), "UPI/Grocery/Store#1", "UPI"),
+        row(3, "AXIS10000004", "PUNB10000009", "120.00", at(19000), "UPI/Grocery/Store#2", "UPI"),
+    ], detect=True)
+    assert risk(e, "AXIS10000004").band == "HIGH"
+
+
+def test_repeated_ring_is_smurfing_but_one_off_loops_are_not(tmp_path):
+    ring = ["SBIN10000001", "HDFC10000002", "ICIC10000003"]
+    rows, i = [], 0
+    for day in (16, 19):                                   # the same ring twice -> smurfing
+        for h, (a, b) in enumerate(zip(ring, ring[1:] + ring[:1])):
+            i += 1
+            rows.append(row(i, a, b, f"{50000 - 500 * h}.00", f"2026-09-{day} {10 + 2 * h:02d}:00:00"))
+    for day, other in ((17, "AXIS10000004"), (21, "PUNB10000005")):   # a busy account: two DIFFERENT loops
+        i += 1
+        rows.append(row(i, "KKBK10000009", other, "8000.00", f"2026-09-{day} 10:00:00"))
+        i += 1
+        rows.append(row(i, other, "KKBK10000009", "7800.00", f"2026-09-{day} 15:00:00"))
+    e = make_engine(tmp_path, rows, detect=True)
+    for a in ring:
+        assert feats(e, a)["cycles_2_4"] == 2 and risk(e, a).band == "HIGH"
+    assert feats(e, "KKBK10000009")["cycles_2_4"] == 1 and risk(e, "KKBK10000009").band != "HIGH"

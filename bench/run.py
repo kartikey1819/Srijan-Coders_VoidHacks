@@ -80,6 +80,9 @@ def main() -> None:
             info = run_ingest(a.data, db, run_detect=False)
         ingest.append((info["ingest_total_s"], info["timings_s"], mem.peak))
     best = min(ingest, key=lambda x: x[0])
+    with PeakRSS() as mem_d:
+        det = run_ingest(a.data, db, run_detect=True)       # final build includes detection (risk table)
+    detect_s, detect_rss = det["timings_s"]["detect"], mem_d.peak
 
     # 2. in-process latency
     e = Engine(db)
@@ -147,6 +150,9 @@ def main() -> None:
         "| Stage | Seconds (best run) |",
         "|---|---|",
         *[f"| {k} | {v:.2f} |" for k, v in best[1].items()],
+        "",
+        f"Mule detection (features + risk for all {det['accounts']:,} accounts, run after indexing): "
+        f"**{detect_s:.2f} s**, peak process memory {detect_rss / 2**20:.0f} MB.",
         "",
         "## Latency (requirement: 4-hop trace <= 2 s)",
         "| Operation | n | p50 | p95 | p99 | max | unit |",

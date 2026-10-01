@@ -35,7 +35,7 @@ Updated by Claude as work proceeds. Brief: `plan/A_ENGINE.md`. B and C work in t
 | Account summary | p99 47 ms | sub-second |
 | Ring isolation | ~54 ms | — |
 
-Tests: **18 passing** (`pytest`, runs on the committed sample).
+Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benchmark: `bench/results.md` (ingest 10.9 s, detection 27.4 s, victim trace p99 5 ms, worst "any account" trace ~1.1 s).
 
 ## Log
 - **Docs fix:** 2,252 = repeated Transaction_ID occurrences; 4,502 = all rows involved. Flag counts the 4,502.
@@ -54,9 +54,20 @@ Tests: **18 passing** (`pytest`, runs on the committed sample).
 - ✅ B3 `detect/risk.py` + `params.py` + `reasons.py`: grouped noisy-OR, floors, bands, reason codes, role hints
 - ✅ B4 `detect/__init__.py` API, exports (flagged/ranked CSV), candidate victims, `routes_risk.py`
 - ✅ B5 `eval/evaluate.py` → `eval/report.md`: **precision 1.0000, recall 1.0000** (0 FP, 0 FN), every layer 100%, role hints 100%, score gap 27 pts (lowest mule 73, highest other 46), victims all MEDIUM, 300/300 traces exact. Detection takes 24.9 s
-- 🔄 B6 `tools/gen_testdata.py`: rule-following synthetic data with hard cases + engine run on it
+- ✅ B6 `tools/gen_testdata.py`: rule-following synthetic data (RBI/NPCI limits) with hard cases. Results on two unseen seeds: **precision 1.0000 / recall 0.945** (seed 7, `eval/report_synthetic.md`) and **1.0000 / 0.925** (seed 23, `eval/report_synthetic_23.md`); smurf rings 100%
 - ✅ B7 `tests/test_detect.py` (boundaries 0/179/180/900/901 s, episodes k=2/3/7/8, direction rule, guard test). **31 tests pass**
-- ⚠️ Note: L2/L3 score 73, close to the 70 threshold (two independent strong signals each). The B6 synthetic data will test this margin
+- ✅ B7 extended: legal-presumption fallback, pro-rata pass-through, ring repetition vs one-off loops, cash-out-from-script floor, ambiguity warning, `seed_txn` API, risk routes
+
+### What the synthetic data taught us (fixed, principled, official result unchanged)
+- Detection recall 0.68 → 0.945:
+  - A cash-out sent from a script device or foreign proxy is now evidence on its own (floor 70), mirroring the receiving side.
+  - A cash-out channel plus at least half of the money linked to suspects is also a floor.
+  - The cycle search now covers all accounts (5.8 s). It counts repeats of the *same* ring: busy merchants close one-off loops by chance (2 false positives, now 0); smurfing repeats a ring.
+- Trace noise (median 20 → 2 extra accounts per victim): after direct evidence (the 3–15 min window, ≥ 90% pass-through), the trace now presumes the holder spends their own money first. This is the established *lowest intermediate balance* tracing rule, so leftover commission no longer leaks into grocery payments.
+- Pass-through is judged per inflow transaction, with partly tainted inflows forwarded pro rata.
+- New trace warning when money from several sources arrives at one account in the same 15-minute window (attribution is genuinely ambiguous there; the IO should review).
+- **Known limits (by design, reported in the synthetic reports):** splits slower than 15 min, mule transfers from ordinary devices with weak links to other suspects, and cash-out narrations without wallet/crypto words are partly missed. The trace reproduces exact layers only for 6–9 of 80–120 synthetic victims (L1 always right, L2/L3 overlap ~0.55–0.60); on the official data it is 300/300.
+- `trace` API now accepts `seed_txn` (trace from the disputed transaction when the victim also has normal spending). C's UI should offer this.
 
 ## Waiting on teammates (for A11)
 - C: `web/`, `abhedya/{evidence,ai,docs}/`, `routes_docs.py`. Contract: `contracts/models.py`; sample: `contracts/fixtures/trace_KKBK10000000.json`.

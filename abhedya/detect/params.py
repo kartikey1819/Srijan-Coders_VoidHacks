@@ -32,7 +32,12 @@ class DetectParams(BaseModel):
     network_seed_min: int = 50     # pass-1 score that makes an account a "suspect" for G4
     floor_pass_through: int = 70
     floor_fanout: int = 60
-    floor_term_in_anom: int = 70
+    floor_term_in_anom: int = 70    # received a cash-out transfer sent from a script device / foreign proxy
+    floor_term_out_anom: int = 70   # sent a cash-out transfer from a script device / foreign proxy
+    floor_term_linked: int = 70     # cash-out channel + at least half its money from/to suspects
+    term_linked_min: float = 0.5
+    cycle_min_loops: int = 2        # repeated loops = cyclical smurfing
+    floor_cycles: int = 70
     band_high: int = 70            # HIGH = flagged
     band_medium: int = 40
 

@@ -17,7 +17,7 @@ def _signals(f: dict[str, np.ndarray], p: DetectParams) -> dict[str, np.ndarray]
         "pt": np.where(f["pt_outflows"] >= p.pt_min_outflows, f["pt_strict"], 0.0),
         "episodes": np.minimum(1.0, f["episodes_3_7"] / 2.0),
         "burst": np.clip((f["burst_senders_60m"] - (p.burst_min_senders - 1)) / 3.0, 0.0, 1.0),
-        "cycle": 0.3 * np.minimum(1.0, f["cycles_2_4"] / 2.0),
+        "cycle": np.minimum(1.0, f["cycles_2_4"] / max(p.cycle_min_loops, 1)),
         "term_out": np.where(f["term_out_anom_n"] > 0, 1.0, np.where(f["term_out_n"] > 0, 0.6, 0.0)),
         "term_in_anom": (f["term_in_from_anom"] > 0).astype(float),
         "term_in": np.where(f["term_in_n"] > 0, 0.6 * f["sink_ratio"], 0.0),
@@ -37,14 +37,20 @@ def _noisy_or(parts: list[tuple[float, np.ndarray]]) -> np.ndarray:
     return 100.0 * (1.0 - keep)
 
 
-def _floors(score: np.ndarray, f: dict[str, np.ndarray], p: DetectParams) -> np.ndarray:
+def _floors(score: np.ndarray, f: dict[str, np.ndarray], p: DetectParams, g4: np.ndarray | None = None) -> np.ndarray:
+    """Minimum scores for patterns the statement names outright (each is evidence on its own)."""
+    rules = [
+        ((f["pt_strict"] >= p.pt_flag_ratio) & (f["pt_outflows"] >= p.pt_min_outflows), p.floor_pass_through),
+        ((f["episodes_3_7"] >= 1) & (f["pt_strict"] >= 0.5), p.floor_fanout),
+        (f["term_in_from_anom"] >= 1, p.floor_term_in_anom),
+        (f["term_out_anom_n"] >= 1, p.floor_term_out_anom),
+        (f["cycles_2_4"] >= p.cycle_min_loops, p.floor_cycles),
+    ]
+    if g4 is not None:
+        rules.append((((f["term_out_n"] >= 1) | (f["term_in_n"] >= 1)) & (g4 >= p.term_linked_min), p.floor_term_linked))
     score = score.copy()
-    pt_rule = (f["pt_strict"] >= p.pt_flag_ratio) & (f["pt_outflows"] >= p.pt_min_outflows)
-    score[pt_rule] = np.maximum(score[pt_rule], p.floor_pass_through)
-    fan_rule = (f["episodes_3_7"] >= 1) & (f["pt_strict"] >= 0.5)
-    score[fan_rule] = np.maximum(score[fan_rule], p.floor_fanout)
-    term_rule = f["term_in_from_anom"] >= 1
-    score[term_rule] = np.maximum(score[term_rule], p.floor_term_in_anom)
+    for mask, floor in rules:
+        score[mask] = np.maximum(score[mask], floor)
     return score
 
 
@@ -61,7 +67,7 @@ def score(f: dict[str, np.ndarray], e: dict[str, np.ndarray], p: DetectParams) -
         f["out_to_flagged"] = np.where(f["sum_out_paise"] > 0, to_s / np.maximum(f["sum_out_paise"], 1), 0.0)
     s["G4"] = np.maximum(f["in_from_flagged"], f["out_to_flagged"])
     final = _floors(_noisy_or([(p.w_velocity, s["G1"]), (p.w_topology, s["G2"]),
-                               (p.w_channel, s["G3"]), (p.w_network, s["G4"])]), f, p)
+                               (p.w_channel, s["G3"]), (p.w_network, s["G4"])]), f, p, s["G4"])
     sc = np.clip(np.rint(final), 0, 100).astype(np.int64)
     band = np.where(sc >= p.band_high, "HIGH", np.where(sc >= p.band_medium, "MEDIUM", "LOW"))
     role = np.full(V, "", dtype=object)

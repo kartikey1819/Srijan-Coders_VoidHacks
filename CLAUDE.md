@@ -21,7 +21,7 @@ Files marked `STUB` were created by A only so imports work; their owner replaces
 - DuckDB performance trap: never bind a Python list as a query parameter (`IN (SELECT unnest(?))`, `= ANY(?)`). It costs about 1 ms per element (1.1 s for 1,174 ids). Inline integer lists instead (see `_ints_sql` in `abhedya/engine.py`), and map account strings to `acct_id` integers first.
 
 ## Engine API for B and C (`abhedya/engine.py`)
-`get_engine()` provides `.trace(victim)`, `.account(acct)`, `.account_txns(acct)`, `.txns(idxs)`, `.ring(seed)`, `.search(prefix)` and `.cursor()` (a DuckDB cursor, read-only). They return the models in `contracts/models.py`.
+`get_engine()` provides `.trace(victim, seed_txns=None)` (optionally from the disputed transaction(s), by `txn_idx`), `.account(acct)`, `.account_txns(acct)`, `.txns(idxs)`, `.ring(seed)`, `.search(prefix)` and `.cursor()` (a DuckDB cursor, read-only). They return the models in `contracts/models.py`.
 
 ## Commands
 - Setup: `python -m venv .venv`, then `.venv\Scripts\pip install -e .[dev]`
@@ -29,3 +29,6 @@ Files marked `STUB` were created by A only so imports work; their owner replaces
 - `python -m abhedya serve`, then open http://127.0.0.1:8000 (API under `/api`)
 - `pytest`: tests run on the committed `data/sample.csv`
 - Web: `cd web && npm install && npm run dev` (proxy `/api` → 127.0.0.1:8000)
+- Evaluation: `python -m eval.ground_truth`, then `python -m eval.evaluate` → `eval/report.md`
+- Synthetic stress data: `python tools/gen_testdata.py --seed 7` → `testdata/` (gitignored, reproducible from the seed)
+- Benchmarks: `python bench/run.py` → `bench/results.md`

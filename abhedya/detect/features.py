@@ -83,9 +83,7 @@ def compute(con: duckdb.DuckDBPyConnection, p: DetectParams) -> tuple[dict[str, 
     stream = _stream_features(V, optr, iptr, S, f["sum_in_paise"], p)
     f.update(stream)
 
-    cand = np.flatnonzero((f["pt_lenient"] >= 0.5) | (f["episodes_3_7"] > 0) | (f["term_out_n"] > 0)
-                          | (f["term_in_n"] > 0) | (f["script_out_n"] > 0) | (f["foreign_out_n"] > 0))
-    f["cycles_2_4"] = _cycles(V, cand.tolist(), optr, S, p)
+    f["cycles_2_4"] = _cycles(V, np.flatnonzero(f["n_out"] > 0).tolist(), optr, S, p)
     return f, e
 
 
@@ -178,25 +176,28 @@ def _stream_features(V, optr, iptr, S, sum_in, p: DetectParams) -> dict[str, np.
             "max_episode_k": maxk, "burst_senders_60m": burst}
 
 
-def _cycles(V, cands, optr, S, p: DetectParams) -> np.ndarray:
-    """Time-respecting loops of length 2..cycle_max_len that return to the start within cycle_window_s,
-    every hop within +-cycle_amount_tol of the first amount. Bounded search from candidates only."""
+def _cycles(V, starts, optr, S, p: DetectParams) -> np.ndarray:
+    """Smurfing loops: time-respecting loops of length 2..cycle_max_len that return to their start within
+    cycle_window_s, every hop within +-cycle_amount_tol of the first amount. Returns, per account, how many
+    times money went round the SAME set of accounts (busy accounts close one-off loops by chance;
+    smurfing repeats a ring). A loop is only visible from the account that starts it, so every member
+    of a found ring is credited."""
     o_ts, o_amt, o_dst = S["o_ts"], S["o_amt"], S["o_dst"]
-    out = np.zeros(V, dtype=np.int64)
+    rings: dict[frozenset, int] = {}
     tol, win, max_len, cap = p.cycle_amount_tol, p.cycle_window_s, p.cycle_max_len, p.cycle_cap
-    for s in cands:
-        n = 0
-        budget = 20_000  # bound the work per account
+    for s in starts:
+        found = 0
+        budget = 20_000  # bound the work per start account
         for j in range(optr[s], optr[s + 1]):
-            if n >= cap or budget <= 0:
+            if found >= cap or budget <= 0:
                 break
             t0, a0, d0 = o_ts[j], o_amt[j], o_dst[j]
             if d0 == s:
                 continue
             amin, amax, tend = a0 * (1 - tol), a0 * (1 + tol), t0 + win
-            stack = [(d0, t0, 1)]
-            while stack and n < cap and budget > 0:
-                u, t, depth = stack.pop()
+            stack = [(d0, t0, (s, d0))]
+            while stack and found < cap and budget > 0:
+                u, t, path = stack.pop()
                 budget -= 1
                 b, e = optr[u], optr[u + 1]
                 for k in range(bisect_right(o_ts, t, b, e), bisect_right(o_ts, tend, b, e)):
@@ -204,8 +205,13 @@ def _cycles(V, cands, optr, S, p: DetectParams) -> np.ndarray:
                         continue
                     v = o_dst[k]
                     if v == s:
-                        n += 1
-                    elif depth + 1 < max_len:
-                        stack.append((v, o_ts[k], depth + 1))
-        out[s] = min(n, cap)
-    return out
+                        found += 1
+                        ring = frozenset(path)
+                        rings[ring] = rings.get(ring, 0) + 1
+                    elif len(path) < max_len and v not in path:
+                        stack.append((v, o_ts[k], path + (v,)))
+    out = np.zeros(V, dtype=np.int64)
+    for ring, n in rings.items():
+        for a in ring:
+            out[a] = max(out[a], n)
+    return np.minimum(out, cap)

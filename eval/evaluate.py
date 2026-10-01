@@ -41,8 +41,10 @@ def evaluate(db: Path, truth_path: Path) -> tuple[str, dict]:
     flagged = {a for a, (_, b, _, _) in info.items() if b == "HIGH"}
 
     m = prf(flagged, mules)
+    by_role = {r: s for r, s in by_role.items() if s}
     role_recall = {r: len(flagged & s) / len(s) for r, s in by_role.items()}
-    role_hint_ok = {r: sum(1 for a in s if info[a][2] == r) / len(s) for r, s in by_role.items()}
+    role_hint_ok = {r: (sum(1 for a in s if info[a][2] == r) / len(s) if r in ("L1", "L2", "L3") else None)
+                    for r, s in by_role.items()}
     halves = {h: prf({a for a in flagged if half(a) == h}, {a for a in mules if half(a) == h}) for h in (0, 1)}
     sweep = []
     for th in range(30, 95, 5):
@@ -64,11 +66,16 @@ def evaluate(db: Path, truth_path: Path) -> tuple[str, dict]:
     # blind-victim simulation: trace every victim and compare layers with the ground truth
     eng = Engine(db)
     exact, fails, times = 0, [], []
+    jac = {k: [] for k in ("L1", "L2", "L3")}
     for v, t in gt["victims"].items():
+        seed = {t["seed_txn"]} if "seed_txn" in t else None   # trace from the disputed transaction if known
         t0 = time.perf_counter()
-        r = eng.trace(v)
+        r = eng.trace(v, seed_txns=seed)
         times.append((time.perf_counter() - t0) * 1000)
         got = {k: sorted(n.account for n in r.nodes if n.role == k) for k in ("L1", "L2", "L3")}
+        for k in got:
+            a, b = set(got[k]), set(t[k])
+            jac[k].append(len(a & b) / len(a | b) if a | b else 1.0)
         txns = sorted(e.txn_idx for e in r.edges)
         if all(got[k] == t[k] for k in got) and txns == t["txn_idxs"]:
             exact += 1
@@ -96,7 +103,8 @@ def evaluate(db: Path, truth_path: Path) -> tuple[str, dict]:
         "",
         "| Layer | Mules | Recall | Role hint correct |",
         "|---|---|---|---|",
-        *[f"| {r} | {len(by_role[r])} | {role_recall[r]:.4f} | {role_hint_ok[r]:.4f} |" for r in ("L1", "L2", "L3")],
+        *[f"| {r} | {len(s)} | {role_recall[r]:.4f} | "
+          f"{'n/a' if role_hint_ok[r] is None else f'{role_hint_ok[r]:.4f}'} |" for r, s in by_role.items()],
         "",
         f"- Lowest-scoring mule: {min_mule[1]} at {min_mule[0]}. Highest-scoring other (non-mule, non-victim) account: "
         f"{max_bg[1]} at {max_bg[0]}. **Score gap: {min_mule[0] - max_bg[0]} points.**",
@@ -131,6 +139,8 @@ def evaluate(db: Path, truth_path: Path) -> tuple[str, dict]:
         f"Every victim traced with `Engine.trace`; layers and transactions compared with the ground truth.",
         "",
         f"- Exact match (same L1, L2, L3 accounts and the same transactions): **{exact} / {len(gt['victims'])}**",
+        "- Mean Jaccard overlap with the true layer: " + ", ".join(
+            f"{k} {sum(v) / len(v):.3f}" for k, v in jac.items()),
         f"- Trace latency in-process: p50 {times[len(times) // 2]:.1f} ms, max {times[-1]:.1f} ms",
         *([f"- Failing victims: {', '.join(fails[:20])}"] if fails else []),
         "",

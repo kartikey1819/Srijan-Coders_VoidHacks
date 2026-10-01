@@ -122,3 +122,39 @@ def test_hop_limit_and_return_to_victim(tmp_path):
     r2 = make_engine(tmp_path / "b", back).trace("SBIN10000001")
     assert any("back to the victim" in w for w in r2.warnings)
     assert sum(n.held_paise for n in r2.nodes) == 0
+
+
+def test_own_money_spent_first_so_residue_stays_held(tmp_path):
+    e = make_engine(tmp_path, [
+        row(1, "KKBK10000002", "HDFC10000009", "5000.00", "2026-09-18 10:00:00", "IMPS/Family/Transfer#1"),
+        row(2, "SBIN10000001", "HDFC10000009", "1000.00", "2026-09-20 10:00:00"),   # victim
+        row(3, "HDFC10000009", "ICIC10000003", "950.00", "2026-09-20 10:05:00"),    # pass-through, 5% kept
+        row(4, "HDFC10000009", "PUNB10000004", "300.00", "2026-09-22 18:00:00", "UPI/Grocery/Store#1", "UPI"),
+    ])
+    r = e.trace("SBIN10000001")
+    assert {x.txn_idx for x in r.edges} == {1, 2}          # the grocery payment is not part of the trail
+    assert {n.account: n.held_paise for n in r.nodes}["HDFC10000009"] == 5000
+
+
+def test_partly_tainted_inflow_passes_through_pro_rata(tmp_path):
+    e = make_engine(tmp_path, [
+        row(1, "KKBK10000002", "HDFC10000009", "600.00", "2026-09-20 09:59:00", "IMPS/Family/Transfer#1"),
+        row(2, "SBIN10000001", "HDFC10000009", "400.00", "2026-09-20 10:00:00"),       # victim
+        row(3, "HDFC10000009", "AXIS10000004", "1000.00", "2026-09-20 10:01:00"),      # L1 forwards both (1 min)
+        row(4, "AXIS10000004", "PYTM10000005", "950.00", "2026-09-20 11:00:00",        # 59 min later, 95%
+            "UPI/WALLET_LOAD/P2P_CRYPTO_1", "IMPS"),
+    ])
+    r = e.trace("SBIN10000001")
+    edge = {x.txn_idx: x for x in r.edges}
+    assert edge[3].rule == "amount_match" and edge[3].attributed_paise == 38000   # 400 * 950 / 1000
+    assert sum(n.held_paise for n in r.nodes) == r.loss_paise
+
+
+def test_two_victims_in_one_window_raise_ambiguity_warning(tmp_path):
+    e = make_engine(tmp_path, [
+        row(1, "SBIN10000001", "HDFC10000009", "1000.00", "2026-09-20 10:00:00"),
+        row(2, "KKBK10000002", "HDFC10000009", "1000.00", "2026-09-20 10:02:00"),
+        row(3, "HDFC10000009", "ICIC10000003", "500.00", "2026-09-20 10:06:00"),
+        row(4, "HDFC10000009", "AXIS10000004", "500.00", "2026-09-20 10:07:00"),
+    ])
+    assert any("could be funded" in w for w in e.trace("KKBK10000002").warnings)

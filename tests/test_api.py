@@ -46,3 +46,21 @@ def test_ring_and_export_rows_are_byte_identical(client):
     exported = z.read("transactions.csv").splitlines()
     original = set(SAMPLE.read_bytes().splitlines())
     assert len(exported) - 1 == ring["n_txn"] and all(line in original for line in exported)
+
+
+def test_trace_from_disputed_transaction(client):
+    full = client.get("/api/trace/KKBK10000000").json()
+    seeded = client.get("/api/trace/KKBK10000000", params={"seed_txn": 0}).json()
+    assert seeded["loss_paise"] == full["loss_paise"] and len(seeded["edges"]) == len(full["edges"])
+    assert client.get("/api/trace/KKBK10000000", params={"seed_txn": 999999}).json()["loss_paise"] == 0
+
+
+def test_risk_routes(client):
+    r = client.get("/api/risk/ICIC10000335").json()
+    assert r["band"] == "HIGH" and r["role_hint"] == "L1"
+    assert len(client.get("/api/risk/top", params={"limit": 5, "band": "HIGH"}).json()) == 5
+    assert "PT_STRICT" in client.get("/api/risk/reasons").json()
+    assert len(client.get("/api/victims", params={"limit": 1000}).json()) == 300
+    flagged = client.get("/api/export/flagged.csv").text.splitlines()
+    assert flagged[0].startswith("account,ifsc") and len(flagged) - 1 == 1073
+    assert client.get("/api/risk/ZZZZ00000000").status_code == 404
