@@ -13,7 +13,15 @@
    "sent_paise": 45554161,
    "held_paise": 0,
    "first_in_ts": null,
-   "risk": null
+   "risk": {
+    "account": "KKBK10000000",
+    "score": 40,
+    "band": "MEDIUM",
+    "role_hint": null,
+    "reasons": [
+     "LINKED_TO_FLAGGED:1.00"
+    ]
+   }
   },
   {
    "account": "ICIC10000335",
@@ -26,7 +34,19 @@
    "sent_paise": 44643078,
    "held_paise": 911083,
    "first_in_ts": "2026-09-22 01:13:51",
-   "risk": null
+   "risk": {
+    "account": "ICIC10000335",
+    "score": 94,
+    "band": "HIGH",
+    "role_hint": "L1",
+    "reasons": [
+     "PT_STRICT:0.98",
+     "SCRIPT_DEVICE_OUT:20",
+     "FOREIGN_PROXY_IP_OUT:20",
+     "FANOUT_EPISODES:4",
+     "LINKED_TO_FLAGGED:1.00"
+    ]
+   }
   },
   {
    "account": "ICIC10001095",
@@ -39,7 +59,18 @@
    "sent_paise": 7822104,
    "held_paise": 325921,
    "first_in_ts": "2026-09-22 01:17:24",
-   "risk": null
+   "risk": {
+    "account": "ICIC10001095",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L2",
+    "reasons": [
+     "TERM_OUT:1",
+     "SCRIPT_DEVICE_OUT:1",
+     "FOREIGN_PROXY_IP_OUT:1",
+     "LINKED_TO_FLAGGED:1.00"
+    ]
+   }
   },
   {
    "account": "PYTM10000639",
@@ -52,7 +83,18 @@
    "sent_paise": 17779714,
    "held_paise": 740822,
    "first_in_ts": "2026-09-22 01:20:43",
-   "risk": null
+   "risk": {
+    "account": "PYTM10000639",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L2",
+    "reasons": [
+     "TERM_OUT:1",
+     "SCRIPT_DEVICE_OUT:1",
+     "FOREIGN_PROXY_IP_OUT:1",
+     "LINKED_TO_FLAGGED:1.00"
+    ]
+   }
   },
   {
    "account": "HDFC10000815",
@@ -65,7 +107,18 @@
    "sent_paise": 8518777,
    "held_paise": 354949,
    "first_in_ts": "2026-09-22 01:21:08",
-   "risk": null
+   "risk": {
+    "account": "HDFC10000815",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L2",
+    "reasons": [
+     "TERM_OUT:3",
+     "SCRIPT_DEVICE_OUT:3",
+     "FOREIGN_PROXY_IP_OUT:3",
+     "LINKED_TO_FLAGGED:1.00"
+    ]
+   }
   },
   {
    "account": "PYTM10000679",
@@ -78,7 +131,18 @@
    "sent_paise": 2103444,
    "held_paise": 87643,
    "first_in_ts": "2026-09-22 01:23:51",
-   "risk": null
+   "risk": {
+    "account": "PYTM10000679",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L2",
+    "reasons": [
+     "TERM_OUT:2",
+     "SCRIPT_DEVICE_OUT:2",
+     "FOREIGN_PROXY_IP_OUT:2",
+     "LINKED_TO_FLAGGED:1.00"
+    ]
+   }
   },
   {
    "account": "AXIS10000585",
@@ -91,7 +155,18 @@
    "sent_paise": 6633316,
    "held_paise": 276388,
    "first_in_ts": "2026-09-22 01:24:15",
-   "risk": null
+   "risk": {
+    "account": "AXIS10000585",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L2",
+    "reasons": [
+     "TERM_OUT:2",
+     "SCRIPT_DEVICE_OUT:2",
+     "FOREIGN_PROXY_IP_OUT:2",
+     "LINKED_TO_FLAGGED:1.00"
+    ]
+   }
   },
   {
    "account": "AIRP10001372",
@@ -104,7 +179,18 @@
    "sent_paise": 0,
    "held_paise": 2103444,
    "first_in_ts": "2026-09-22 01:29:41",
-   "risk": null
+   "risk": {
+    "account": "AIRP10001372",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L3",
+    "reasons": [
+     "TERM_IN_FROM_SCRIPT_OR_FOREIGN:5",
+     "LINKED_TO_FLAGGED:1.00",
+     "TERM_IN:5",
+     "SINK:1.00"
+    ]
+   }
   },
   {
    "account": "ICIC10001309",
@@ -117,7 +203,18 @@
    "sent_paise": 0,
    "held_paise": 7822104,
    "first_in_ts": "2026-09-22 01:30:05",
-   "risk": null
+   "risk": {
+    "account": "ICIC10001309",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L3",
+    "reasons": [
+     "TERM_IN_FROM_SCRIPT_OR_FOREIGN:5",
+     "LINKED_TO_FLAGGED:1.00",
+     "TERM_IN:5",
+     "SINK:1.00"
+    ]
+   }
   },
   {
    "account": "BARB10001377",
@@ -130,7 +227,18 @@
    "sent_paise": 0,
    "held_paise": 8518777,
    "first_in_ts": "2026-09-22 01:40:24",
-   "risk": null
+   "risk": {
+    "account": "BARB10001377",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L3",
+    "reasons": [
+     "TERM_IN_FROM_SCRIPT_OR_FOREIGN:5",
+     "LINKED_TO_FLAGGED:1.00",
+     "TERM_IN:5",
+     "SINK:1.00"
+    ]
+   }
   },
   {
    "account": "KKBK10001330",
@@ -143,7 +251,18 @@
    "sent_paise": 0,
    "held_paise": 17779714,
    "first_in_ts": "2026-09-22 01:45:16",
-   "risk": null
+   "risk": {
+    "account": "KKBK10001330",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L3",
+    "reasons": [
+     "TERM_IN_FROM_SCRIPT_OR_FOREIGN:4",
+     "LINKED_TO_FLAGGED:1.00",
+     "TERM_IN:4",
+     "SINK:1.00"
+    ]
+   }
   },
   {
    "account": "AIRP10001422",
@@ -156,7 +275,18 @@
    "sent_paise": 0,
    "held_paise": 6633316,
    "first_in_ts": "2026-09-22 01:49:21",
-   "risk": null
+   "risk": {
+    "account": "AIRP10001422",
+    "score": 73,
+    "band": "HIGH",
+    "role_hint": "L3",
+    "reasons": [
+     "TERM_IN_FROM_SCRIPT_OR_FOREIGN:6",
+     "LINKED_TO_FLAGGED:1.00",
+     "TERM_IN:6",
+     "SINK:1.00"
+    ]
+   }
   }
  ],
  "edges": [

@@ -26,7 +26,7 @@ def _isolated_audit_log(tmp_path_factory):
 @pytest.fixture(scope="session")
 def sample_db(tmp_path_factory) -> Path:
     db = tmp_path_factory.mktemp("sample") / "case.duckdb"
-    run_ingest(SAMPLE, db, run_detect=False)
+    run_ingest(SAMPLE, db, run_detect=True)
     return db
 
 
@@ -42,12 +42,12 @@ def sample_con(sample_db):
     con.close()
 
 
-def make_engine(tmp_path: Path, rows: list[str]) -> Engine:
+def make_engine(tmp_path: Path, rows: list[str], detect: bool = False) -> Engine:
     """Ingest a tiny hand-written CSV (11 columns per row) and return an Engine on it."""
     csv = tmp_path / "mini.csv"
     csv.write_text(HEADER + "\n" + "\n".join(rows) + "\n", encoding="utf-8")
     db = tmp_path / "mini.duckdb"
-    run_ingest(csv, db, run_detect=False)
+    run_ingest(csv, db, run_detect=detect)
     return Engine(db)
 
 

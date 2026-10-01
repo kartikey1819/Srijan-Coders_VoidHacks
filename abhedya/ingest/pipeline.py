@@ -54,11 +54,13 @@ def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool 
 
     detect_info = None
     if run_detect:
-        from abhedya import detect  # B's package; a stub until B's work is merged
+        from abhedya import detect
+        from abhedya.detect.export import write_exports
         t0 = time.perf_counter()
         detect_info = detect.run(con)
         timings["detect"] = round(time.perf_counter() - t0, 3)
-        print(f"  {'detect':<16} {timings['detect']:>7.2f} s")
+        detect_info["exports_sha256"] = write_exports(con, db_path.parent / "exports")
+        print(f"  {'detect':<16} {timings['detect']:>7.2f} s   bands {detect_info['bands']}")
 
     info = {
         "input_file": csv_path.name,
