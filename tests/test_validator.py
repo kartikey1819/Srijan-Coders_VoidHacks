@@ -88,3 +88,33 @@ def test_narrator_retries_then_gives_up(ev):
 def test_narrator_unavailable(ev):
     n, reason = narrator.narrate_with_status(ev, _client([httpx.ConnectError("refused")]))
     assert n is None and "unavailable" in reason
+
+
+def test_role_mislabels_are_rejected(ev):
+    roles = {a.eid: a.role for a in ev.accounts}
+    victim = next(e for e, r in roles.items() if r == "VICTIM")
+    l1 = next(e for e, r in roles.items() if r == "L1")
+    bad = one(f"A debit hold should be placed on the victim's accounts ({l1}).", [l1])
+    assert any("described as" in e for e in validate_narrative(bad, ev))
+    good = one(f"The victim's account {victim} paid the collector mule {l1}, which passed it on to {l1}.", [victim, l1])
+    assert validate_narrative(good, ev) == []
+
+
+def test_non_english_characters_rejected(ev):
+    assert any("non-English" in e for e in validate_narrative(one("The money moved 赃 quickly."), ev))
+
+
+def test_ai_prose_merged_with_template_lists(ev):
+    from abhedya.ai.fallback import with_template_sections
+    merged = with_template_sections(one("The complainant lost money through mule accounts."), ev)
+    ids = [s.section_id for s in merged.sections]
+    assert ids[0] == "summary" and "recommendation" in ids and "layer_l1" in ids
+    assert merged.sections[0].paragraphs[0].text.startswith("The complainant lost")
+    assert validate_narrative(merged, ev) == []
+
+
+def test_schema_limits_keep_generation_bounded():
+    s = narrator.SCHEMA["properties"]["sections"]
+    assert s["maxItems"] == 3 and set(s["items"]["properties"]["section_id"]["enum"]) == {"summary", "modus_operandi", "recommendation"}
+    assert s["items"]["properties"]["paragraphs"]["maxItems"] == 2
+    assert narrator.OPTIONS["num_predict"] > 0 and narrator.OPTIONS["temperature"] == 0

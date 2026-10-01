@@ -55,3 +55,11 @@ def fallback_narrative(ev: Evidence) -> Narrative:
                                                              if ev.warnings else ""),
         [])
     return Narrative(sections=S)
+
+
+def with_template_sections(ai: Narrative, ev: Evidence) -> Narrative:
+    """AI-written prose sections + template sections for everything else (layer and holding lists)."""
+    from abhedya.ai.prompts import SECTIONS
+    mine = {s.section_id: s for s in ai.sections}
+    tpl = {s.section_id: s for s in fallback_narrative(ev).sections}
+    return Narrative(sections=[mine.get(sid) or tpl[sid] for sid in SECTIONS if sid in mine or sid in tpl])

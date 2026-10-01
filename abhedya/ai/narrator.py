@@ -9,13 +9,13 @@ import os
 import httpx
 from pydantic import ValidationError
 
-from abhedya.ai.prompts import SYSTEM, user_message
+from abhedya.ai.prompts import AI_SECTIONS, SYSTEM, user_message
 from abhedya.ai.validator import validate_narrative
 from contracts.models import Evidence, Narrative
 
 OLLAMA_URL = os.environ.get("ABHEDYA_OLLAMA_URL", "http://127.0.0.1:11434")
 MODEL = os.environ.get("ABHEDYA_LLM_MODEL", "qwen2.5:3b")
-TIMEOUT_S = float(os.environ.get("ABHEDYA_LLM_TIMEOUT", "120"))
+TIMEOUT_S = float(os.environ.get("ABHEDYA_LLM_TIMEOUT", "90"))
 
 
 def _inline(schema: dict) -> dict:
@@ -34,7 +34,22 @@ def _inline(schema: dict) -> dict:
     return walk(schema)
 
 
-SCHEMA = _inline(Narrative.model_json_schema())
+def _bounded(schema: dict) -> dict:
+    """Hard limits inside the grammar the model must follow: only the prose sections, short paragraphs,
+    so generation always ends well inside the token budget."""
+    sec = schema["properties"]["sections"]
+    sec["minItems"], sec["maxItems"] = 1, len(AI_SECTIONS)
+    sec["items"]["properties"]["section_id"]["enum"] = list(AI_SECTIONS)
+    par = sec["items"]["properties"]["paragraphs"]
+    par["minItems"], par["maxItems"] = 1, 2
+    para = par["items"]["properties"]
+    para["text"]["maxLength"] = 600
+    para["refs"]["maxItems"] = 12
+    return schema
+
+
+SCHEMA = _bounded(_inline(Narrative.model_json_schema()))
+OPTIONS = {"temperature": 0, "num_ctx": 8192, "num_predict": 1600}
 
 
 def narrate_with_status(ev: Evidence, client: httpx.Client | None = None) -> tuple[Narrative | None, str | None]:
@@ -46,7 +61,7 @@ def narrate_with_status(ev: Evidence, client: httpx.Client | None = None) -> tup
         for _ in range(2):
             try:
                 r = client.post("/api/chat", json={
-                    "model": MODEL, "stream": False, "format": SCHEMA, "options": {"temperature": 0},
+                    "model": MODEL, "stream": False, "format": SCHEMA, "options": OPTIONS,
                     "messages": [{"role": "system", "content": SYSTEM},
                                  {"role": "user", "content": user_message(ev, errors)}],
                 })

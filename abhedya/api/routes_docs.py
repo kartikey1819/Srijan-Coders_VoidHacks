@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 
 from abhedya import config
 from abhedya.ai import narrator
-from abhedya.ai.fallback import fallback_narrative
+from abhedya.ai.fallback import fallback_narrative, with_template_sections
 from abhedya.docs.render import FirewallError, render_case
 from abhedya.engine import get_engine
 from abhedya.evidence.build import build_evidence
@@ -27,8 +27,10 @@ def make_documents(victim: str, case: CaseInfo):
     narrative, reason = (narrator.narrate_with_status(ev) if case.use_llm else (None, "AI narrative switched off"))
     used_llm = narrative is not None
     if used_llm:
-        source = (f"Narrative drafted by the local AI model ({narrator.MODEL}) from evidence IDs only and checked by the "
-                  "validator. Every account, amount and transaction ID in this diary is inserted from the evidence.")
+        narrative = with_template_sections(narrative, ev)
+        source = (f"Summary, modus operandi and recommendation drafted by the local AI model ({narrator.MODEL}) from "
+                  "evidence IDs only and checked by the validator; layer and holding paragraphs from fixed templates. "
+                  "Every account, amount and transaction ID in this diary is inserted from the evidence.")
     else:
         narrative = fallback_narrative(ev)
         source = f"Narrative generated from fixed templates ({reason})."

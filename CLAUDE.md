@@ -30,7 +30,8 @@ Files marked `STUB` were created by A only so imports work; their owner replaces
 - `pytest`: tests run on the committed `data/sample.csv`
 - Web (dev): `cd web && npm install && npm run dev` (proxy `/api` → 127.0.0.1:8000)
 - Web (demo): `cd web && npm run build`, then `python -m abhedya serve` serves the UI at http://127.0.0.1:8000
-- Optional AI narrative: install Ollama, `ollama pull qwen2.5:3b` (override with env `ABHEDYA_LLM_MODEL`). Without it, documents use the template narrative
+- Optional AI narrative: install Ollama, `ollama pull qwen2.5:3b` (override with env `ABHEDYA_LLM_MODEL`). Without it, documents use the template narrative.
+  On the main PC Ollama lives on D: (`D:\ai-model\ollama`, models via `OLLAMA_MODELS=D:\ai-model\models`). Check: `python bench/llm_check.py --n 10`
 - Evaluation: `python -m eval.ground_truth`, then `python -m eval.evaluate` → `eval/report.md`
 - Synthetic stress data: `python tools/gen_testdata.py --seed 7` → `testdata/` (gitignored, reproducible from the seed)
 - Benchmarks: `python bench/run.py` → `bench/results.md`
