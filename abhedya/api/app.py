@@ -29,6 +29,8 @@ if (config.WEB_DIST / "index.html").exists():
 
     @app.get("/{path:path}", include_in_schema=False)
     async def spa(path: str):
+        if path == "api" or path.startswith("api/"):  # unknown API paths stay 404, never the UI page
+            return JSONResponse(status_code=404, content={"detail": "Not found"})
         f = (config.WEB_DIST / path).resolve()
         if path and f.is_file() and config.WEB_DIST.resolve() in f.parents:
             return FileResponse(f)

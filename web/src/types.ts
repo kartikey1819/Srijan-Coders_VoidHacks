@@ -1,0 +1,42 @@
+// Mirror of contracts/models.py (the API's response shapes). Money is always integer paise.
+export type Role = 'VICTIM' | 'L1' | 'L2' | 'L3'
+export type Band = 'HIGH' | 'MEDIUM' | 'LOW'
+
+export interface RiskRow { account: string; score: number; band: Band; role_hint: 'L1' | 'L2' | 'L3' | null; reasons: string[] }
+
+export interface TraceNode {
+  account: string; role: Role; hop: number; bank_prefix: string; bank_name: string; ifsc: string
+  received_paise: number; sent_paise: number; held_paise: number; first_in_ts: string | null; risk: RiskRow | null
+}
+export interface TraceEdge {
+  txn_idx: number; transaction_id: string; src: string; dst: string; ts: string; amount_paise: number
+  attributed_paise: number; hop: number; delay_s: number | null; rule: 'seed' | 'window' | 'amount_match' | 'oldest'
+  mode: string; narr_category: string; terminal: boolean
+}
+export interface TraceResult {
+  victim: string; loss_paise: number; nodes: TraceNode[]; edges: TraceEdge[]; freeze_candidates: string[]
+  warnings: string[]; elapsed_ms: number; data_sha256: string
+}
+
+export interface Counterparty { account: string; direction: 'in' | 'out'; n_txn: number; total_paise: number }
+export interface AccountSummary {
+  account: string; ifsc: string; bank_prefix: string; bank_name: string; n_in: number; n_out: number
+  sum_in_paise: number; sum_out_paise: number; first_ts: string | null; last_ts: string | null
+  top_counterparties: Counterparty[]; modes: Record<string, number>; devices: Record<string, number>
+  ip_classes: Record<string, number>; dq_flags: Record<string, number>; risk: RiskRow | null
+}
+export interface TxnRow {
+  txn_idx: number; transaction_id: string; sender: string; receiver: string; sender_ifsc: string; receiver_ifsc: string
+  amount_paise: number; ts: string; mode: string; narration: string; narr_category: string; ip: string
+  ip_class: string; device: string; device_class: string; dq_flags: string[]
+}
+
+export interface GraphNode { account: string; role: Role | 'UNKNOWN'; bank_prefix: string; risk_score: number | null; risk_band: Band | null }
+export interface GraphEdge { src: string; dst: string; n_txn: number; total_paise: number; first_ts: string; last_ts: string; txn_idxs: number[] }
+export interface RingResult { seed: string; nodes: GraphNode[]; edges: GraphEdge[]; n_txn: number; total_paise: number }
+
+export interface VictimCandidate { account: string; out_paise_to_flagged: number; first_ts: string }
+export interface DQSummary { rows: number; accounts: number; counts: Record<string, number>; input_sha256: string; ingest_seconds: Record<string, number> }
+
+export interface CaseInfo { fir_no?: string; ncrp_ack?: string; police_station?: string; io_name?: string; use_llm: boolean; seed_txns?: number[] }
+export interface CaseOutput { case_id: string; files: Record<string, string>; used_llm: boolean; llm_fallback_reason: string | null; manifest_sha256: string; facts_sha256: string }

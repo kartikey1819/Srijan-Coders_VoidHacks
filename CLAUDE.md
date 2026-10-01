@@ -28,7 +28,9 @@ Files marked `STUB` were created by A only so imports work; their owner replaces
 - `python -m abhedya ingest --data data/VoidHacks8_MuleAccount_2M_Transactions.csv` (put the CSV in `data/`; it's gitignored)
 - `python -m abhedya serve`, then open http://127.0.0.1:8000 (API under `/api`)
 - `pytest`: tests run on the committed `data/sample.csv`
-- Web: `cd web && npm install && npm run dev` (proxy `/api` → 127.0.0.1:8000)
+- Web (dev): `cd web && npm install && npm run dev` (proxy `/api` → 127.0.0.1:8000)
+- Web (demo): `cd web && npm run build`, then `python -m abhedya serve` serves the UI at http://127.0.0.1:8000
+- Optional AI narrative: install Ollama, `ollama pull qwen2.5:3b` (override with env `ABHEDYA_LLM_MODEL`). Without it, documents use the template narrative
 - Evaluation: `python -m eval.ground_truth`, then `python -m eval.evaluate` → `eval/report.md`
 - Synthetic stress data: `python tools/gen_testdata.py --seed 7` → `testdata/` (gitignored, reproducible from the seed)
 - Benchmarks: `python bench/run.py` → `bench/results.md`

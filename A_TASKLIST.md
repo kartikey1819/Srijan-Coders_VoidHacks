@@ -69,5 +69,19 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
 - **Known limits (by design, reported in the synthetic reports):** splits slower than 15 min, mule transfers from ordinary devices with weak links to other suspects, and cash-out narrations without wallet/crypto words are partly missed. The trace reproduces exact layers only for 6–9 of 80–120 synthetic victims (L1 always right, L2/L3 overlap ~0.55–0.60); on the official data it is 300/300.
 - `trace` API now accepts `seed_txn` (trace from the disputed transaction when the victim also has normal spending). C's UI should offer this.
 
+## C: Investigator UI, case documents, LLM narrator (brief: `plan/C_UI_DOCS.md`)
+- ✅ C2 `evidence/build.py`: Evidence with stable IDs (E-ACC-001, E-TXN-0001), trace hash, trace warnings
+- ✅ C3 `docs/`: case diary + one Section 94 BNSS (91 CrPC) notice per bank, A4 print layout, DRAFT watermark, **output firewall** (no account / IFSC / transaction ID / ₹ amount that isn't in the evidence)
+- ✅ C4 `ai/`: facts-only prompt, Ollama narrator (JSON schema, temperature 0), validator, deterministic fallback
+- ✅ C5 `routes_docs.py` (generate + serve case files, manifest, audit) + tests (docs, validator / injection suite, LLM on/off identical facts)
+- ✅ C1 `web/`: React + Cytoscape. Investigate tab:
+  - search with suggested victims;
+  - layered Victim → L1 → L2 → L3 graph (ordered to avoid crossing lines; red = cash-out, dashed = slower than 15 min);
+  - exact layer tables, account panel with risk reasons, minute-by-minute playback.
+  Other tabs: Syndicate ring (all 1,373 accounts, export ZIP), Flagged accounts (reason chips, CSV), Data quality.
+  Documents dialog. Shareable links `#trace=ACCOUNT`, `#ring=ACCOUNT`. Checked with headless Edge screenshots at desktop and narrow widths
+- ✅ Tests: **57 passing** (documents, firewall, LLM on/off identical facts, validator + injection suite, simulated model, document API; an unknown `/api/...` path now returns 404 instead of the UI page)
+- ⚠️ Ollama is not installed on this PC. The narrator is tested with a simulated model plus the fallback; installing Ollama and a model needs your OK
+
 ## Waiting on teammates (for A11)
 - C: `web/`, `abhedya/{evidence,ai,docs}/`, `routes_docs.py`. Contract: `contracts/models.py`; sample: `contracts/fixtures/trace_KKBK10000000.json`.

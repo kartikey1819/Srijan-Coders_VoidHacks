@@ -138,6 +138,7 @@ class CaseInfo(BaseModel):
     police_station: Optional[str] = None
     io_name: Optional[str] = None
     use_llm: bool = True
+    seed_txns: list[int] = []        # txn_idx of the disputed transaction(s); empty = all victim outflows
 
 class EvidenceAccount(BaseModel):
     eid: str                         # "E-ACC-001"
@@ -161,6 +162,8 @@ class EvidenceTxn(BaseModel):
     attributed_paise: int
     mode: str
     hop: int
+    rule: str = ""                    # which trace rule linked this transfer (seed/window/amount_match/oldest)
+    delay_s: Optional[int] = None
 
 class Evidence(BaseModel):
     case_id: str
@@ -173,6 +176,9 @@ class Evidence(BaseModel):
     data_sha256: str
     trace_sha256: str
     case: CaseInfo
+    warnings: list[str] = []         # trace warnings the IO must see (e.g. ambiguous attribution)
+    dq_notes: list[str] = []         # data-quality flags on the trail's rows
+    facts_sha256: str = ""           # fingerprint of every fact in the documents (same with LLM on or off)
 
 class NarrParagraph(BaseModel):
     text: str                        # no digits runs >= 4, no ₹, no account/txn-like tokens
@@ -191,3 +197,4 @@ class CaseOutput(BaseModel):
     used_llm: bool
     llm_fallback_reason: Optional[str] = None
     manifest_sha256: str
+    facts_sha256: str = ""
