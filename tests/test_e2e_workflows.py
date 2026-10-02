@@ -100,6 +100,7 @@ def test_w2_victim_trace_shows_exact_layers(page, base):
         boxes = page.locator(f".tbox[data-role={role}]")
         shown = {boxes.nth(i).get_attribute("data-acct") for i in range(boxes.count())}
         assert shown == {n.account for n in api.nodes if n.role == role}, role
+    page.wait_for_function("document.querySelector('.jstrip').innerText.includes('5\\ndistributors')")   # figures count up once
     strip = page.locator(".jstrip").inner_text()
     assert "1\ncollector" in strip and "5\ndistributors" in strip and "5\ncash-out accounts" in strip
     assert "₹4,55,541.61" in page.locator(".headline").inner_text()

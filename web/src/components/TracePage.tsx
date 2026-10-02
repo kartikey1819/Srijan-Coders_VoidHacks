@@ -185,7 +185,7 @@ export function TracePage({ account, seeds, reasons }: Props) {
           </Panel>
 
           <div className="two-col">
-            <Panel title="Collector account: first minutes after the victim's payment" note="Money in above the line, money out below">
+            <Panel title="What the collector did with the money" note={view.collector ? `${view.collector.account} · ${view.collector.bank_name}` : undefined}>
               <PassWindow t={trace} v={view} />
             </Panel>
             <Panel title="Trace record" note="How this result was produced" flush>

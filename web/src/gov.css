@@ -282,3 +282,107 @@ body { font-size: var(--fs); line-height: 1.5; }
 .j-wrap:first-child { flex: 0 1 160px; }
 @media (max-width: 1520px) { .insights { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .insights { grid-template-columns: minmax(0, 1fr); } }
+
+/* sidebar footer: the open case and its size, nothing more */
+.side-foot { gap: 8px; }
+.sf-title { margin-bottom: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--side-muted); font-weight: 600; }
+.side-foot select, .sf-file { font-size: 13.5px; height: 36px; border-radius: var(--radius); padding: 0 8px; text-overflow: ellipsis; }
+.sf-file { display: flex; align-items: center; color: var(--side-ink); overflow: hidden; white-space: nowrap; }
+.sf-stats { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sf-stats > div { background: rgba(255, 255, 255, 0.06); border-radius: var(--radius); padding: 7px 9px; }
+.sf-stats dt { font-size: 11.5px; color: var(--side-muted); }
+.sf-stats dd { margin: 0; font-size: 15px; font-weight: 700; color: var(--side-ink); }
+.sf-note { margin-top: 0; font-size: 12px; }
+
+/* collector chart: facts as figures, the chart only draws */
+.pw { display: flex; flex-direction: column; gap: 12px; }
+.pw-figs { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.pw-figs > div { border: 1px solid var(--rule); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pw-figs dt { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.pw-figs dd { margin: 0; font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+.pw-figs span { font-size: 12.5px; color: var(--muted); }
+.pw-figs .ok-fig { color: var(--ok); }
+@media (max-width: 1700px) { .pw-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.w-side { font-size: 12px; font-weight: 600; fill: var(--muted); }
+.pw-key { margin: 0; display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.pw-key b { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.pw-key i { display: inline-block; width: 16px; border-top: 2px solid var(--victim); opacity: 0.6; margin-right: 6px; vertical-align: 3px; }
+
+/* ---------- trace: summary strip, money now, insight cards (motion: transform / opacity only, once per trace) ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes grow-x-once { from { transform: scaleX(0); } }
+@keyframes draw-line { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@keyframes flow { to { stroke-dashoffset: -32; } }
+@keyframes draw-1 { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes arc { from { stroke-dashoffset: var(--c); } }
+
+.j-st { position: relative; animation: rise 280ms var(--ease) both; animation-delay: var(--d, 0ms); padding-bottom: 14px; }
+.j-st .j-big { font-variant-numeric: tabular-nums; }
+.j-share { position: absolute; left: 10px; right: 10px; bottom: 6px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--jc) 18%, transparent); overflow: hidden; }
+.j-share i { display: block; height: 100%; background: var(--jc); transform-origin: 0 50%; animation: grow-x-once 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 200ms); }
+.j-gap { animation: rise 280ms var(--ease) both; animation-delay: calc(var(--d, 0ms) - 40ms); }
+.j-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--sheet-2);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 1px 8px; margin-bottom: 2px; white-space: nowrap; }
+.j-line { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; stroke-dasharray: 100; animation: draw-line 420ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 60ms); }
+.j-flow { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; stroke-dasharray: 4 12; stroke-linecap: round; opacity: 0.85;
+  animation: flow 1.1s linear 3; animation-delay: calc(var(--d, 0ms) + 480ms); }
+
+.moneynow { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--rule-2); display: flex; flex-direction: column; gap: 8px; }
+.mn-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.mn-head b { font-size: 15px; }
+.mn-bar { display: flex; height: 16px; gap: 3px; border-radius: 6px; overflow: hidden; }
+.mn-bar i { display: block; min-width: 4px; height: 100%; transform-origin: 0 50%; animation: grow-x-once 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 300ms); }
+.mn-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13.5px; }
+.mn-legend li { display: flex; align-items: center; gap: 6px; }
+.mn-legend b { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.mn-amt { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.ig { animation: rise 280ms var(--ease) both; animation-delay: var(--d, 0ms); gap: 14px; }
+.ig-h { display: flex; align-items: center; gap: 10px; }
+.ig-h h3 { font-size: 15px; font-weight: 700; color: var(--ink); }
+.ig-ic { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+.ig-main { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.ig-foot { margin: 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--muted); }
+.ig-big { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.ig-big small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.45; margin-top: 4px; }
+.ig-layers { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--ink-2); }
+.ig-layers b { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
+.donut-arc { animation: arc 700ms var(--ease) both; animation-delay: 150ms; }
+.fan-l { stroke-dasharray: 1; opacity: 0.6; animation: draw-1 500ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 200ms); }
+
+.ruler { position: relative; height: 46px; margin: 4px 4px 0; }
+.ruler::before { content: ""; position: absolute; left: 0; right: 0; top: 14px; height: 6px; border-radius: 3px; background: var(--grid); }
+.r-band { position: absolute; top: 10px; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--l1) 22%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--l1) 60%, transparent); }
+.r-band em { position: absolute; left: 0; top: -17px; white-space: nowrap; font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--l1); }
+.r-mark { position: absolute; top: 7px; width: 0; animation: rise 300ms var(--ease) both; animation-delay: 450ms; }
+.r-mark i { position: absolute; left: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--l1); border: 3px solid var(--sheet);
+  box-shadow: 0 0 0 1px var(--l1); }
+.r-tick { position: absolute; top: 28px; font-size: 11.5px; color: var(--muted); transform: translateX(-50%); }
+.r-tick.end { right: 0; transform: none; }
+
+.meters { display: flex; flex-direction: column; gap: 9px; flex: 1; min-width: 0; }
+.mtr { display: flex; flex-direction: column; gap: 4px; }
+.mt-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.mt-row b { font-variant-numeric: tabular-nums; }
+.mt-row small { font-weight: 400; color: var(--muted); }
+.mt-track { height: 7px; border-radius: 4px; background: var(--grid); overflow: hidden; display: block; }
+.mt-track i { display: block; height: 100%; border-radius: 4px; transform-origin: 0 50%; animation: grow-x-once 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 250ms); }
+
+.bank-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bank-bars li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.bb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-track { height: 7px; border-radius: 4px; background: var(--grid); overflow: hidden; display: block; }
+.bb-track i { display: block; height: 100%; background: var(--ok); border-radius: 4px; transform-origin: 0 50%; animation: grow-x-once 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 300ms); }
+.bank-bars b { font-variant-numeric: tabular-nums; }
+.bank-bars .bb-more { display: block; font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .j-st, .j-gap, .j-share i, .j-line, .j-flow, .mn-bar i, .ig, .donut-arc, .fan-l, .r-mark, .mt-track i, .bb-track i { animation: none !important; }
+  .j-flow { display: none; }
+}
+/* the flowing dashes show the direction once, then leave a clean solid arrow */
+@keyframes flow { from { opacity: 0.85; stroke-dashoffset: 0; } to { opacity: 0.85; stroke-dashoffset: -32; } }
+.j-flow { opacity: 0; }
+.mt-row b { white-space: nowrap; }
+.j-sub { font-family: var(--font); }

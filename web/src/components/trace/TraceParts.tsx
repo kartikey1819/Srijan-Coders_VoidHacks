@@ -1,47 +1,108 @@
-import { Bank, Desktop, Globe, Snowflake, User, Users, Wallet } from '@phosphor-icons/react'
-import type { ComponentType, ReactNode } from 'react'
+import { Bank, Clock, Globe, Lightning, ShieldCheck, Snowflake, TreeStructure, User, Users, Wallet } from '@phosphor-icons/react'
+import { useEffect, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { inr, inrShort, toEpoch } from '../../format'
+import { prefersReducedMotion } from '../../look'
 import type { TraceResult, TxnRow } from '../../types'
 import { RoleBadge } from '../Page'
-import { after, duration, plainWarning, when, type Signs, type TraceView } from './model'
+import { after, plainWarning, when, type Signs, type TraceView } from './model'
 
 const roleVar = (r: string) => (r === 'L1' || r === 'L2' || r === 'L3' ? `var(--${r.toLowerCase()})` : 'var(--victim)')
+const ROLE_PLURAL: Record<string, [string, string]> = { L1: ['collector', 'collectors'], L2: ['distributor', 'distributors'], L3: ['cash-out account', 'cash-out accounts'] }
 
-/** The money's journey as stations: victim, collectors, distributors, cash-out, and what can still be frozen. */
+/** A figure that counts up once when a trace opens (ease-out, 700 ms); the final text is always the exact value.
+ *  Reduced motion shows the value at once. */
+export function CountUp({ value, format, ms = 700 }: { value: number; format: (n: number) => string; ms?: number }) {
+  const [shown, setShown] = useState(() => (prefersReducedMotion() ? value : 0))
+  useEffect(() => {
+    if (prefersReducedMotion()) { setShown(value); return }
+    let raf = 0
+    const start = performance.now()
+    const tick = (now: number) => {
+      const k = Math.min(1, (now - start) / ms), e = 1 - Math.pow(1 - k, 3)
+      setShown(k >= 1 ? value : value * e)
+      if (k < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [value, ms])
+  return <span aria-label={format(value)}>{format(shown === value ? value : Math.round(shown))}</span>
+}
+
+const delay = (i: number, step = 90): CSSProperties => ({ ['--d' as string]: `${i * step}ms` })
+
+/** The money's journey as stations (victim, each layer, what can still be frozen), then where the money is now. */
 export function JourneyStrip({ t, v }: { t: TraceResult; v: TraceView }) {
-  type St = { k: string; icon: ComponentType<{ size?: number; weight?: 'regular' | 'fill' }>; big: string; label: string; sub: string; gap?: string }
-  const st: St[] = [{ k: 'VICTIM', icon: User, big: inrShort(t.loss_paise), label: 'taken from victim', sub: v.victim.account }]
-  const add = (k: 'L1' | 'L2' | 'L3', one: string, many: string, verb: string) => {
-    if (!v.counts[k]) return
-    st.push({ k, icon: k === 'L1' ? Wallet : k === 'L2' ? Users : Bank, big: String(v.counts[k]), label: v.counts[k] === 1 ? one : many,
-              sub: `${inrShort(v.received[k])} ${verb}`, gap: v.firstAt[k] !== undefined ? after(v.firstAt[k]! - v.t0) : '' })
+  type St = { k: string; icon: ComponentType<{ size?: number; weight?: 'regular' | 'fill' }>; big: ReactNode; label: string; sub: string
+    gap?: string; share: number }
+  const st: St[] = [{ k: 'VICTIM', icon: User, big: <CountUp value={t.loss_paise} format={inrShort} />, label: 'taken from victim',
+                      sub: v.victim.account, share: 100 }]
+  for (const k of ['L1', 'L2', 'L3'] as const) {
+    if (!v.counts[k]) continue
+    st.push({ k, icon: k === 'L1' ? Wallet : k === 'L2' ? Users : Bank, big: <CountUp value={v.counts[k]} format={(n) => String(Math.round(n))} />,
+              label: ROLE_PLURAL[k][v.counts[k] === 1 ? 0 : 1], sub: `${inrShort(v.received[k])} received`,
+              gap: v.firstAt[k] !== undefined ? after(v.firstAt[k]! - v.t0) : '', share: Math.round((100 * v.received[k]) / Math.max(1, t.loss_paise)) })
   }
-  add('L1', 'collector', 'collectors', 'received')
-  add('L2', 'distributor', 'distributors', 'passed on')
-  add('L3', 'cash-out account', 'cash-out accounts', 'landed')
-  st.push({ k: 'OK', icon: Snowflake, big: inrShort(v.freezeTotal), label: 'can still be frozen',
+  st.push({ k: 'OK', icon: Snowflake, big: <CountUp value={v.freezeTotal} format={inrShort} />, label: 'can still be frozen',
             sub: `${v.freeze.length} account${v.freeze.length === 1 ? '' : 's'} · ${v.freezeBanks} bank${v.freezeBanks === 1 ? '' : 's'}`,
-            gap: after(v.spanS) })
+            gap: after(v.spanS), share: v.recPct })
   return (
-    <ol className="jstrip" aria-label="Where the victim's money went">
-      {st.map((s, i) => (
-        <li key={s.k} className="j-wrap">
-          {i > 0 && (
-            <div className="j-gap" aria-hidden="true"><span>{s.gap}</span>
-              <svg width="100%" height="12" preserveAspectRatio="none" viewBox="0 0 100 12">
-                <path d="M0,6 H92 M86,1 L94,6 L86,11" fill="none" strokeWidth="2" vectorEffect="non-scaling-stroke"
-                      style={{ stroke: s.k === 'OK' ? 'var(--ok)' : roleVar(s.k) }} /></svg>
+    <>
+      <ol className="jstrip" aria-label="Where the victim's money went">
+        {st.map((s, i) => (
+          <li key={s.k} className="j-wrap">
+            {i > 0 && (
+              <div className="j-gap" aria-hidden="true" style={delay(i)}>
+                <span className="j-pill"><Clock size={12} weight="fill" /> {s.gap}</span>
+                <svg width="100%" height="14" preserveAspectRatio="none" viewBox="0 0 100 14">
+                  <path className="j-line" pathLength={100} d="M0,7 H93" style={{ stroke: s.k === 'OK' ? 'var(--ok)' : roleVar(s.k) }} />
+                  <path className="j-flow" d="M0,7 H93" style={{ stroke: s.k === 'OK' ? 'var(--ok)' : roleVar(s.k) }} />
+                  <path d="M87,2 L95,7 L87,12" fill="none" strokeWidth="2" vectorEffect="non-scaling-stroke"
+                        style={{ stroke: s.k === 'OK' ? 'var(--ok)' : roleVar(s.k) }} />
+                </svg>
+              </div>
+            )}
+            <div className={`j-st j-${s.k}`} style={delay(i)}>
+              <span className="j-ic"><s.icon size={20} weight="fill" /></span>
+              <b className="j-big">{s.big}</b>
+              <span className="j-lbl">{s.label}</span>
+              <span className="j-sub">{s.sub}</span>
+              <span className="j-share" title={`${s.share}% of the money taken`}><i style={{ transform: `scaleX(${Math.min(1, s.share / 100)})` }} /></span>
             </div>
-          )}
-          <div className={`j-st j-${s.k}`}>
-            <span className="j-ic"><s.icon size={20} weight="fill" /></span>
-            <b className="j-big">{s.big}</b>
-            <span className="j-lbl">{s.label}</span>
-            <span className="j-sub">{s.sub}</span>
-          </div>
-        </li>
-      ))}
-    </ol>
+          </li>
+        ))}
+      </ol>
+      <MoneyNow t={t} v={v} />
+    </>
+  )
+}
+
+/** Where the victim's money sits right now, by layer, and how much has already left the trail. */
+function MoneyNow({ t, v }: { t: TraceResult; v: TraceView }) {
+  const held = { L1: 0, L2: 0, L3: 0 }
+  for (const n of v.mules) if (n.role === 'L1' || n.role === 'L2' || n.role === 'L3') held[n.role] += n.held_paise
+  const gone = Math.max(0, t.loss_paise - v.freezeTotal)
+  const parts = [
+    { k: 'L1', label: 'with collectors', value: held.L1, color: 'var(--l1)' },
+    { k: 'L2', label: 'with distributors', value: held.L2, color: 'var(--l2)' },
+    { k: 'L3', label: 'in cash-out accounts', value: held.L3, color: 'var(--l3)' },
+    { k: 'GONE', label: 'already withdrawn or moved on', value: gone, color: 'var(--bar-off)' },
+  ].filter((p) => p.value > 0)
+  const total = Math.max(1, t.loss_paise)
+  return (
+    <div className="moneynow">
+      <div className="mn-head"><b>Where the money is now</b><span className="muted">of {inr(t.loss_paise)} taken</span></div>
+      <div className="mn-bar" role="img" aria-label={parts.map((p) => `${inr(p.value)} ${p.label}`).join(', ')}>
+        {parts.map((p, i) => (
+          <i key={p.k} style={{ flexGrow: p.value / total, background: p.color, ...delay(i, 120) }} title={`${p.label}: ${inr(p.value)}`} />
+        ))}
+      </div>
+      <ul className="mn-legend">
+        {parts.map((p) => (
+          <li key={p.k}><b style={{ background: p.color }} /><span className="mn-amt">{inr(p.value)}</span>
+            <span className="muted">{p.label} · {Math.round((100 * p.value) / total)}%</span></li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -51,7 +112,8 @@ export function Donut({ pct, color, center, sub, size = 96 }: { pct: number; col
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="donut-ring" role="img" aria-label={`${center} ${sub}`}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} style={{ stroke: 'var(--grid)' }} />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round" className="donut-arc"
-              strokeDasharray={`${(c * p) / 100} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} style={{ stroke: color }} />
+              strokeDasharray={c} transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{ stroke: color, strokeDashoffset: c * (1 - p / 100), ['--c' as string]: c }} />
       <text x="50%" y="49%" textAnchor="middle" className="donut-c" style={{ fill: color }}>{center}</text>
       <text x="50%" y="67%" textAnchor="middle" className="donut-s">{sub}</text>
     </svg>
@@ -61,88 +123,122 @@ export function Donut({ pct, color, center, sub, size = 96 }: { pct: number; col
 /** Victim, then 1 → n → m dots per layer. */
 function FanMini({ counts }: { counts: Record<'L1' | 'L2' | 'L3', number> }) {
   const cols = ([['VICTIM', 1], ['L1', counts.L1], ['L2', counts.L2], ['L3', counts.L3]] as [string, number][]).filter(([, n]) => n > 0)
-  const W = 150, H = 96, show = (n: number) => Math.min(n, 8)
+  const W = 150, H = 92, show = (n: number) => Math.min(n, 8)
   const pts = cols.map(([k, n], ci) => Array.from({ length: show(n) }, (_, i) => ({
-    k, x: 12 + (ci * (W - 24)) / Math.max(1, cols.length - 1), y: H / 2 - 6 + (i - (show(n) - 1) / 2) * 10,
+    k, x: 12 + (ci * (W - 24)) / Math.max(1, cols.length - 1), y: H / 2 + (i - (show(n) - 1) / 2) * 10,
   })))
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" className="fan">
       {pts.slice(1).map((col, ci) => col.map((p, i) => {
         const prev = pts[ci], q = prev[Math.min(prev.length - 1, Math.floor((i * prev.length) / col.length))]
-        return <path key={`${ci}-${i}`} d={`M${q.x},${q.y} C${(q.x + p.x) / 2},${q.y} ${(q.x + p.x) / 2},${p.y} ${p.x},${p.y}`}
-                     fill="none" strokeWidth="1.4" style={{ stroke: roleVar(p.k), opacity: 0.55 }} />
+        return <path key={`${ci}-${i}`} className="fan-l" pathLength={1} style={{ stroke: roleVar(p.k), ...delay(ci, 160) }}
+                     d={`M${q.x},${q.y} C${(q.x + p.x) / 2},${q.y} ${(q.x + p.x) / 2},${p.y} ${p.x},${p.y}`} fill="none" strokeWidth="1.4" />
       }))}
       {pts.flat().map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" style={{ fill: roleVar(p.k) }} />)}
-      {cols.map(([k, n], ci) => <text key={k} x={pts[ci][0].x} y={H - 2} textAnchor="middle" className="fan-t" style={{ fill: roleVar(k) }}>{k === 'VICTIM' ? 'V' : n}</text>)}
     </svg>
   )
 }
 
-function IconStat({ icon: Icon, color, value, label }: { icon: ComponentType<{ size?: number }>; color: string; value: ReactNode; label: string }) {
+function Card({ icon: Icon, color, title, children, foot, i }: {
+  icon: ComponentType<{ size?: number; weight?: 'regular' | 'fill' }>; color: string; title: string; children: ReactNode; foot?: ReactNode; i: number
+}) {
   return (
-    <div className="istat">
-      <span className="istat-ic" style={{ color, background: `color-mix(in srgb, ${color} 13%, transparent)` }}><Icon size={16} /></span>
-      <div><b style={{ color }}>{value}</b><span>{label}</span></div>
+    <section className="gpanel ig" aria-label={title} style={delay(i, 70)}>
+      <header className="ig-h"><span className="ig-ic" style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}><Icon size={17} weight="fill" /></span>
+        <h3>{title}</h3></header>
+      <div className="ig-main">{children}</div>
+      {foot && <p className="ig-foot">{foot}</p>}
+    </section>
+  )
+}
+
+function Meter({ label, n, of, color, i }: { label: string; n: number; of: number; color: string; i: number }) {
+  return (
+    <div className="mtr">
+      <div className="mt-row"><span>{label}</span><b style={{ color }}>{n}<small> of {of}</small></b></div>
+      <span className="mt-track"><i style={{ transform: `scaleX(${of ? n / of : 0})`, background: color, ...delay(i, 110) }} /></span>
     </div>
   )
 }
 
-/** Four plain answers: how fast, how wide, how organised, how much can be recovered. */
+/** Four plain answers, each with a picture: how fast, how wide, how organised, how much can be recovered. */
 export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs: Signs | null }) {
-  const moved = t.loss_paise - v.freezeTotal
+  const pm = v.passMin
+  const scale = Math.max(20, Math.ceil(((pm ?? 0) + 2) / 5) * 5)
+  const at = (m: number) => `${(100 * Math.min(m, scale)) / scale}%`
+  const byBank = new Map<string, number>()
+  for (const n of v.freeze) byBank.set(n.bank_name, (byBank.get(n.bank_name) ?? 0) + n.held_paise)
+  const banks = [...byBank.entries()].sort((a, b) => b[1] - a[1])
+  const topBank = Math.max(1, banks[0]?.[1] ?? 1)
+  const moved = Math.max(0, t.loss_paise - v.freezeTotal)
   return (
     <div className="insights">
-      <section className="gpanel ig" aria-label="How fast the money moved">
-        <h3>How fast the money moved</h3>
-        {v.collector && v.passMin !== null ? (
-          <div className="ig-row">
-            <Donut pct={v.passPct} color="var(--l1)" center={`${v.passPct}%`} sub="moved out" />
-            <p className="ig-fig" style={{ color: 'var(--l1)' }}>{duration(v.passMin * 60)}
-              <small>for the collector account to pass on the victim's money. Genuine accounts rarely do this.</small></p>
+      <Card i={0} icon={Lightning} color="var(--l1)" title="How fast the money moved"
+            foot={pm !== null && pm <= 15 ? 'Genuine accounts rarely pass money on this fast.' : pm !== null ? 'Slower than the usual 3 to 15 minute mule pattern.' : undefined}>
+        {v.collector && pm !== null ? <>
+          <p className="ig-big" style={{ color: 'var(--l1)' }}><CountUp value={Math.round(pm)} format={(n) => `${Math.round(n)} min`} />
+            <small>for the collector to pass on {v.passPct}% of the victim's money</small></p>
+          <div className="ruler" role="img" aria-label={`${Math.round(pm)} minutes; the mule pattern is 3 to 15 minutes`}>
+            <span className="r-band" style={{ left: at(3), width: `calc(${at(15)} - ${at(3)})` }}><em>mule pattern 3-15 min</em></span>
+            <span className="r-mark" style={{ left: at(pm) }}><i /></span>
+            <span className="r-tick" style={{ left: '0%' }}>0</span>
+            <span className="r-tick" style={{ left: at(15) }}>15</span>
+            <span className="r-tick end">{scale} min</span>
           </div>
-        ) : <p className="muted">No collector account passed money on.</p>}
-      </section>
-      <section className="gpanel ig" aria-label="How widely it was spread">
-        <h3>How widely it was spread</h3>
+        </> : <p className="muted">No collector account passed money on.</p>}
+      </Card>
+      <Card i={1} icon={TreeStructure} color="var(--l2)" title="How widely it was spread"
+            foot={<span className="bchips">{v.banks.map((b) => <span key={b}>{b}</span>)}</span>}>
         <div className="ig-row">
           <FanMini counts={v.counts} />
-          <p className="ig-fig" style={{ color: 'var(--l2)' }}>{v.mules.length} accounts<small>in {v.banks.length} bank{v.banks.length === 1 ? '' : 's'}</small></p>
+          <div>
+            <p className="ig-big" style={{ color: 'var(--l2)' }}><CountUp value={v.mules.length} format={(n) => `${Math.round(n)}`} /> accounts
+              <small>in {v.banks.length} bank{v.banks.length === 1 ? '' : 's'}</small></p>
+            <ul className="ig-layers">
+              {(['L1', 'L2', 'L3'] as const).filter((k) => v.counts[k]).map((k) => (
+                <li key={k}><b style={{ background: roleVar(k) }} />{v.counts[k]} {ROLE_PLURAL[k][v.counts[k] === 1 ? 0 : 1]}</li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <div className="bchips">{v.banks.map((b) => <span key={b}>{b}</span>)}</div>
-      </section>
-      <section className="gpanel ig" aria-label="Signs of an organised operation">
-        <h3>Signs of an organised operation</h3>
+      </Card>
+      <Card i={2} icon={Globe} color="var(--held)" title="Signs of an organised operation"
+            foot={signs?.ranges.length ? `Foreign proxy IP ranges seen: ${signs.ranges.join(', ')}` : undefined}>
         {signs ? (
           <div className="ig-row">
-            <Donut pct={signs.automatedPct} color="var(--l3)" center={`${signs.automatedPct}%`} sub="automated" />
-            <div className="istats">
-              <IconStat icon={Globe} color="var(--held)" value={signs.proxy}
-                        label={`transfers from foreign proxy IPs${signs.ranges.length ? ` (${signs.ranges.join(', ')})` : ''}`} />
-              <IconStat icon={Desktop} color="var(--l2)" value={signs.script} label="transfers by scripts or emulators" />
-              <IconStat icon={Wallet} color="var(--l3)" value={signs.cashout} label="cash-outs to wallets or crypto" />
+            <Donut pct={signs.automatedPct} color="var(--held)" center={`${signs.automatedPct}%`} sub="automated" />
+            <div className="meters">
+              <Meter i={0} label="From foreign proxy IPs" n={signs.proxy} of={signs.total} color="var(--held)" />
+              <Meter i={1} label="By scripts or emulators" n={signs.script} of={signs.total} color="var(--l2)" />
+              <Meter i={2} label="Cashed out to wallets or crypto" n={signs.cashout} of={signs.total} color="var(--l3)" />
             </div>
           </div>
         ) : <p className="muted">Reading the transfers…</p>}
-      </section>
-      <section className="gpanel ig" aria-label="Amount that can be recovered">
-        <h3>Amount that can be recovered</h3>
+      </Card>
+      <Card i={3} icon={ShieldCheck} color="var(--ok)" title="Amount that can be recovered"
+            foot={<>Already withdrawn or moved on: <b>{inr(moved)}</b></>}>
         <div className="ig-row">
           <Donut pct={v.recPct} color="var(--ok)" center={`${v.recPct}%`} sub="recoverable" />
-          <p className="ig-fig" style={{ color: 'var(--ok)' }}>{inrShort(v.freezeTotal)}
+          <p className="ig-big" style={{ color: 'var(--ok)' }}><CountUp value={v.freezeTotal} format={inrShort} />
             <small>held in {v.freeze.length} account{v.freeze.length === 1 ? '' : 's'} at {v.freezeBanks} bank{v.freezeBanks === 1 ? '' : 's'}</small></p>
         </div>
-        <div className="split" role="img" aria-label={`${inr(v.freezeTotal)} can be frozen, ${inr(moved)} already withdrawn or moved on`}>
-          <i style={{ width: `${(100 * v.freezeTotal) / Math.max(1, t.loss_paise)}%`, background: 'var(--ok)' }} />
-          <i style={{ width: `${(100 * moved) / Math.max(1, t.loss_paise)}%`, background: 'var(--bar-off)' }} />
-        </div>
-        <div className="split-lg"><span><b style={{ background: 'var(--ok)' }} />Can be frozen <em>{inrShort(v.freezeTotal)}</em></span>
-          <span><b style={{ background: 'var(--bar-off)' }} />Already withdrawn or moved on <em>{inrShort(moved)}</em></span></div>
-      </section>
+        {banks.length > 0 && (
+          <ul className="bank-bars" aria-label="Largest amounts to freeze, by bank">
+            {banks.slice(0, 3).map(([b, amt], i) => (
+              <li key={b}><span className="bb-name">{b}</span>
+                <span className="bb-track"><i style={{ transform: `scaleX(${amt / topBank})`, ...delay(i, 110) }} /></span>
+                <b>{inrShort(amt)}</b></li>
+            ))}
+            {banks.length > 3 && <li className="muted bb-more">and {banks.length - 3} more bank{banks.length - 3 === 1 ? '' : 's'}</li>}
+          </ul>
+        )}
+      </Card>
     </div>
   )
 }
 
-/** The collector's own ledger right after the victim's credit: the credit up, its debits down, the balance draining. */
+/** The collector's own ledger right after the victim's money arrived: the facts as four figures, then a plain chart
+ *  (money in above the line, each payment out below it, the balance stepping down). */
 export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
   const c = v.collector
   if (!c) return <p className="muted">There is no collector account on this trail.</p>
@@ -150,48 +246,60 @@ export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
     ?? t.edges.filter((e) => e.dst === c.account).sort((a, b) => toEpoch(a.ts) - toEpoch(b.ts))[0]
   const debits = t.edges.filter((e) => e.src === c.account).sort((a, b) => toEpoch(a.ts) - toEpoch(b.ts))
   if (!credit || !debits.length) return <p className="muted">The collector has not passed any money on.</p>
-  const W = 760, H = 270, AX = 150, L = 40, R = 30
   const ct = toEpoch(credit.ts), amount = credit.attributed_paise
   const off = (ts: string) => (toEpoch(ts) - ct) / 60
   const lastM = off(debits[debits.length - 1].ts)
   const win = lastM <= 15 ? 15 : Math.min(60, Math.ceil(lastM / 5) * 5)
   const inWin = debits.filter((e) => off(e.ts) <= win)
-  const x = (m: number) => L + (Math.min(Math.max(m, 0), win) / win) * (W - L - R)
+  const later = debits.length - inWin.length
   const outSum = inWin.reduce((s, e) => s + e.attributed_paise, 0)
-  const pct = Math.round((100 * outSum) / amount)
+  const left = Math.max(0, amount - outSum)
+  const pct = (n: number) => Math.round((100 * n) / amount)
   const receivers = new Set(inWin.map((e) => e.dst)).size
-  const first = Math.max(0, off(debits[0].ts)), fm = Math.floor(first), fs = Math.round((first - fm) * 60)
-  const yb = (val: number) => AX - (96 * val) / amount
-  let bal = amount, path = `M${x(0) + 6},${yb(bal)}`
+  const first = Math.max(0, (toEpoch(debits[0].ts) - ct))
+  const firstText = first < 60 ? `${first} s` : `${Math.floor(first / 60)} min ${String(first % 60).padStart(2, '0')} s`
+
+  const W = 720, H = 190, AX = 92, L = 44, R = 16, UP = 70, DOWN = 70
+  const x = (m: number) => L + (Math.min(Math.max(m, 0), win) / win) * (W - L - R)
+  const yb = (val: number) => AX - (UP * val) / amount
+  let bal = amount, path = `M${x(0)},${yb(bal)}`
   for (const e of inWin) { path += ` H${x(off(e.ts))}`; bal = Math.max(0, bal - e.attributed_paise); path += ` V${yb(bal)}` }
   path += ` H${x(win)}`
-  const leftPct = Math.round((100 * bal) / amount)
+  const step = win <= 15 ? 5 : win <= 30 ? 5 : 10
+
   return (
-    <svg className="win" viewBox={`0 0 ${W} ${H}`} role="img"
-         aria-label={`${inr(amount)} arrives at ${c.account}; ${inWin.length} debits to ${receivers} accounts within ${win} minutes, ${pct}% passed on`}>
-      <text x={(x(0) + x(win)) / 2} y={18} textAnchor="middle" className="w-cap">First {win} minutes after the credit</text>
-      {Array.from({ length: win / 5 + 1 }, (_, i) => (
-        <g key={i}>
-          <line x1={x(i * 5)} x2={x(i * 5)} y1={40} y2={H - 30} className="w-grid" />
-          <text x={x(i * 5)} y={H - 10} textAnchor="middle" className="w-tick">{i * 5}{i === 0 || i === win / 5 ? ' min' : ''}</text>
-        </g>
-      ))}
-      <line x1={L - 30} x2={W - R + 20} y1={AX} y2={AX} className="w-axis" />
-      <path d={`${path} V${AX} H${x(0) + 6} Z`} style={{ fill: 'var(--victim)', opacity: 0.09 }} />
-      <path d={path} fill="none" strokeWidth="1.6" style={{ stroke: 'var(--victim)', opacity: 0.6 }} />
-      <text x={x(win) - 4} y={yb(bal) - 8} textAnchor="end" className="w-bal">balance left: {inr(bal)} ({leftPct}%)</text>
-      <rect x={x(0) - 5} y={AX - 96} width={10} height={96} rx="2" style={{ fill: 'var(--victim)' }} />
-      <text x={x(0) + 14} y={AX - 80} className="w-big">{inr(amount)} arrives</text>
-      <text x={x(0) + 14} y={AX - 62} className="w-note">from the victim · {credit.ts.slice(11, 16)}</text>
-      {inWin.map((e, i) => (
-        <rect key={i} x={x(off(e.ts)) - 5} y={AX + 1} width={10} height={Math.max(4, (e.attributed_paise / amount) * 96)} rx="2"
-              style={{ fill: 'var(--l1)' }}><title>{`${e.ts.slice(11)} · ${inr(e.attributed_paise)} → ${e.dst}`}</title></rect>
-      ))}
-      <line x1={x(first)} x2={x(first)} y1={AX - 34} y2={AX - 6} className="w-axis" />
-      <text x={x(first)} y={AX - 40} textAnchor={first < win * 0.15 ? 'start' : 'middle'} className="w-note">first debit after {fm} min {fs} s</text>
-      <text x={W - R} y={AX - 50} textAnchor="end" className="w-big">{inWin.length} debit{inWin.length === 1 ? '' : 's'} to {receivers} different account{receivers === 1 ? '' : 's'}</text>
-      <text x={W - R} y={AX - 30} textAnchor="end" className="w-note">{inr(outSum)} out = {pct}% of the credit</text>
-    </svg>
+    <div className="pw">
+      <dl className="pw-figs">
+        <div><dt>Received from the victim</dt><dd>{inr(amount)}</dd><span>at {credit.ts.slice(11, 16)}</span></div>
+        <div><dt>First money out</dt><dd>{firstText}</dd><span>after it arrived</span></div>
+        <div><dt>Passed on</dt><dd>{inr(outSum)}</dd>
+          <span>{pct(outSum)}% · {inWin.length} payment{inWin.length === 1 ? '' : 's'} to {receivers} account{receivers === 1 ? '' : 's'}</span></div>
+        <div><dt>Left in the account</dt><dd className="ok-fig">{inr(left)}</dd><span>{pct(left)}% of what arrived</span></div>
+      </dl>
+      <svg className="win" viewBox={`0 0 ${W} ${H}`} role="img"
+           aria-label={`${inr(amount)} arrived; ${inWin.length} payments out to ${receivers} accounts within ${win} minutes; ${pct(outSum)}% passed on`}>
+        {Array.from({ length: win / step + 1 }, (_, i) => (
+          <g key={i}>
+            <line x1={x(i * step)} x2={x(i * step)} y1={AX - UP - 4} y2={AX + DOWN} className="w-grid" />
+            <text x={x(i * step)} y={H - 4} textAnchor={i === win / step ? 'end' : i === 0 ? 'start' : 'middle'} className="w-tick">{i * step}{i === win / step ? ' min' : ''}</text>
+          </g>
+        ))}
+        <text x={L - 8} y={AX - UP / 2} textAnchor="end" className="w-side">in</text>
+        <text x={L - 8} y={AX + DOWN / 2} textAnchor="end" className="w-side">out</text>
+        <path d={`${path} V${AX} H${x(0)} Z`} style={{ fill: 'var(--victim)', opacity: 0.08 }} />
+        <path d={path} fill="none" strokeWidth="1.6" style={{ stroke: 'var(--victim)', opacity: 0.55 }} />
+        <rect x={x(0) - 5} y={AX - UP} width={10} height={UP} rx="2" style={{ fill: 'var(--victim)' }}>
+          <title>{`${credit.ts.slice(11)} · ${inr(amount)} from the victim`}</title></rect>
+        {inWin.map((e, i) => (
+          <rect key={i} x={x(off(e.ts)) - 5} y={AX + 1} width={10} height={Math.max(4, (e.attributed_paise / amount) * DOWN)} rx="2"
+                style={{ fill: 'var(--l1)' }}><title>{`${e.ts.slice(11)} · ${inr(e.attributed_paise)} to ${e.dst}`}</title></rect>
+        ))}
+        <line x1={L} x2={W - R} y1={AX} y2={AX} className="w-axis" />
+      </svg>
+      <p className="pw-key"><span><b style={{ background: 'var(--victim)' }} />money in</span>
+        <span><b style={{ background: 'var(--l1)' }} />money out</span>
+        <span><i />balance</span>{later > 0 && <span className="muted">{later} later payment{later === 1 ? '' : 's'} not shown</span>}</p>
+    </div>
   )
 }
 

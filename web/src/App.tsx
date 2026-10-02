@@ -83,20 +83,21 @@ export default function App() {
             </a>
           ))}
           <div className="side-foot">
-            <div className="sf-title">Loaded data</div>
+            <div className="sf-title">Open case</div>
             {sets.length > 1 ? (
-              <select value={active?.id ?? ''} onChange={(e) => switchTo(e.target.value)} aria-label="Open case">
+              <select value={active?.id ?? ''} onChange={(e) => switchTo(e.target.value)} aria-label="Open case" title={active?.name}>
                 {sets.filter((d) => d.status === 'done').map((d) => (
-                  <option key={d.id} value={d.id}>{d.name} · {d.rows.toLocaleString('en-IN')} rows</option>
+                  <option key={d.id} value={d.id}>{d.name.replace(/\.csv$/i, '')}</option>
                 ))}
               </select>
-            ) : <div className="sf-file">{active?.name ?? ''}</div>}
-            {stats ? <>
-              <div><b>{stats.rows.toLocaleString('en-IN')}</b> transactions</div>
-              <div><b>{stats.accounts.toLocaleString('en-IN')}</b> accounts</div>
-              <div className="sf-hash" title={stats.input_sha256}>File fingerprint {stats.input_sha256.slice(0, 12)}</div>
-            </> : down ? <div className="sf-bad">The analysis engine is not reachable.</div> : <div>Loading…</div>}
-            <div className="sf-note">Processed on this computer. No data is sent outside.</div>
+            ) : <div className="sf-file" title={active?.name}>{active?.name.replace(/\.csv$/i, '') ?? ''}</div>}
+            {stats ? (
+              <dl className="sf-stats" title={`File fingerprint (SHA-256) ${stats.input_sha256}`}>
+                <div><dt>Transactions</dt><dd>{stats.rows.toLocaleString('en-IN')}</dd></div>
+                <div><dt>Accounts</dt><dd>{stats.accounts.toLocaleString('en-IN')}</dd></div>
+              </dl>
+            ) : down ? <div className="sf-bad">The analysis engine is not reachable.</div> : <div>Loading…</div>}
+            <div className="sf-note">Offline · data stays on this computer</div>
           </div>
         </nav>
         <main id="main">
