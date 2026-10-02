@@ -757,3 +757,22 @@ body { font-size: var(--fs); line-height: 1.5; }
   .wf-who { white-space: normal; overflow-wrap: anywhere; }
   .gpanel .tbl, .upload-dlg .tbl, .gpanel .gtbl { display: block; overflow-x: auto; }
 }
+
+/* Network trail: one line of context, the tree shrinks to fit the panel */
+.rt-scroll { overflow: hidden; display: flex; flex-direction: column; }
+.ring-trail { flex: 1; min-height: 0; gap: 8px; }
+.rt-bar { flex-wrap: nowrap; }
+.rt-pick select { max-width: 260px; }
+.rt-sum { margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rt-fit { flex: 1; min-height: 0; overflow: auto; }
+.rt-fit .tree-wrap { overflow: visible; }
+@media (max-width: 1100px) { .rt-bar { flex-wrap: wrap; } }
+
+/* Money journey rows: account and amount, details, then actions; nothing is cut in a narrow panel */
+.journey { overflow-x: hidden; }
+.journey .hop { grid-template-columns: 12px minmax(0, 1fr); }
+.hop-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hop-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.hop-top .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hop-acts { display: flex; gap: 6px; margin-top: 2px; }
+.hop-acts .btn { padding-left: 8px; padding-right: 8px; }

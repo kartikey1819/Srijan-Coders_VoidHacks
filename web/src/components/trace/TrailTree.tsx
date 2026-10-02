@@ -19,14 +19,25 @@ interface Line { key: string; from: string; to: string; t: number; slow: boolean
  * one row each and parents are centred on their children. Columns are steps away from the victim (Layer 1, 2, 3).
  * `cursor` (epoch s) shows only what had happened by then: later boxes and lines are faded, so playback builds the tree.
  */
-export function TrailTree({ trace, cursor, onSelect, mark }: { trace: TraceResult; cursor: number; onSelect: (a: string) => void; mark?: string | null }) {
+export function TrailTree({ trace, cursor, onSelect, mark, fitHeight }: {
+  trace: TraceResult; cursor: number; onSelect: (a: string) => void; mark?: string | null; fitHeight?: number
+}) {
   const [hover, setHover] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<string>>(new Set())
   const [ref, width] = useWidth<HTMLDivElement>()
   // wide enough for every column with room for the arrows between them; narrower panels scroll sideways
   const cols = 1 + Math.max(1, ...trace.nodes.map((n) => n.hop))
   const W = Math.max(2 * PAD + cols * BW + (cols - 1) * 40, width)
-  const L = useMemo(() => layout(trace, open, W), [trace, open, W])
+  const L0 = useMemo(() => layout(trace, open, W), [trace, open, W])
+  // fitHeight: squeeze the rows (not the boxes' text) to fit, down to 72% of the normal spacing
+  const { L, bh } = useMemo(() => {
+    if (!fitHeight || L0.height <= fitHeight) return { L: L0, bh: BH }
+    const k = Math.max(0.72, (fitHeight - TOP - 4) / (L0.height - TOP - 4))
+    const sy = (y: number) => TOP + (y - TOP) * k
+    const pos = new Map([...L0.pos].map(([id, p]) => [id, { x: p.x, y: sy(p.y) }]))
+    return { L: { ...L0, pos, boxes: L0.boxes.map((b) => ({ ...b, y: sy(b.y) })), height: TOP + (L0.height - TOP - 4) * k + 4 },
+             bh: Math.min(BH, Math.round(ROW * k - 6)) }
+  }, [L0, fitHeight])
   const hl = useMemo(() => (hover ? lineage(hover, L.lines) : null), [hover, L])
 
   return (
@@ -51,7 +62,7 @@ export function TrailTree({ trace, cursor, onSelect, mark }: { trace: TraceResul
           {L.lines.map((e) => {
             const a = L.pos.get(e.from), b = L.pos.get(e.to)
             if (!a || !b) return null
-            const x1 = a.x + BW, y1 = a.y + BH / 2, x2 = b.x - 4, y2 = b.y + BH / 2, mx = (x1 + x2) / 2
+            const x1 = a.x + BW, y1 = a.y + bh / 2, x2 = b.x - 4, y2 = b.y + bh / 2, mx = (x1 + x2) / 2
             const on = hl?.lines.has(e.key)
             return (
               <g key={e.key} className={`tline${e.t > cursor ? ' later' : ''}${on ? ' hl' : ''}`}>
@@ -72,9 +83,9 @@ export function TrailTree({ trace, cursor, onSelect, mark }: { trace: TraceResul
                  onMouseEnter={() => !n.more && setHover(n.id)} onMouseLeave={() => setHover(null)}
                  onFocus={() => !n.more && setHover(n.id)} onBlur={() => setHover(null)}
                  onClick={act} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); act() } }}>
-                <rect width={BW} height={BH} rx={8} style={{ fill: roleBg(n.role), stroke: roleVar(n.role) }} />
-                <text x={BW / 2} y={21} textAnchor="middle" className={n.more ? 'tb-more' : 'tb-acct'}>{n.title}</text>
-                <text x={BW / 2} y={39} textAnchor="middle" className="tb-sub">{n.sub}</text>
+                <rect width={BW} height={bh} rx={8} style={{ fill: roleBg(n.role), stroke: roleVar(n.role) }} />
+                <text x={BW / 2} y={bh / 2 - 4} textAnchor="middle" className={n.more ? 'tb-more' : 'tb-acct'}>{n.title}</text>
+                <text x={BW / 2} y={bh / 2 + 13} textAnchor="middle" className="tb-sub">{n.sub}</text>
               </g>
             )
           })}

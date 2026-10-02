@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { inr, inrShort } from '../format'
 import type { ringIndex } from '../ringJourney'
@@ -42,29 +42,53 @@ export function RingTrail({ ix, seed, mark, cursor, onSelect }: {
     return () => { live = false }
   }, [victim])
 
+  // the tree shrinks to fit the panel (never below 55%), like the money flow, so the whole trail is in view
+  const fit = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+  const [fitH, setFitH] = useState<number | undefined>(undefined)
+  useLayoutEffect(() => {
+    const box = fit.current
+    if (!box) return
+    const measure = () => {
+      const canvas = box.querySelector<HTMLElement>('.tree-canvas')
+      if (!canvas) return
+      const avail = box.clientHeight
+      setFitH(avail - 4)                                // rows squeeze to this first (text stays full size)
+      const natural = canvas.offsetHeight
+      setScale(natural && avail ? Math.max(0.8, Math.min(1, (avail - 4) / natural)) : 1)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)            // the tree draws once its width is known: watch it appear
+    ro.observe(box)
+    if (box.firstElementChild) ro.observe(box.firstElementChild)
+    return () => ro.disconnect()
+  }, [trace])
+
   if (!victims.length) return <p className="muted rt-empty">No victim's money reaches {seed} inside this network. Switch to the Globe to see every account.</p>
   const count = (r: string) => trace?.nodes.filter((n) => n.role === r).length ?? 0
   const reaches = !trace || trace.nodes.some((n) => n.account === seed)
   return (
     <div className="ring-trail">
       <div className="rt-bar">
-        <label className="rt-pick">Trail of victim
-          <select value={victim ?? ''} onChange={(e) => setVictim(e.target.value)} aria-label="Victim whose trail is shown">
-            {victims.map((v) => <option key={v.account} value={v.account}>{v.account} · {inrShort(v.amount)} into the network</option>)}
+        <label className="rt-pick">Victim
+          <select value={victim ?? ''} onChange={(e) => setVictim(e.target.value)} aria-label="Victim whose trail is shown"
+                  title={`${victims.length} victims' money reached ${seed}`}>
+            {victims.map((v) => <option key={v.account} value={v.account}>{v.account} · {inrShort(v.amount)}</option>)}
           </select>
+          <span className="muted">of {victims.length}</span>
         </label>
-        <span className="small muted">{victims.length === 1 ? 'the only victim' : `1 of ${victims.length} victims`} whose money reached <b className="mono">{seed}</b></span>
         {trace && <span className="rt-sum small">{inr(trace.loss_paise)} · {count('L1')} collector{count('L1') === 1 ? '' : 's'} · {count('L2')} distributor{count('L2') === 1 ? '' : 's'} · {count('L3')} cash-out</span>}
       </div>
       {!reaches && <p className="banner small" role="status">The traced money of this victim does not reach {seed}: the rules matched its payments to other money. Pick another victim, or use the Globe.</p>}
       {err && <p className="banner bad" role="alert">{err}</p>}
       {!trace && !err && <p className="muted">Tracing {victim}…</p>}
-      {trace && <TrailTree trace={trace} cursor={cursor} onSelect={onSelect} mark={mark ?? seed} />}
+      <div className="rt-fit" ref={fit}>
+        {trace && <div style={{ zoom: scale }}><TrailTree trace={trace} cursor={cursor} onSelect={onSelect} mark={mark ?? seed} fitHeight={fitH} /></div>}
+      </div>
       {trace && (
         <div className="tree-legend">
           <span><svg width="34" height="8" aria-hidden="true"><line x1="0" y1="4" x2="34" y2="4" style={{ stroke: 'var(--l2)' }} strokeWidth="2" /></svg> moved within one hour</span>
           <span><svg width="34" height="8" aria-hidden="true"><line x1="0" y1="4" x2="34" y2="4" style={{ stroke: 'var(--l2)' }} strokeWidth="2" strokeDasharray="6 5" /></svg> moved later</span>
-          <span className="muted">Point at a box for what it received and kept; click it for its journey.</span>
         </div>
       )}
     </div>

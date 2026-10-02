@@ -192,12 +192,14 @@ function HopList({ title, hops, onGo, onFlow }: { title: string; hops: Hop[]; on
       {shown.map((h) => (
         <div key={h.account} className="hop">
           <span className={`key ${h.role}`} aria-hidden="true" />
-          <div><div className="acct acct-bank"><BankIcon bank={h.account} size="sm" />{h.account}</div>
-            <div className="small muted">{ROLE_TEXT[h.role] ?? h.role} · {h.bank} · {h.n} transfer{h.n === 1 ? '' : 's'} · first {h.first.slice(5, 16)}</div></div>
-          <div style={{ textAlign: 'right' }}><div className="num">{inr(h.total)}</div>
-            <div className="row gap" style={{ justifyContent: 'flex-end' }}>
+          <div className="hop-main">
+            <div className="hop-top"><span className="acct acct-bank"><BankIcon bank={h.account} size="sm" />{h.account}</span>
+              <b className="num">{inr(h.total)}</b></div>
+            <div className="small muted">{ROLE_TEXT[h.role] ?? h.role} · {h.n} transfer{h.n === 1 ? '' : 's'} · first {h.first.slice(5, 16)}</div>
+            <div className="hop-acts">
               <button className="btn ghost sm" onClick={() => onFlow(h.account)} aria-label={`Transfer flow with ${h.account}`}>Flow</button>
-              <button className="btn ghost sm" onClick={() => onGo(h.account)} aria-label={`Go to ${h.account}`}>Go here</button></div></div>
+              <button className="btn ghost sm" onClick={() => onGo(h.account)} aria-label={`Go to ${h.account}`}>Go here</button></div>
+          </div>
         </div>
       ))}
       {hops.length > 6 && <button className="btn ghost sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${hops.length}`}</button>}
