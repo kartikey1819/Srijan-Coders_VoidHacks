@@ -121,6 +121,42 @@ def test_upload_analyse_switch_and_back(client, tmp_path, monkeypatch):
     assert sha256_file(SAMPLE) == before
 
 
+def test_remove_cases_keeps_the_original_file(client, tmp_path, monkeypatch):
+    from abhedya import datasets
+    from abhedya.audit.log import sha256_file
+    from abhedya.ingest.pipeline import run_ingest
+    lines = SAMPLE.read_bytes().splitlines(keepends=True)
+    own = tmp_path / "official.csv"                       # a stand-in "official" case, so the shared one is untouched
+    own.write_bytes(b"".join(lines[:2001]))
+    run_ingest(own, tmp_path / "case.duckdb", run_detect=True)
+    monkeypatch.setattr(datasets, "DIR", tmp_path / "datasets")
+    monkeypatch.setattr(datasets, "_active", "official")
+    monkeypatch.setattr(datasets, "official_db", lambda: tmp_path / "case.duckdb")
+    before, shared = sha256_file(own), engine_mod._engine
+    try:
+        engine_mod._engine = engine_mod.Engine(tmp_path / "case.duckdb")
+        body = b"".join(lines[:1501])
+        ds_id = client.post("/api/datasets?name=small.csv", content=body).json()["id"]
+        assert _wait_done(client, ds_id)["status"] == "done"
+        assert client.post(f"/api/datasets/{ds_id}/activate").json()["active"]
+        left = client.delete("/api/datasets/official").json()             # removing a case that is not open
+        assert [d["id"] for d in left] == [ds_id] and left[0]["active"]
+        assert not (tmp_path / "case.duckdb").exists() and sha256_file(own) == before     # the CSV itself stays
+        assert datasets.removed_official_sha() == before
+        assert client.get("/api/datasets/official/progress").status_code == 404
+        r = client.delete(f"/api/datasets/{ds_id}")
+        assert r.status_code == 409 and "only case left" in r.json()["detail"]
+        again = client.post("/api/datasets?name=x.csv", content=own.read_bytes()).json()["id"]   # re-adding works
+        assert again != "official" and _wait_done(client, again)["status"] == "done"
+        left = client.delete(f"/api/datasets/{ds_id}").json()               # removing the open case opens another
+        assert [d["id"] for d in left] == [again] and left[0]["active"]
+        assert not (tmp_path / "datasets" / ds_id).exists()
+        assert client.get("/api/stats").json()["rows"] == 2000
+        assert client.delete("/api/datasets/zzz").status_code == 404
+    finally:
+        engine_mod._engine = shared
+
+
 def test_upload_rejects_a_file_without_the_columns(client, tmp_path, monkeypatch):
     from abhedya import datasets
     monkeypatch.setattr(datasets, "DIR", tmp_path / "datasets")

@@ -55,3 +55,16 @@ def activate(ds_id: str):
         return datasets.activate(_check(ds_id))
     except FileNotFoundError as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.delete("/datasets/{ds_id}", response_model=list[DatasetInfo])
+def remove(ds_id: str):
+    """Removes a case (database, graph cache, stored copy). The official CSV itself is never deleted."""
+    try:
+        return datasets.remove(_check(ds_id))
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Unknown dataset")
+    except (ValueError, FileNotFoundError) as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except OSError as e:
+        raise HTTPException(status_code=409, detail=f"Could not delete the files ({e.strerror or e}); close other programs using them and retry.")

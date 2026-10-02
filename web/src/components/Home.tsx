@@ -1,4 +1,4 @@
-import { CheckCircle, FileArrowUp, Warning } from '@phosphor-icons/react'
+import { CheckCircle, FileArrowUp, Trash, Warning } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { api } from '../api'
 import { useCopy } from '../copy'
@@ -97,6 +97,9 @@ function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInf
   const [err, setErr] = useState<string | null>(null)
   const [started, setStarted] = useState(0)
   const [elapsed, setElapsed] = useState(0)
+  const [asking, setAsking] = useState<string | null>(null)      // case awaiting "remove?" confirmation
+  const [removing, setRemoving] = useState<string | null>(null)
+  const [setErrMsg, setSetErr] = useState<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -129,6 +132,15 @@ function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInf
   const drop = (e: DragEvent) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files[0]; if (f) send(f) }
   const open = (id: string) => api.activate(id).then(() => { window.location.hash = '#overview'; window.location.reload() })
     .catch((e) => setErr(String((e as Error).message)))
+  const remove = (d: DatasetInfo) => {
+    setRemoving(d.id); setSetErr(null)
+    api.removeDataset(d.id).then((left) => {
+      setAsking(null); setRemoving(null)
+      if (d.active) { window.location.hash = '#home'; window.location.reload(); return }   // another case was opened
+      onSets(left)
+      window.dispatchEvent(new Event('abhedya:datasets'))
+    }).catch((e) => { setRemoving(null); setSetErr(String((e as Error).message)) })
+  }
   const total = prog ? Object.values(prog.stages_done).reduce((a, b) => a + b, 0) : 0
 
   return (
@@ -179,7 +191,8 @@ function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInf
         )}
       </div>
       <div className="sheet">
-        <div className="sheet-head"><h2>Saved cases</h2><span className="small muted">Each file stays exactly as received</span></div>
+        <div className="sheet-head"><h2>Saved cases</h2><span className="small muted">Each file stays exactly as received; remove a case to delete it from this workstation</span></div>
+        {setErrMsg && <div className="banner bad small" role="alert" style={{ margin: '0 14px 10px' }}>{setErrMsg}</div>}
         <table className="tbl">
           <thead><tr><th>File</th><th className="num">Rows</th><th>Status</th><th><span className="sr-only">Action</span></th></tr></thead>
           <tbody>
@@ -188,7 +201,22 @@ function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInf
                 <td><div>{d.id === 'official' ? 'Official dataset' : d.name}</div><div className="small muted mono">{d.sha256.slice(0, 12)}</div></td>
                 <td className="num">{d.rows.toLocaleString('en-IN')}</td>
                 <td>{d.active ? <b>Open now</b> : d.status === 'done' ? 'Ready' : d.status}</td>
-                <td className="row-acts">{!d.active && d.status === 'done' && <button className="btn sm" onClick={() => open(d.id)}>Open</button>}</td>
+                <td className="row-acts">
+                  {asking === d.id ? (
+                    <span className="confirm" role="group" aria-label={`Remove ${d.id === 'official' ? 'the official dataset' : d.name}?`}>
+                      <span className="small">{d.id === 'official' ? 'Delete its database? The CSV stays on disk.' : 'Delete this case and its copy?'}</span>
+                      <button className="btn sm danger" disabled={removing === d.id} onClick={() => remove(d)}>{removing === d.id ? 'Removing…' : 'Remove'}</button>
+                      <button className="btn sm ghost" disabled={removing === d.id} onClick={() => setAsking(null)}>Cancel</button>
+                    </span>
+                  ) : (
+                    <>
+                      {!d.active && d.status === 'done' && <button className="btn sm" onClick={() => open(d.id)}>Open</button>}
+                      {d.status !== 'queued' && d.status !== 'running' && sets.length > 1 &&
+                        <button className="btn sm ghost danger-text" onClick={() => { setAsking(d.id); setSetErr(null) }}
+                                aria-label={`Remove ${d.id === 'official' ? 'the official dataset' : d.name}`} title="Remove this case"><Trash /> Remove</button>}
+                    </>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

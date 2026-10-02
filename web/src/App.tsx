@@ -28,6 +28,9 @@ export default function App() {
     api.stats().then(setStats).catch(() => setDown(true))
     api.reasons().then(setReasons).catch(() => setReasons({}))
     api.datasets().then(setSets).catch(() => setSets([]))
+    const refresh = () => api.datasets().then(setSets).catch(() => undefined)
+    window.addEventListener('abhedya:datasets', refresh)
+    return () => window.removeEventListener('abhedya:datasets', refresh)
   }, [])
   useEffect(() => {
     const t = route.name === 'investigate' && route.account ? `${route.account} · trace` : route.name === 'ring' ? `${route.account} · ring` : null

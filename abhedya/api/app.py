@@ -1,5 +1,7 @@
 """FastAPI app: mounts the three owners' routers and the built web UI. Owner: A.
 Run with `python -m abhedya serve` (127.0.0.1, one worker)."""
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,8 +10,16 @@ from abhedya import config
 from abhedya.api import routes_datasets, routes_docs, routes_risk, routes_trace
 from abhedya.engine import UnknownAccount
 
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    from abhedya import datasets
+    datasets.startup()                     # official case removed? open the most recent saved case instead
+    yield
+
+
 # no /docs or /redoc pages: they load scripts from an internet CDN and the app must work offline
-app = FastAPI(title="Abhedya-Chakra", docs_url=None, redoc_url=None)
+app = FastAPI(title="Abhedya-Chakra", docs_url=None, redoc_url=None, lifespan=_lifespan)
 app.include_router(routes_trace.router)
 app.include_router(routes_risk.router)
 app.include_router(routes_docs.router)

@@ -20,6 +20,7 @@ export const api = {
   datasets: () => req<DatasetInfo[]>('/api/datasets'),
   progress: (id: string) => req<DatasetProgress>(`/api/datasets/${enc(id)}/progress`),
   activate: (id: string) => req<DatasetInfo>(`/api/datasets/${enc(id)}/activate`, { method: 'POST' }),
+  removeDataset: (id: string) => req<DatasetInfo[]>(`/api/datasets/${enc(id)}`, { method: 'DELETE' }),
   search: (q: string) => req<string[]>(`/api/search?q=${enc(q)}&limit=12`),
   victims: (limit = 50) => req<VictimCandidate[]>(`/api/victims?limit=${limit}`),
   trace: (victim: string, seeds?: number[] | null) =>

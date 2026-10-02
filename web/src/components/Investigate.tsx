@@ -1,5 +1,5 @@
 import { FileText, Graph } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
 import { useCopy } from '../copy'
@@ -149,7 +149,13 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
       </section>
 
       {errBox}
-      {trace.warnings.map((w) => <div key={w} className="banner note small">{w}</div>)}
+      {trace.warnings.length > 0 && (
+        <details className="banner note small inv-notes">
+          <summary><b>{trace.warnings.length === 1 ? 'Note on this trace' : `${trace.warnings.length} notes on this trace`}</b>
+            <span className="first">{trace.warnings[0]}</span></summary>
+          <ul>{trace.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+        </details>
+      )}
       {(seeds || nSeeds > 1) && <DisputedPicker victim={trace.victim} seeds={seeds}
         onApply={(s) => go({ name: 'investigate', account: trace.victim, seeds: s })} />}
 
@@ -177,9 +183,7 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
               <Separator className="sep-h" />
               <Panel id="chart" minSize="20%">
                 <PanelFrame label="Money over time" title="Where the money sat">
-                  <div style={{ padding: '8px 14px' }}>
-                    <HeldOverTime trail={trail} cursor={Math.min(cutoff, trail.tEnd)} onCursor={setCutoff} />
-                  </div>
+                  <FitHeight>{(h) => <HeldOverTime trail={trail} cursor={Math.min(cutoff, trail.tEnd)} onCursor={setCutoff} height={h} />}</FitHeight>
                 </PanelFrame>
               </Panel>
             </Group>
@@ -215,4 +219,25 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
 
 const RULE: Record<string, string> = {
   window: 'passed on within 3-15 min', amount_match: 'passed on at >= 90% of one credit', oldest: 'balance rule (own money spent first)',
+}
+
+/** Gives a chart the height left in its panel (minus its own title lines), so it never needs a scrollbar. */
+function FitHeight({ children }: { children: (h: number) => ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [h, setH] = useState(150)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      const svg = el.querySelector<SVGSVGElement>('svg[role="img"]')
+      const inner = el.firstElementChild as HTMLElement | null
+      const chrome = svg && inner ? inner.offsetHeight - svg.clientHeight : 90
+      const next = Math.round(Math.max(80, Math.min(360, el.clientHeight - 16 - chrome)))
+      setH((cur) => (Math.abs(cur - next) > 2 ? next : cur))
+    }
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return <div ref={ref} style={{ padding: '8px 14px', flex: 1, minHeight: 0, overflow: 'hidden' }}>{children(h)}</div>
 }

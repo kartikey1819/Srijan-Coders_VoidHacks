@@ -57,14 +57,21 @@ def main(argv: list[str] | None = None) -> None:
         if a.data is not None:
             if not a.data.exists():
                 raise SystemExit(f"serve failed: {a.data} not found")
-            reason = _needs_ingest(a.data, a.db)
+            from abhedya.audit.log import sha256_file
+            from abhedya.datasets import removed_official_sha
+            gone = removed_official_sha()
+            if gone and gone == sha256_file(a.data):
+                reason = None
+                print(f"{a.data.name} was removed from Saved cases, so it is not rebuilt; upload it on Home to bring it back")
+            else:
+                reason = _needs_ingest(a.data, a.db)
             if reason:
                 print(f"preparing {a.data.name} ({reason})")
                 try:
                     run_ingest(a.data, a.db, run_detect=True)
                 except IngestError as e:
                     raise SystemExit(f"ingest failed: {e}")
-        elif not a.db.exists():
+        elif not a.db.exists() and not any(config.DATA_DIR.glob("datasets/*/case.duckdb")):
             raise SystemExit(f"no database at {a.db}: run `python -m abhedya serve --data <file.csv>`")
         if not (config.WEB_DIST / "index.html").exists():
             print("note: the web UI is not built (cd web && npm install && npm run build); the API still works")

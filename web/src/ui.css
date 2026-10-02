@@ -59,9 +59,25 @@ h1, h2, h3 { font-family: var(--display); font-weight: var(--disp-weight); lette
 [data-separator]:hover::after, [data-separator]:focus-visible::after, [data-separator][data-separator-state="drag"]::after { opacity: 1; background: var(--focus); }
 
 /* ---------- investigate (panel version) ---------- */
-.inv { display: flex; flex-direction: column; gap: var(--gap); min-height: 100%; padding: var(--gap); }
-.inv-main { height: max(440px, calc(100vh - 330px)); }
+/* the case fills exactly the space under the tabs: header, notes and timeline take what they need, the panels get the rest */
+.screen:has(> .inv) { height: 100%; }
+.inv { display: flex; flex-direction: column; gap: var(--gap); height: 100%; min-height: 0; padding: var(--gap); }
+.inv > * { flex: none; }
+.inv > .inv-main { flex: 1 1 0; min-height: 300px; }
 .inv .timeline { position: sticky; bottom: 0; margin: 0; }
+.inv > .picker { padding: 6px 12px; }
+.inv > .picker .btn { min-height: 30px; }
+.inv-notes { display: block; padding: 6px 12px; }
+.inv-notes summary { display: flex; gap: 10px; align-items: baseline; cursor: pointer; min-width: 0; }
+.inv-notes summary .first { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.inv-notes[open] summary .first { display: none; }
+.inv-notes ul { margin: 6px 0 2px; padding-left: 18px; display: grid; gap: 4px; }
+/* positioned scroll boxes, so hidden labels inside them never stretch the page */
+.scroll, .ef-table, .drawer .body, .side, .pframe > .pbody { position: relative; }
+.btn.danger { background: var(--held); border-color: var(--held); color: #fff; }
+.btn.danger:hover { background: var(--held); border-color: var(--held); filter: brightness(1.08); }
+.btn.danger-text { color: var(--held); }
+.row-acts .confirm { display: inline-flex; gap: 6px; align-items: center; white-space: normal; text-align: left; }
 .inv-main .register { height: 100%; display: flex; flex-direction: column; }
 .inv-main .register .scroll { max-height: none; flex: 1; }
 .inv-main [data-panel] { min-height: 0; }
@@ -270,3 +286,31 @@ button.b-row { cursor: pointer; }
   background: var(--sheet); color: var(--ink); border: 1px solid var(--rule-2); border-radius: var(--radius); padding: 6px 9px;
   font-size: 12px; box-shadow: var(--shadow); white-space: nowrap; }
 .globe-tip b { font-family: var(--mono); }
+
+/* smaller laptop screens: keep the case header on one row and leave the panels the room */
+@media (max-width: 1500px) {
+  .inv .case .fig { padding: 8px 14px; }
+  .inv .case .fig b { font-size: calc(var(--fs-fig) * 0.8); }
+  .inv .case .meter { min-width: 150px; }
+  .inv .case .act { padding: 8px 12px; }
+}
+@media (max-height: 760px) {
+  .inv { gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+  .inv .case .fig { padding-top: 6px; padding-bottom: 6px; }
+  .inv > .inv-main { min-height: 240px; }
+  .inv .timeline { padding-top: 4px; padding-bottom: 4px; }
+}
+/* inside the resizable panels the trail graph takes the panel's height, never a fixed one */
+.inv-main .investigate-graph { height: auto; min-height: 0; }
+/* the case header stays one row: long figures shorten with an ellipsis before anything wraps */
+.inv .case { flex-wrap: nowrap; }
+.inv .case .fig { flex: 0 1 auto; }
+.inv .case .fig > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv .case .meter { flex: 1 1 140px; min-width: 120px; }
+.inv .case .act { flex: none; }
+.inv .case .act .btn { white-space: nowrap; }
+@media (max-width: 1500px) { [data-look="genz"] .inv .case .fig b { font-size: calc(var(--fs-fig) * 0.68); } }
+@media (max-width: 1100px) { .inv .case { flex-wrap: wrap; } }
+.inv .case .fig:first-child { flex-shrink: 0; }                    /* the victim account is never shortened */
+.inv .case .meter .steps { flex-wrap: nowrap; }
+.inv-main .graph { min-height: 0; overflow: hidden; }

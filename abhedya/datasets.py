@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import queue
+import shutil
 import threading
 import time
 import traceback
@@ -37,6 +38,19 @@ def official_db() -> Path:
     return Path(os.environ.get("ABHEDYA_DB", config.DB_PATH))
 
 
+def _removed() -> Path:
+    """Marker: the official case was removed from Saved cases (its CSV stays on disk)."""
+    return DIR / "official.removed"
+
+
+def removed_official_sha() -> str | None:
+    """SHA-256 of the official file if its case was removed (so `serve --data` does not rebuild it)."""
+    try:
+        return json.loads(_removed().read_text(encoding="utf-8")).get("sha256") if _removed().exists() else None
+    except (OSError, ValueError):
+        return None
+
+
 def _meta_path(ds_id: str) -> Path:
     return DIR / ds_id / "meta.json"
 
@@ -55,6 +69,8 @@ def db_path(ds_id: str) -> Path:
 
 
 def _official_sha() -> str | None:
+    if _removed().exists():
+        return None
     try:
         import duckdb
         with duckdb.connect(str(official_db()), read_only=True) as con:
@@ -74,6 +90,8 @@ def check_header(first_line: bytes) -> list[str]:
 def list_datasets() -> list[DatasetInfo]:
     out: list[DatasetInfo] = []
     try:
+        if _removed().exists():
+            raise LookupError("official case removed")
         e = engine_mod._engine if _active == "official" and engine_mod._engine else None
         meta = (e.meta if e else None)
         if meta is None and official_db().exists():
@@ -100,7 +118,7 @@ def list_datasets() -> list[DatasetInfo]:
 def progress(ds_id: str) -> DatasetProgress | None:
     if ds_id in _progress:
         return _progress[ds_id]
-    if ds_id == "official":
+    if ds_id == "official" and not _removed().exists():
         d = next((x for x in list_datasets() if x.id == "official"), None)
         return DatasetProgress(id="official", status="done", stage=None, stages_done={}, rows=d.rows if d else 0,
                                accounts=d.accounts if d else 0, flagged=0, error=None) if d else None
@@ -219,6 +237,69 @@ def activate(ds_id: str) -> DatasetInfo:
             engine_mod._engine = engine_mod.Engine(path)
         _active = ds_id
     return next(d for d in list_datasets() if d.id == ds_id)
+
+
+def _close(e) -> None:
+    try:
+        e.con.close()
+    except Exception:  # noqa: BLE001  (already closed)
+        pass
+
+
+def remove(ds_id: str) -> list[DatasetInfo]:
+    """Deletes a case from this workstation: its database, graph cache and, for an upload, the stored copy of the file.
+    For the official case only what was built from the file is deleted; the original CSV is never touched.
+    If the case is open, the most recent other case is opened first; the last remaining case cannot be removed."""
+    global _active
+    cases = list_datasets()
+    me = next((d for d in cases if d.id == ds_id), None)
+    if me is None:
+        raise KeyError(ds_id)
+    if me.status in ("queued", "running"):
+        raise ValueError(f"{me.name} is still being analysed; remove it once it finishes.")
+    others = [d for d in cases if d.id != ds_id and d.status == "done"]
+    if _active == ds_id:
+        if not others:
+            raise ValueError("This is the only case left. Add another file on Home before removing it.")
+        activate(others[0].id)
+    path = db_path(ds_id)
+    with engine_mod._lock:
+        cur = engine_mod._engine
+        if cur is not None and Path(cur.db_path).resolve() == path.resolve():
+            engine_mod._engine = None
+            _close(cur)
+    import gc
+    gc.collect()                           # engines replaced earlier release their file handles
+    if ds_id == "official":
+        import duckdb
+        cache = None
+        if path.exists():
+            with duckdb.connect(str(path), read_only=True) as con:
+                cache = dict(con.execute("SELECT key, value FROM meta").fetchall()).get("cache_dir")
+        for f in (path, path.with_name(path.name + ".wal"), path.with_name("case_manifest.json")):
+            if f.exists():
+                f.unlink()
+        DIR.mkdir(parents=True, exist_ok=True)
+        _removed().write_text(json.dumps({"sha256": me.sha256, "name": me.name,
+                                          "removed_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}), encoding="utf-8")
+        if cache and Path(cache).is_dir() and config.DATA_DIR.resolve() in Path(cache).resolve().parents:
+            shutil.rmtree(cache)
+    else:
+        shutil.rmtree(DIR / ds_id)
+    _progress.pop(ds_id, None)
+    return list_datasets()
+
+
+def startup() -> None:
+    """When the official case is removed (or was never built), open the most recent saved case instead."""
+    global _active
+    if official_db().exists() and not _removed().exists():
+        return
+    ready = [d for d in list_datasets() if d.id != "official" and d.status == "done"]
+    if ready:
+        with engine_mod._lock:
+            engine_mod._engine = engine_mod.Engine(db_path(ready[0].id))
+            _active = ready[0].id
 
 
 def active_id() -> str:
