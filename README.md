@@ -38,7 +38,7 @@ the evidence, never written by the model. Detection and tracing never use the mo
 
 ## How it works
 
-Full technical walkthrough (every stage, algorithm and parameter): [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
+Team guide (what everything does, how to run, test and demo it, results): [`docs/TEAM_GUIDE.md`](docs/TEAM_GUIDE.md). Full technical walkthrough (every stage, algorithm and parameter): [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
 
 | Part | Where | Notes |
 |---|---|---|
