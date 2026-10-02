@@ -43,13 +43,20 @@ export default function App() {
   const openRing = useCallback((a: string) => { setRingSeed(a); setSelected(a); setTab('ring') }, [])
   const openAccount = useCallback((a: string) => { setSelected(a) }, [])
 
-  // shareable links: #trace=ACCOUNT, #ring=ACCOUNT, #flagged, #data
+  // shareable links: #trace=ACCOUNT, #ring=ACCOUNT, #flagged, #data. Read on load and whenever the address
+  // changes (a link pasted into an open tab, back / forward). Our own updates below use replaceState, which
+  // does not fire hashchange, so this cannot loop.
   useEffect(() => {
-    const h = decodeURIComponent(window.location.hash.slice(1))
-    const [k, v] = h.split('=')
-    if (k === 'trace' && v) runTrace(v.split('&')[0])
-    else if (k === 'ring' && v) openRing(v)
-    else if (k === 'flagged' || k === 'data') setTab(k)
+    const apply = () => {
+      const h = decodeURIComponent(window.location.hash.slice(1))
+      const [k, v] = h.split('=')
+      if (k === 'trace' && v) runTrace(v.split('&')[0])
+      else if (k === 'ring' && v) openRing(v)
+      else if (k === 'flagged' || k === 'data') setTab(k)
+    }
+    apply()
+    window.addEventListener('hashchange', apply)
+    return () => window.removeEventListener('hashchange', apply)
   }, [runTrace, openRing])
   useEffect(() => {
     const h = tab === 'investigate' ? (trace ? `#trace=${trace.victim}` : '') : tab === 'ring' ? `#ring=${ringSeed ?? ''}` : `#${tab}`

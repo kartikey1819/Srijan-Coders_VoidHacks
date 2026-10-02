@@ -1,7 +1,7 @@
 # Final test matrix
 
 Final regression on 2026-10-02, on the code in this commit:
-- `python -m pytest` gave **181 passed, 0 failed, 0 skipped**, run twice in a row (154 s and 155 s);
+- `python -m pytest` gave **181 passed, 0 failed, 0 skipped**, run twice in a row (154 s and 155 s), then 182 after bug 20's browser test (browser and contract files rerun: 26 / 26);
 - benchmarks: `bench/run.py --runs 5` and `bench/llm_check.py --n 10`;
 - official evaluation: `python -m eval.evaluate`;
 - four independent suites: `python -m tests.adversarial_data.evaluate`.
@@ -17,7 +17,7 @@ Datasets:
 
 | Area | Test | Dataset | Expected | Actual | Status | Runtime |
 |---|---|---|---|---|---|---|
-| Integration | Real UI on real API, workflows 1–10 + data-quality screen (`test_e2e_workflows.py`) | sample | each workflow shows the stated result, no browser errors | 10 / 10 | PASS | 8.7 s |
+| Integration | Real UI on real API, workflows 1–10 + data-quality screen + pasted link / back (`test_e2e_workflows.py`) | sample | each workflow shows the stated result, no browser errors | 11 / 11 (bug 20 found and fixed) | PASS | 8.7 s |
 | Integration | API ↔ UI type contract (`test_contract.py`) | — | every TS interface matches its pydantic model | 15 / 15 | PASS | <0.1 s |
 | Integration | API routes, 404s, byte-identical ring export, disputed-transfer trace (`test_api.py`) | sample | correct JSON, 404 for unknown | 6 / 6 | PASS | 2.1 s |
 | Integration | One-command start `serve --data` | official | ingests if missing / stale, then serves | used for every manual run and the HTTP benchmark | PASS | 1.45 s to first answer (db present) |

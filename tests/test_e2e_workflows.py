@@ -170,6 +170,16 @@ def test_w10_invalid_account(page, base):
     page.get_by_text("Unknown account: ZZZZ00000000").wait_for()
 
 
+def test_link_pasted_into_an_open_tab_navigates(page, base):
+    """Expected: changing only the #link in an already-open tab switches the screen (was ignored)."""
+    page.goto(f"{base}/#flagged")
+    page.get_by_text("Flagged mule accounts:").wait_for()
+    page.goto(f"{base}/#trace={VICTIM}")
+    page.get_by_text("Accounts on the money trail").wait_for(timeout=10_000)
+    page.go_back()
+    page.get_by_text("Flagged mule accounts:").wait_for(timeout=10_000)
+
+
 def test_data_quality_screen(page, base):
     """Expected: the data-quality screen shows the row count and the flag table."""
     page.goto(f"{base}/#data")

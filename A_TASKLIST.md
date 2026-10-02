@@ -105,7 +105,7 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
 - ✅ F9 Randomized runs: 53 worlds / ~656k rows (20 small dev, 20 small held-out, 10 medium, 3 large). Clear-cut mules 91.5–91.9%, false positives 4 / 18,839 legitimate accounts, victim L1 found 3,090/3,090, invariant problems 0 → `reports/adversarial/`
 - ✅ F10 Final regression: 181 passed ×2 (0 skipped), official 1.0000/1.0000 + 300/300, official file hash unchanged, 4 independent suites identical to committed results → `reports/final_test_matrix.md`, `reports/final_readiness_report.md`, `README.md`
 
-### Bugs found in the final phase: 19 found, 18 fixed, 1 partly fixed (#9)
+### Bugs found in the final phase: 20 found, 19 fixed, 1 partly fixed (#9)
 1. A malformed row aborted the whole ingest.
 2. A header-only file crashed.
 3. Missing or extra columns gave an obscure error.
@@ -125,6 +125,7 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
 17. The time slider could never show the last transfer of a trail (10 of 11 at the end; found by browser workflow 4).
 18. With the AI model stopped, document generation stalled ~2.3 s before falling back (Windows retries a refused connection); now ~1 s.
 19. An account id containing a NUL byte crashed `/api/risk/{id}` with a 500 (SQL literal cut short); now a 404.
+20. A #link pasted into an already-open tab (or back / forward) did not change the screen; found while showing the UI on the 2M data. Now follows the address; browser test added.
 
 ## Waiting on teammates (for A11)
 - C: `web/`, `abhedya/{evidence,ai,docs}/`, `routes_docs.py`. Contract: `contracts/models.py`; sample: `contracts/fixtures/trace_KKBK10000000.json`.

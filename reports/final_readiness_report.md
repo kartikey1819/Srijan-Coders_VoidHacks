@@ -7,7 +7,7 @@ section. Test-by-test detail: `reports/final_test_matrix.md`.
 
 ## Verdict
 
-**Ready for submission and demo**, with the limitations in section 9 stated openly. All 181 automated tests
+**Ready for submission and demo**, with the limitations in section 9 stated openly. All 182 automated tests
 pass (0 skipped, including the live AI model and the 10 browser workflows). The official file is processed in
 **26.7 s** (median) end to end, against a 60 s budget for ingest alone. The official evaluation is unchanged at
 precision and recall 1.0000, with 300 / 300 exact traces. Over 656k rows of independently generated data, the engine finds
@@ -17,7 +17,7 @@ precision and recall 1.0000, with 300 / 300 exact traces. Over 656k rows of inde
 - One command: `python -m abhedya serve --data <csv>` ingests when the database is missing or was built from a
   different file (SHA-256 check), then serves on 127.0.0.1. Bad input ends with a plain message.
 - The API and UI types agree field by field: `tests/test_contract.py`, 15 models.
-- The real UI runs on the real API in headless Microsoft Edge: `tests/test_e2e_workflows.py`, 10 / 10. The
+- The real UI runs on the real API in headless Microsoft Edge: `tests/test_e2e_workflows.py`, 11 / 11. The
   workflows cover the flagged account, exact layers, ring of 1,373 accounts, time slider, diary, bank notice, AI on,
   AI off, model unavailable, invalid account and the data-quality screen.
 - The UI can now pick the disputed transfer(s) a trace starts from (`DisputedPicker`).
@@ -149,7 +149,7 @@ Investigation, warm (p50 / max):
 9. **Detection weights are hand-set,** not fitted. The 27-point official score gap is wide, but the official file is
    synthetic and much cleaner than the independent data.
 
-## 10. Bugs found in this phase: 19 found, 18 fixed, 1 partly fixed
+## 10. Bugs found in this phase: 20 found, 19 fixed, 1 partly fixed
 Bugs 1–15 are listed in `A_TASKLIST.md`: input robustness, keyword dependence, smurfing false positives, wallet
 top-up, funnels (partly), drain false positives, 5-account rings, raw payment mode reaching the model, validator gaps,
 20× detection slowdown, and a BOM-corrupted config. Found in the last part of this phase:
@@ -160,6 +160,9 @@ top-up, funnels (partly), drain false positives, 5-account rings, raw payment mo
     because Windows retries a refused connection. A 1 s connect limit fixed it (now 1.26 s), with a regression test.
 19. **NUL-byte crash:** an account ID containing a NUL byte crashed `/api/risk/{id}` with a 500 (SQL literal cut
     short). It is now quoted safely and gives a 404 (security test).
+20. **Pasted links ignored:** a `#trace=` / `#ring=` link pasted into an already-open tab, or back / forward,
+    did not change the screen. Found while showing the UI on the 2M data; it now follows the address
+    (browser test added).
 
 There were also 5 mistakes in our own new tests: a property test calling an account that doesn't exist, a contract
 regex, a conservation check ignoring money returned to the victim, and two security-test mistakes. Each was fixed
