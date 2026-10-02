@@ -216,7 +216,7 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
       </Card>
       <Card i={1} icon={TreeStructure} color="var(--l2)" title="How widely it was spread"
             foot={<span className="bchips" aria-label="Mule accounts by bank">
-              {mulesByBank.slice(0, mulesByBank.length > 8 ? 7 : 8).map(([b, n]) => <span key={b} title={b}><BankIcon bank={b} size="sm" /> <b>{n}</b></span>)}
+              {mulesByBank.slice(0, mulesByBank.length > 8 ? 7 : 8).map(([b, n]) => <span key={b} title={b}><BankIcon bank={b} size="sm" label /> <b>{n}</b></span>)}
               {mulesByBank.length > 8 && <span className="more" title={mulesByBank.slice(7).map(([b, n]) => `${b} ${n}`).join(', ')}>+{mulesByBank.length - 7} more</span>}
             </span>}>
         <p className="ig-big ig-inline" style={{ color: 'var(--l2)' }}><CountUp value={v.mules.length} format={(n) => `${Math.round(n)}`} />
@@ -246,7 +246,7 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
         {banks.length > 0 && (
           <ul className="bank-bars" aria-label="Largest amounts to freeze, by bank">
             {banks.slice(0, 3).map(([b, amt], i) => (
-              <li key={b}><span className="bb-name" title={bankLabel.get(b) ?? b}><BankIcon bank={b} /></span>
+              <li key={b}><span className="bb-name" title={bankLabel.get(b) ?? b}><BankIcon bank={b} label /></span>
                 <span className="bb-track"><i style={{ transform: `scaleX(${amt / topBank})`, ...delay(i, 110) }} /></span>
                 <b>{inrShort(amt)}</b></li>
             ))}

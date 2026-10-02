@@ -714,14 +714,16 @@ body { font-size: var(--fs); line-height: 1.5; }
 @media (max-width: 1360px) { .cf-main { min-height: 0; } }
 @media (max-width: 560px) { .cf-bklist { grid-template-columns: minmax(0, 1fr); } }
 
-/* Bank badges (short name on the bank's own colour) */
-.bank-ic { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 38px; height: 18px; padding: 0 5px;
-  border-radius: 4px; background: var(--bk, var(--unknown)); color: #fff; font: 700 9.5px/1 var(--sans, inherit); letter-spacing: .03em; }
-.bank-ic.sm { min-width: 32px; height: 16px; font-size: 8.5px; padding: 0 4px; }
+/* Bank logos on a small white tile (the marks are designed for white), optional short name beside */
+.bank-ic { display: inline-flex; align-items: center; gap: 6px; flex: none; vertical-align: middle; }
+.bank-ic img, .bank-ic-x { width: 20px; height: 20px; border-radius: 4px; background: #fff; padding: 1px; box-shadow: 0 0 0 1px var(--rule);
+  display: block; object-fit: contain; flex: none; }
+.bank-ic.sm img, .bank-ic.sm .bank-ic-x { width: 17px; height: 17px; }
+.bank-ic-x { display: grid; place-items: center; font-size: 7px; font-weight: 700; line-height: 1; color: #333; }
+.bank-ic-l { font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
 .bank-nm { display: inline-flex; align-items: center; gap: 7px; }
 .acct-bank { display: inline-flex; align-items: center; gap: 8px; }
-.b-label .bank-ic { margin-right: 8px; vertical-align: middle; }
-:root[data-theme="dark"] .bank-ic { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
-.bchips span.bank-ic { color: #fff; border: 0; padding: 0 4px; font-family: inherit; font-size: 8.5px; border-radius: 3px; }
+.b-label .bank-ic { margin-right: 8px; }
+.bchips span.bank-ic, .bchips span.bank-ic span { border: 0; padding: 0; background: none; font-family: inherit; }
 .bchips > span { display: inline-flex; align-items: center; gap: 5px; }
 .bank-bars .bb-name { display: flex; align-items: center; }

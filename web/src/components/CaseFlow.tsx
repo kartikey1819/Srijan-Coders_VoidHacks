@@ -79,7 +79,7 @@ export function CaseFlow({ f, stats, days, banks }: { f: FlowSummary; stats: DQS
                 <ul className="cf-bklist">
                   {f.banks.map((b) => (
                     <li key={b.bank}><a href={`#flagged?bank=${b.bank}`} title={`${b.bank_name}: ${inr(b.held_paise)} in ${n(b.accounts)} accounts`}>
-                      <BankIcon bank={b.bank} /><span>{n(b.accounts)} a/c</span><b>{inrShort(b.held_paise)}</b></a></li>
+                      <BankIcon bank={b.bank} label /><span>{n(b.accounts)} a/c</span><b>{inrShort(b.held_paise)}</b></a></li>
                   ))}
                 </ul>
               )}</dd>
