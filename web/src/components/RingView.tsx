@@ -73,7 +73,7 @@ export function RingView({ seed, reasons }: Props) {
 
   return (
     <Page title="Fraud Networks" hi="धोखाधड़ी नेटवर्क"
-          desc={<>The fraud network linked by money to <b className="mono">{seed}</b>: who paid in, and where the money went next. Click an account to follow its money.</>}
+          desc={<>Who paid into <b className="mono">{seed}</b> and where the money went next.</>}
           actions={<>
             <div className="seg view-switch" role="group" aria-label="Network view">
               <button aria-pressed={view === 'flow'} onClick={() => setView('flow')}><FlowArrow /> Money flow</button>

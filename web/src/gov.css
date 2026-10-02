@@ -831,3 +831,63 @@ body { font-size: var(--fs); line-height: 1.5; }
 .net-work #ring-graph > div { height: 100% !important; max-height: none !important; }
 .net-work [data-panel], .net-work [data-panel] > div { overflow: visible !important; }
 .net-work #ring-graph .pframe { position: sticky; top: 10px; }
+
+/* Compact page header (every page) */
+.gpage { padding-top: 12px; }
+.phead { align-items: center; padding-bottom: 10px; gap: 8px 20px; }
+.pcrumbs { font-size: 12px; margin-bottom: 2px; }
+.phead h1 { font-size: 21px; }
+.phead h1 .hi { font-size: 14px; }
+.phead p { margin-top: 2px; font-size: 14px; }
+.gpage-body { gap: 12px; }
+
+/* Trace Victim Funds: summary, journey strip and money now fit the first view */
+.trace-body { gap: 12px; }
+.trace-body .gpanel-h { padding: 8px 16px; }
+.trace-body .gpanel-b { padding: 12px 16px; }
+.headline { font-size: 15px; line-height: 1.5; margin-bottom: 10px; }
+.j-st { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; row-gap: 0; align-items: center;
+  text-align: left; padding: 8px 10px 12px; width: 176px; }
+.j-st .j-ic { grid-row: 1 / span 3; width: 28px; height: 28px; align-self: center; }
+.j-st .j-ic svg { width: 16px; height: 16px; }
+.j-big { font-size: 18px; line-height: 1.15; }
+.j-lbl { font-size: 12.5px; line-height: 1.3; }
+.j-sub { font-size: 11.5px; line-height: 1.3; }
+.j-share { bottom: 5px; height: 3px; }
+.moneynow { margin-top: 10px; padding-top: 10px; gap: 6px; }
+.mn-bar { height: 12px; }
+.mn-legend { font-size: 13px; }
+.trace-body .j-st { width: 162px; }
+.trace-body .j-pill { font-size: 11.5px; padding: 1px 7px; }
+.trace-body .j-wrap:first-child { flex: 0 0 auto; }
+.trace-body .j-wrap { min-width: 0; }
+.trace-body .j-gap { min-width: 70px; }
+@media (max-width: 1440px) { .trace-body .j-st { width: 148px; } }
+.trace-body .j-wrap { align-items: stretch; }
+.trace-body .j-gap { align-self: center; flex: 1 1 auto; min-width: 100px; }
+.trace-body .j-wrap { flex: 1 1 auto; }
+.trace-body .j-wrap > .j-st { flex: none; }
+@media (max-width: 1440px) {
+  .trace-body .j-st { width: 140px; grid-template-columns: minmax(0, 1fr); }
+  .trace-body .j-st .j-ic { display: none; }
+  .trace-body .j-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+.trace-body .jstrip { flex-wrap: nowrap; }
+.trace-body .j-wrap { flex: 1 1 0; min-width: 262px; }
+.trace-body .j-wrap:first-child { flex: 0 0 auto; min-width: 0; }
+@media (max-width: 1440px) {
+  .trace-body .j-wrap { min-width: 230px; }
+  .trace-body .j-gap { min-width: 90px; }
+  .trace-body .j-pill { font-size: 10.5px; padding: 1px 5px; }
+}
+@media (max-width: 1150px) { .trace-body .jstrip { flex-wrap: wrap; } }
+.trace-body .j-st { width: 186px; }
+.trace-body .j-wrap { min-width: 286px; }
+.trace-body .j-lbl, .trace-body .j-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1440px) { .trace-body .j-st { width: 140px; } .trace-body .j-wrap { min-width: 230px; } }
+@media (max-width: 1300px) { .trace-body .j-st { width: 134px; } .trace-body .j-wrap { min-width: 234px; } .trace-body .j-gap { min-width: 100px; } }
+.trace-body .j-st { width: 180px; }
+.trace-body .j-wrap { min-width: 290px; }
+.trace-body .j-gap { padding: 0 2px; }
+@media (max-width: 1440px) { .trace-body .j-st { width: 140px; } .trace-body .j-wrap { min-width: 230px; } }
+@media (max-width: 1300px) { .trace-body .j-st { width: 134px; } .trace-body .j-wrap { min-width: 234px; } .trace-body .j-sub { font-size: 10.5px; } }
