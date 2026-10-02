@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { delayText, inr, RULE_TEXT, toEpoch } from '../format'
 import type { TraceResult } from '../types'
 import { AccountPanel } from './AccountPanel'
+import { DisputedPicker } from './DisputedPicker'
 import { DocsPanel } from './DocsPanel'
 import { LayerTable } from './LayerTable'
 import { TimeSlider } from './TimeSlider'
@@ -14,13 +15,14 @@ interface Props {
   selected: string | null
   reasons: Record<string, string>
   onSelect: (a: string) => void
-  onTrace: (a: string) => void
+  seeds: number[] | null
+  onTrace: (a: string, seeds?: number[] | null) => void
   onRing: (a: string) => void
 }
 
 const WINDOW: [number, number] = [toEpoch('2026-09-15 00:00:00'), toEpoch('2026-09-29 23:59:00')]
 
-export function Investigate({ trace, error, wallMs, selected, reasons, onSelect, onTrace, onRing }: Props) {
+export function Investigate({ trace, error, wallMs, selected, reasons, seeds, onSelect, onTrace, onRing }: Props) {
   const [cutoff, setCutoff] = useState(Infinity)
   const [docs, setDocs] = useState(false)
   const range = useMemo<[number, number]>(() => {
@@ -55,6 +57,9 @@ export function Investigate({ trace, error, wallMs, selected, reasons, onSelect,
           <button className="btn primary" onClick={() => setDocs(true)} disabled={trace.edges.length === 0}>Case diary &amp; notices</button>
         </div>
         {trace.warnings.map((w) => <p key={w} className="warn">{w}</p>)}
+        {(seeds || trace.edges.filter((e) => e.rule === 'seed').length > 1) && (
+          <DisputedPicker victim={trace.victim} seeds={seeds} onApply={(s) => onTrace(trace.victim, s)} />
+        )}
         <div className="legend small">
           <span><span className="dot VICTIM" />Victim</span><span><span className="dot L1" />L1 collector</span>
           <span><span className="dot L2" />L2 distributor</span><span><span className="dot L3" />L3 cash-out</span>
@@ -83,7 +88,7 @@ export function Investigate({ trace, error, wallMs, selected, reasons, onSelect,
         <LayerTable trace={trace} selected={selected} onSelect={onSelect} />
         {selected && <AccountPanel account={selected} reasons={reasons} onTrace={onTrace} onRing={onRing} onSelect={onSelect} />}
       </aside>
-      {docs && <DocsPanel victim={trace.victim} onClose={() => setDocs(false)} />}
+      {docs && <DocsPanel victim={trace.victim} seeds={seeds} onClose={() => setDocs(false)} />}
     </div>
   )
 }

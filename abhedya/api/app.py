@@ -8,7 +8,8 @@ from abhedya import config
 from abhedya.api import routes_docs, routes_risk, routes_trace
 from abhedya.engine import UnknownAccount
 
-app = FastAPI(title="Abhedya-Chakra")
+# no /docs or /redoc pages: they load scripts from an internet CDN and the app must work offline
+app = FastAPI(title="Abhedya-Chakra", docs_url=None, redoc_url=None)
 app.include_router(routes_trace.router)
 app.include_router(routes_risk.router)
 app.include_router(routes_docs.router)

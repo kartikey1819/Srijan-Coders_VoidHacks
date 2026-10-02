@@ -15,15 +15,18 @@ __all__ = ["run", "get_risk_many", "top", "flagged_accounts", "candidate_victims
 def run(con: duckdb.DuckDBPyConnection, params: DetectParams | None = None) -> dict:
     """Compute features and risk for every account; writes tables `features` and `risk`."""
     p = params or DetectParams()
+    stages: dict = {}
     t0 = time.perf_counter()
-    f, e = _features.compute(con, p)
+    f, e = _features.compute(con, p, stages)
     t1 = time.perf_counter()
     r = _risk.score(f, e, p)
+    t_score = time.perf_counter()
     _risk.write_tables(con, f, r, p)
     t2 = time.perf_counter()
     bands = {b: int((r["band"] == b).sum()) for b in ("HIGH", "MEDIUM", "LOW")}
     return {"accounts": len(r["score"]), "bands": bands, "params_hash": p.hash(),
-            "timings_s": {"features": round(t1 - t0, 3), "risk": round(t2 - t1, 3)}}
+            "timings_s": {"features": round(t1 - t0, 3), **{f"  {k}": v for k, v in stages.items()},
+                          "risk_score_2_passes": round(t_score - t1, 3), "write_tables": round(t2 - t_score, 3)}}
 
 
 def _row(r) -> RiskRow:

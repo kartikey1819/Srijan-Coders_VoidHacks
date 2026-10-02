@@ -83,6 +83,7 @@ export function TraceGraph({ trace, cutoff, selected, onSelect }: Props) {
       c.edges().forEach((e) => { e.toggleClass('future', e.data('t') > cutoff) })
       c.nodes().forEach((n) => { n.toggleClass('future', n.data('role') !== 'VICTIM' && n.data('first') > cutoff) })
     })
+    if (box.current) box.current.dataset.visibleEdges = String(c.edges().filter((e) => !e.hasClass('future')).length)
   }, [cutoff, trace])
 
   useEffect(() => {

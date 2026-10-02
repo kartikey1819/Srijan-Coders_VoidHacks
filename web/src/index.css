@@ -103,3 +103,4 @@ input, select { font: inherit; padding: 6px 10px; border: 1px solid #cbd5e1; bor
   .summary { gap: 10px 16px; } .summary .btn { margin-left: 0; width: 100%; }
   .slider .when { min-width: 0; }
 }
+.picker { display: flex; flex-direction: column; gap: 6px; }

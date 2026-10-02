@@ -2,6 +2,10 @@ import type { DQSummary } from '../types'
 
 const RULES: Record<string, string> = {
   DUP_TXN_ID: 'Transaction ID shared with a different transaction (all rows kept)',
+  MISSING_FIELD: 'A required value is empty (row kept, left out of the money graph)',
+  BAD_AMOUNT: 'Amount is not a number (row kept, left out of the money graph)',
+  AMOUNT_PRECISION: 'Amount has more than 2 decimal places (rounded to paise; raw value kept)',
+  BAD_TIMESTAMP: 'Timestamp cannot be read (row kept, left out of the money graph)',
   RTGS_BELOW_MIN: 'RTGS below the RBI minimum of ₹2,00,000',
   UPI_ABOVE_P2P_LIMIT: 'UPI above the NPCI general P2P limit of ₹1,00,000',
   IMPS_ABOVE_LIMIT: 'IMPS above ₹5,00,000',

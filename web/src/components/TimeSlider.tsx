@@ -11,7 +11,9 @@ export function TimeSlider({ min, max, value, onChange, fullRange }: Props) {
   const [speed, setSpeed] = useState(5)
   const [whole, setWhole] = useState(false)
   const lo = whole && fullRange ? fullRange[0] : min
-  const hi = whole && fullRange ? fullRange[1] : max
+  // the slider moves in whole minutes from `lo`; round the end UP to a whole step so that the last
+  // position includes the last transfer (otherwise a transfer in the final minute can never be shown)
+  const hi = lo + Math.ceil(((whole && fullRange ? fullRange[1] : max) - lo) / 60) * 60
   const val = useRef(value)
   val.current = value
 

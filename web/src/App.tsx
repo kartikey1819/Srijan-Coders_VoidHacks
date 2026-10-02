@@ -20,17 +20,18 @@ export default function App() {
   const [wallMs, setWallMs] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
   const [ringSeed, setRingSeed] = useState<string | null>(null)
+  const [seeds, setSeeds] = useState<number[] | null>(null)   // disputed transfers (null = all outgoing)
 
   useEffect(() => {
     api.stats().then(setStats).catch(() => setStats(null))
     api.reasons().then(setReasons).catch(() => setReasons({}))
   }, [])
 
-  const runTrace = useCallback(async (account: string) => {
-    setTab('investigate'); setBusy(true); setTraceErr(null); setSelected(null)
+  const runTrace = useCallback(async (account: string, chosen: number[] | null = null) => {
+    setTab('investigate'); setBusy(true); setTraceErr(null); setSelected(null); setSeeds(chosen)
     const t0 = performance.now()
     try {
-      const t = await api.trace(account)
+      const t = await api.trace(account, chosen)
       setWallMs(performance.now() - t0)
       setTrace(t)
       if (t.edges.length === 0) setTraceErr(`No outgoing money found for ${account}.`)
@@ -46,7 +47,7 @@ export default function App() {
   useEffect(() => {
     const h = decodeURIComponent(window.location.hash.slice(1))
     const [k, v] = h.split('=')
-    if (k === 'trace' && v) runTrace(v)
+    if (k === 'trace' && v) runTrace(v.split('&')[0])
     else if (k === 'ring' && v) openRing(v)
     else if (k === 'flagged' || k === 'data') setTab(k)
   }, [runTrace, openRing])
@@ -71,7 +72,7 @@ export default function App() {
       </nav>
       <main>
         {tab === 'investigate' && (
-          <Investigate trace={trace} error={traceErr} wallMs={wallMs} selected={selected} reasons={reasons}
+          <Investigate trace={trace} error={traceErr} wallMs={wallMs} selected={selected} reasons={reasons} seeds={seeds}
                        onSelect={setSelected} onTrace={runTrace} onRing={openRing} />
         )}
         {tab === 'ring' && ringSeed && (

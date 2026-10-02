@@ -2,12 +2,12 @@ import { useState, type ChangeEvent } from 'react'
 import { api } from '../api'
 import type { CaseOutput } from '../types'
 
-interface Props { victim: string; onClose: () => void }
+interface Props { victim: string; seeds?: number[] | null; onClose: () => void }
 
 const LABEL = (k: string) => (k === 'diary' ? 'Police case diary' : k.startsWith('notice_') ? `Freeze notice: ${k.slice(7)}` : k)
 
 /** Case diary + one Section 94 BNSS (91 CrPC) notice per bank. */
-export function DocsPanel({ victim, onClose }: Props) {
+export function DocsPanel({ victim, seeds, onClose }: Props) {
   const [form, setForm] = useState({ fir_no: '', ncrp_ack: '', police_station: '', io_name: '' })
   const [useLlm, setUseLlm] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -19,7 +19,7 @@ export function DocsPanel({ victim, onClose }: Props) {
     setBusy(true); setErr(null); setOut(null)
     try {
       const body = Object.fromEntries(Object.entries(form).filter(([, v]) => v.trim()))
-      setOut(await api.docs(victim, { ...body, use_llm: useLlm }))
+      setOut(await api.docs(victim, { ...body, use_llm: useLlm, seed_txns: seeds ?? [] }))
     } catch (e) { setErr(String((e as Error).message)) } finally { setBusy(false) }
   }
 

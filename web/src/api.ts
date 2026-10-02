@@ -18,7 +18,8 @@ export const api = {
   stats: () => req<DQSummary>('/api/stats'),
   search: (q: string) => req<string[]>(`/api/search?q=${enc(q)}&limit=12`),
   victims: (limit = 50) => req<VictimCandidate[]>(`/api/victims?limit=${limit}`),
-  trace: (victim: string) => req<TraceResult>(`/api/trace/${enc(victim)}`),
+  trace: (victim: string, seeds?: number[] | null) =>
+    req<TraceResult>(`/api/trace/${enc(victim)}${seeds?.length ? '?' + seeds.map((s) => `seed_txn=${s}`).join('&') : ''}`),
   account: (a: string) => req<AccountSummary>(`/api/account/${enc(a)}`),
   txns: (a: string, limit = 50, offset = 0) => req<TxnRow[]>(`/api/account/${enc(a)}/txns?limit=${limit}&offset=${offset}`),
   reasons: () => req<Record<string, string>>('/api/risk/reasons'),

@@ -4,6 +4,7 @@ Definitions follow the problem statement (plan/B_DETECTION.md B2). IP address an
 the SENDER of a transaction, so channel features are counted on an account's outgoing transfers;
 cash-out receivers (L3) are recognised by what they receive.
 """
+import time
 from bisect import bisect_left, bisect_right
 
 import duckdb
@@ -50,9 +51,14 @@ def _sum(idx: np.ndarray, w: np.ndarray, V: int) -> np.ndarray:
     return out
 
 
-def compute(con: duckdb.DuckDBPyConnection, p: DetectParams) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+def compute(con: duckdb.DuckDBPyConnection, p: DetectParams,
+            timings: dict | None = None) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    timings = {} if timings is None else timings
+    t0 = time.perf_counter()
     V = con.execute("SELECT count(*) FROM account").fetchone()[0]
     e = load_edges(con, p)
+    timings["load_edges"] = round(time.perf_counter() - t0, 3)
+    t0 = time.perf_counter()
     src, dst, ts, amt, txn = e["src"], e["dst"], e["ts"], e["amt"], e["txn"]
     anom = e["script"] | e["foreign"]
     f: dict[str, np.ndarray] = {
@@ -86,10 +92,15 @@ def compute(con: duckdb.DuckDBPyConnection, p: DetectParams) -> tuple[dict[str, 
         "o_ts": ts[oo].tolist(), "o_amt": amt[oo].tolist(), "o_dst": dst[oo].tolist(), "o_txn": txn[oo].tolist(),
         "i_ts": ts[io].tolist(), "i_amt": amt[io].tolist(), "i_src": src[io].tolist(), "i_txn": txn[io].tolist(),
     }
+    timings["counts_channels"] = round(time.perf_counter() - t0, 3)
+    t0 = time.perf_counter()
     stream = _stream_features(V, optr, iptr, S, f["sum_in_paise"], p)
     f.update(stream)
+    timings["pass_through_fanout_fanin"] = round(time.perf_counter() - t0, 3)
+    t0 = time.perf_counter()
 
     f["ring_cycles"] = _cycles(V, np.flatnonzero(f["n_out"] > 0).tolist(), optr, S, p)
+    timings["cycles"] = round(time.perf_counter() - t0, 3)
     return f, e
 
 

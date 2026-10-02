@@ -33,7 +33,7 @@ export interface TxnRow {
 
 export interface GraphNode { account: string; role: Role | 'UNKNOWN'; bank_prefix: string; risk_score: number | null; risk_band: Band | null }
 export interface GraphEdge { src: string; dst: string; n_txn: number; total_paise: number; first_ts: string; last_ts: string; txn_idxs: number[] }
-export interface RingResult { seed: string; nodes: GraphNode[]; edges: GraphEdge[]; n_txn: number; total_paise: number }
+export interface RingResult { seed: string; nodes: GraphNode[]; edges: GraphEdge[]; n_txn: number; total_paise: number; t_from: string | null; t_to: string | null }
 
 export interface VictimCandidate { account: string; out_paise_to_flagged: number; first_ts: string }
 export interface DQSummary { rows: number; accounts: number; counts: Record<string, number>; input_sha256: string; ingest_seconds: Record<string, number> }
