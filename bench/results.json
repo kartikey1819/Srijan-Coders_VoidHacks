@@ -1,0 +1,536 @@
+{
+ "ingest": [
+  {
+   "total_s": 12.702,
+   "stages": {
+    "hash": 0.62,
+    "load_csv": 5.447,
+    "verify_order": 0.012,
+    "account_map": 0.296,
+    "derive+validate": 4.862,
+    "dq_summary": 0.012,
+    "account_table": 0.151,
+    "graph_arrays": 1.302
+   },
+   "rows": 2000000,
+   "accounts": 24873,
+   "peak_mb": 1377.03515625,
+   "process_wall_s": 13.3
+  },
+  {
+   "total_s": 12.654,
+   "stages": {
+    "hash": 0.618,
+    "load_csv": 5.42,
+    "verify_order": 0.012,
+    "account_map": 0.307,
+    "derive+validate": 4.786,
+    "dq_summary": 0.011,
+    "account_table": 0.156,
+    "graph_arrays": 1.344
+   },
+   "rows": 2000000,
+   "accounts": 24873,
+   "peak_mb": 1379.35546875,
+   "process_wall_s": 13.287
+  },
+  {
+   "total_s": 12.121,
+   "stages": {
+    "hash": 0.621,
+    "load_csv": 4.889,
+    "verify_order": 0.012,
+    "account_map": 0.3,
+    "derive+validate": 4.792,
+    "dq_summary": 0.011,
+    "account_table": 0.148,
+    "graph_arrays": 1.348
+   },
+   "rows": 2000000,
+   "accounts": 24873,
+   "peak_mb": 1374.43359375,
+   "process_wall_s": 12.821
+  },
+  {
+   "total_s": 12.714,
+   "stages": {
+    "hash": 0.648,
+    "load_csv": 5.045,
+    "verify_order": 0.012,
+    "account_map": 0.366,
+    "derive+validate": 5.157,
+    "dq_summary": 0.021,
+    "account_table": 0.154,
+    "graph_arrays": 1.311
+   },
+   "rows": 2000000,
+   "accounts": 24873,
+   "peak_mb": 1380.05859375,
+   "process_wall_s": 13.426
+  },
+  {
+   "total_s": 12.409,
+   "stages": {
+    "hash": 0.665,
+    "load_csv": 4.89,
+    "verify_order": 0.012,
+    "account_map": 0.3,
+    "derive+validate": 4.969,
+    "dq_summary": 0.011,
+    "account_table": 0.148,
+    "graph_arrays": 1.414
+   },
+   "rows": 2000000,
+   "accounts": 24873,
+   "peak_mb": 1376.46484375,
+   "process_wall_s": 13.023
+  }
+ ],
+ "detect": [
+  {
+   "total_s": 12.841,
+   "stages": {
+    "features": 12.629,
+    "  load_edges": 0.147,
+    "  counts_channels": 2.428,
+    "  pass_through_fanout_fanin": 3.792,
+    "  cycles": 6.126,
+    "risk_score_2_passes": 0.054,
+    "write_tables": 0.153
+   },
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "accounts": 24873,
+   "duckdb_threads": 8,
+   "peak_mb": 863.0234375,
+   "process_wall_s": 13.372
+  },
+  {
+   "total_s": 12.789,
+   "stages": {
+    "features": 12.577,
+    "  load_edges": 0.144,
+    "  counts_channels": 2.443,
+    "  pass_through_fanout_fanin": 3.764,
+    "  cycles": 6.092,
+    "risk_score_2_passes": 0.053,
+    "write_tables": 0.154
+   },
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "accounts": 24873,
+   "duckdb_threads": 8,
+   "peak_mb": 863.85546875,
+   "process_wall_s": 13.328
+  },
+  {
+   "total_s": 12.845,
+   "stages": {
+    "features": 12.62,
+    "  load_edges": 0.147,
+    "  counts_channels": 2.427,
+    "  pass_through_fanout_fanin": 3.805,
+    "  cycles": 6.102,
+    "risk_score_2_passes": 0.056,
+    "write_tables": 0.164
+   },
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "accounts": 24873,
+   "duckdb_threads": 8,
+   "peak_mb": 864.24609375,
+   "process_wall_s": 13.378
+  },
+  {
+   "total_s": 12.67,
+   "stages": {
+    "features": 12.456,
+    "  load_edges": 0.147,
+    "  counts_channels": 2.41,
+    "  pass_through_fanout_fanin": 3.734,
+    "  cycles": 6.034,
+    "risk_score_2_passes": 0.054,
+    "write_tables": 0.155
+   },
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "accounts": 24873,
+   "duckdb_threads": 8,
+   "peak_mb": 863.83203125,
+   "process_wall_s": 13.207
+  },
+  {
+   "total_s": 12.688,
+   "stages": {
+    "features": 12.472,
+    "  load_edges": 0.146,
+    "  counts_channels": 2.432,
+    "  pass_through_fanout_fanin": 3.723,
+    "  cycles": 6.034,
+    "risk_score_2_passes": 0.056,
+    "write_tables": 0.155
+   },
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "accounts": 24873,
+   "duckdb_threads": 8,
+   "peak_mb": 862.875,
+   "process_wall_s": 13.231
+  }
+ ],
+ "pipeline": [
+  {
+   "total_s": 26.979,
+   "ingest_s": 12.843,
+   "detect_s": 13.525,
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "peak_mb": 1363.953125,
+   "process_wall_s": 27.348
+  },
+  {
+   "total_s": 26.713,
+   "ingest_s": 12.401,
+   "detect_s": 13.737,
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "peak_mb": 1375.81640625,
+   "process_wall_s": 27.089
+  },
+  {
+   "total_s": 26.849,
+   "ingest_s": 12.629,
+   "detect_s": 13.653,
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "peak_mb": 1373.6640625,
+   "process_wall_s": 27.217
+  },
+  {
+   "total_s": 25.282,
+   "ingest_s": 11.728,
+   "detect_s": 13.0,
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "peak_mb": 1375.6796875,
+   "process_wall_s": 25.643
+  },
+  {
+   "total_s": 25.213,
+   "ingest_s": 11.358,
+   "detect_s": 13.313,
+   "bands": {
+    "HIGH": 1073,
+    "MEDIUM": 308,
+    "LOW": 23492
+   },
+   "peak_mb": 1375.6640625,
+   "process_wall_s": 25.573
+  }
+ ],
+ "query": [
+  {
+   "engine_load_ms": 129.22160000016447,
+   "first_trace_ms": 11.222700000416808,
+   "lat": {
+    "trace (4 hops): 300 victims": {
+     "n": 300,
+     "min": 3.2405000001745066,
+     "p50": 3.6295999998401385,
+     "p95": 4.084299999703944,
+     "max": 11.31779999968785
+    },
+    "trace: 200 random accounts as 'victim'": {
+     "n": 200,
+     "min": 1.0072999998556043,
+     "p50": 341.7797000001883,
+     "p95": 421.74800000020696,
+     "max": 494.7959000000992
+    },
+    "trace: 50 busiest accounts as 'victim'": {
+     "n": 50,
+     "min": 358.88280000017403,
+     "p50": 471.0273999999117,
+     "p95": 546.0671999999249,
+     "max": 606.4559999999801
+    },
+    "account summary: 200 random": {
+     "n": 200,
+     "min": 30.768999999963853,
+     "p50": 36.42479999962234,
+     "p95": 42.279599999801576,
+     "max": 46.102499999960855
+    },
+    "account txns (200 rows): 200 random": {
+     "n": 200,
+     "min": 91.12450000020544,
+     "p50": 96.65709999990213,
+     "p95": 106.66249999985666,
+     "max": 115.99819999992178
+    },
+    "ring isolation from a victim's L1: 20 victims": {
+     "n": 20,
+     "min": 65.98460000031992,
+     "p50": 72.71499999978914,
+     "p95": 81.65499999995518,
+     "max": 82.84920000005513
+    },
+    "evidence + diary + bank notices (templates): 20 victims": {
+     "n": 20,
+     "min": 35.42650000008507,
+     "p50": 42.0974000003298,
+     "p95": 45.77870000002804,
+     "max": 45.95469999958368
+    },
+    "validator on a full narrative: 20 victims": {
+     "n": 20,
+     "min": 1.1266999999861582,
+     "p50": 1.2386000003061781,
+     "p95": 1.265000000330474,
+     "max": 1.2815000000045984
+    },
+    "AI unavailable -> template fallback: 5 victims": {
+     "n": 5,
+     "min": 1252.175999999963,
+     "p50": 1256.6254999997,
+     "p95": 1310.588800000005,
+     "max": 1310.588800000005
+    },
+    "full investigation (trace + every trail account + ring + documents): 20 victims": {
+     "n": 20,
+     "min": 357.9043999998248,
+     "p50": 491.9985000001361,
+     "p95": 573.8642000001164,
+     "max": 576.2512000001152
+    }
+   },
+   "peak_mb": 371.0625,
+   "process_wall_s": 134.034
+  },
+  {
+   "engine_load_ms": 61.04539999978442,
+   "first_trace_ms": 11.081199999807723,
+   "lat": {
+    "trace (4 hops): 300 victims": {
+     "n": 300,
+     "min": 3.2997999996950966,
+     "p50": 3.6810999999943306,
+     "p95": 4.144800000176474,
+     "max": 11.492900000121153
+    },
+    "trace: 200 random accounts as 'victim'": {
+     "n": 200,
+     "min": 1.0210999998889747,
+     "p50": 344.50550000019575,
+     "p95": 425.59730000039053,
+     "max": 507.1146999998746
+    },
+    "trace: 50 busiest accounts as 'victim'": {
+     "n": 50,
+     "min": 362.2697999999218,
+     "p50": 471.28139999995255,
+     "p95": 561.6112000002431,
+     "max": 623.2989000000089
+    },
+    "account summary: 200 random": {
+     "n": 200,
+     "min": 26.6566000000239,
+     "p50": 36.52300000021569,
+     "p95": 41.96090000004915,
+     "max": 45.71070000019972
+    },
+    "account txns (200 rows): 200 random": {
+     "n": 200,
+     "min": 92.37290000010034,
+     "p50": 96.50180000016917,
+     "p95": 107.0451000000503,
+     "max": 119.97870000004696
+    },
+    "ring isolation from a victim's L1: 20 victims": {
+     "n": 20,
+     "min": 66.98679999999513,
+     "p50": 74.12640000029569,
+     "p95": 84.78420000028564,
+     "max": 85.0972000002912
+    },
+    "evidence + diary + bank notices (templates): 20 victims": {
+     "n": 20,
+     "min": 36.841800000274816,
+     "p50": 42.21370000004754,
+     "p95": 46.137300000282266,
+     "max": 47.2287999996297
+    },
+    "validator on a full narrative: 20 victims": {
+     "n": 20,
+     "min": 1.1094999999841093,
+     "p50": 1.21579999995447,
+     "p95": 1.249800000096002,
+     "max": 1.3033000000177708
+    },
+    "AI unavailable -> template fallback: 5 victims": {
+     "n": 5,
+     "min": 1254.3471000003592,
+     "p50": 1264.066599999751,
+     "p95": 1309.744099999989,
+     "max": 1309.744099999989
+    },
+    "full investigation (trace + every trail account + ring + documents): 20 victims": {
+     "n": 20,
+     "min": 348.1426999996984,
+     "p50": 493.11400000033245,
+     "p95": 573.8706000001912,
+     "max": 586.9571999996879
+    }
+   },
+   "peak_mb": 366.953125,
+   "process_wall_s": 134.27
+  },
+  {
+   "engine_load_ms": 57.96060000011494,
+   "first_trace_ms": 10.973599999942962,
+   "lat": {
+    "trace (4 hops): 300 victims": {
+     "n": 300,
+     "min": 3.2624999998915882,
+     "p50": 3.6661000003732624,
+     "p95": 4.250200000115001,
+     "max": 11.333199999626231
+    },
+    "trace: 200 random accounts as 'victim'": {
+     "n": 200,
+     "min": 1.0409000001345703,
+     "p50": 338.69099999992613,
+     "p95": 419.58329999988564,
+     "max": 504.5885999998063
+    },
+    "trace: 50 busiest accounts as 'victim'": {
+     "n": 50,
+     "min": 373.22820000008505,
+     "p50": 466.49710000019695,
+     "p95": 553.6035000004631,
+     "max": 588.3964999993623
+    },
+    "account summary: 200 random": {
+     "n": 200,
+     "min": 27.649200000269047,
+     "p50": 36.78299999955925,
+     "p95": 41.548499999407795,
+     "max": 47.73170000044047
+    },
+    "account txns (200 rows): 200 random": {
+     "n": 200,
+     "min": 92.17760000046837,
+     "p50": 96.63389999968786,
+     "p95": 104.97790000044915,
+     "max": 114.60499999975582
+    },
+    "ring isolation from a victim's L1: 20 victims": {
+     "n": 20,
+     "min": 66.54129999969882,
+     "p50": 73.91559999996389,
+     "p95": 84.82230000026902,
+     "max": 88.25139999953535
+    },
+    "evidence + diary + bank notices (templates): 20 victims": {
+     "n": 20,
+     "min": 39.414799999576644,
+     "p50": 41.84540000005654,
+     "p95": 47.087899999496585,
+     "max": 47.546199999487726
+    },
+    "validator on a full narrative: 20 victims": {
+     "n": 20,
+     "min": 1.127700000324694,
+     "p50": 1.2280000000828295,
+     "p95": 1.3252999997348525,
+     "max": 1.4045999996596947
+    },
+    "AI unavailable -> template fallback: 5 victims": {
+     "n": 5,
+     "min": 1248.0043000005026,
+     "p50": 1263.082200000099,
+     "p95": 1321.384500000022,
+     "max": 1321.384500000022
+    },
+    "full investigation (trace + every trail account + ring + documents): 20 victims": {
+     "n": 20,
+     "min": 350.41349999937665,
+     "p50": 498.38460000046325,
+     "p95": 550.2228999994259,
+     "max": 565.9585000003062
+    }
+   },
+   "peak_mb": 376.078125,
+   "process_wall_s": 133.281
+  }
+ ],
+ "http": {
+  "server_ready_ms": 1452.0286000006308,
+  "first_trace_ms": 8.280400000330701,
+  "lat": {
+   "GET /api/trace: 300 victims": {
+    "n": 300,
+    "min": 4.79540000014822,
+    "p50": 5.255299999589624,
+    "p95": 5.754300000262447,
+    "max": 8.161700000528072
+   },
+   "GET /api/account: 200 random": {
+    "n": 200,
+    "min": 29.92790000007517,
+    "p50": 38.98470000058296,
+    "p95": 41.81669999979931,
+    "max": 47.16329999973823
+   },
+   "GET /api/risk/top (HIGH, 500 rows): 20": {
+    "n": 20,
+    "min": 9.47730000007141,
+    "p50": 9.82209999983752,
+    "p95": 14.181599999574246,
+    "max": 24.805000000014843
+   },
+   "POST /api/docs (AI off): 10 victims": {
+    "n": 10,
+    "min": 38.40480000053503,
+    "p50": 41.29630000079487,
+    "p95": 59.87910000021657,
+    "max": 59.87910000021657
+   },
+   "POST /api/docs (AI on, model unreachable): 5 victims": {
+    "n": 5,
+    "min": 1295.0943999994706,
+    "p50": 1300.8890000000974,
+    "p95": 1401.6582000003837,
+    "max": 1401.6582000003837
+   }
+  },
+  "process_wall_s": 18.366
+ }
+}

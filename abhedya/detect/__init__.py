@@ -33,10 +33,15 @@ def _row(r) -> RiskRow:
     return RiskRow(account=r[0], score=r[1], band=r[2], role_hint=r[3], reasons=list(r[4] or []))
 
 
+def _sql_str(s: str) -> str:
+    """A SQL string literal for any text. A NUL byte would end the literal early, so it is spliced in."""
+    return "'" + s.replace("'", "''").replace("\x00", "' || chr(0) || '") + "'"
+
+
 def get_risk_many(con: duckdb.DuckDBPyConnection, accounts: list[str]) -> dict[str, RiskRow]:
     if not accounts:
         return {}
-    quoted = ",".join("'" + a.replace("'", "''") + "'" for a in accounts)  # inline: list params are slow
+    quoted = ",".join(_sql_str(a) for a in accounts)  # inline: list params are slow
     rows = con.execute(f"SELECT account, score, band, role_hint, reasons FROM risk WHERE account IN ({quoted})")
     return {r[0]: _row(r) for r in rows.fetchall()}
 

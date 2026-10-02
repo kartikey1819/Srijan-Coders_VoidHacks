@@ -16,6 +16,9 @@ from contracts.models import Evidence, Narrative
 OLLAMA_URL = os.environ.get("ABHEDYA_OLLAMA_URL", "http://127.0.0.1:11434")
 MODEL = os.environ.get("ABHEDYA_LLM_MODEL", "qwen2.5:3b")
 TIMEOUT_S = float(os.environ.get("ABHEDYA_LLM_TIMEOUT", "90"))
+# the model is on this machine: a listening server accepts at once, so a short connect limit makes the
+# "model not running" case fall back quickly (Windows retries a refused connection for ~2 s otherwise)
+CONNECT_TIMEOUT_S = 1.0
 
 
 def _inline(schema: dict) -> dict:
@@ -55,7 +58,7 @@ OPTIONS = {"temperature": 0, "num_ctx": 8192, "num_predict": 1600}
 def narrate_with_status(ev: Evidence, client: httpx.Client | None = None) -> tuple[Narrative | None, str | None]:
     """Returns (narrative, None) on success or (None, reason)."""
     own = client is None
-    client = client or httpx.Client(base_url=OLLAMA_URL, timeout=TIMEOUT_S)
+    client = client or httpx.Client(base_url=OLLAMA_URL, timeout=httpx.Timeout(TIMEOUT_S, connect=CONNECT_TIMEOUT_S))
     errors: list[str] = []
     try:
         for _ in range(2):

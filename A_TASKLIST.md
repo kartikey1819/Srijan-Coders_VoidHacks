@@ -97,15 +97,15 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
   `tests/test_robustness.py` (8 tests) passes. Official results unchanged (1.0000/1.0000, 300/300); ingest+index 10.9 s → 15.3 s
 - ✅ F2 External pattern research → `reports/external_pattern_research.md` (AMLworld/NeurIPS 2023, FBI-Europol mule PSA, FinCEN 2020/2014/2025 advisories, false-positive literature, PIB I4C–RBIH)
 - ✅ F3 Independent scenario generator (`tests/adversarial_data/`): 9 laundering + 14 legitimate families, labels from scenario meaning, dev + held-out wording
-- ⬜ F4 Adversarial suites: timing boundaries, amounts, network shapes, data quality, broken inputs
+- ✅ F4 Adversarial suites: broken inputs (`test_robustness.py`, 8); timing boundaries 179/180/181 and 899/900/901 s, 90 % amount edge, same-second ties, hub with 6,000 edges, dense 40-account clique, 30-hop chain (`test_adversarial_shapes.py`, 18); security: path traversal, injection-shaped ids, limits, HTML escaping (`test_security.py`, 24)
 - ✅ F5 Property-based tests (`tests/test_properties.py`, Hypothesis, ~120 random datasets): score bounds, trace conservation/time/real edges, determinism, unrelated component, DQ never changes risk, file order. Source-file hash test in `test_robustness.py`
 - ✅ F6 LLM grounding (`tests/test_llm_grounding.py`, 37 tests incl. live model): hostile replies, injection via payment mode (fixed: only known rails reach the model), evidence self-check, AI-vs-detection isolation; validator now also blocks dates/times/IPs, guilt language, banks not in the case, bank or role mislabels
-- ⬜ F7 Integration completion: one-command start, disputed-transfer choice in UI, API/UI contract test, browser workflows 1–10
-- ⬜ F8 Performance: 2M tests 1–4, repeated runs, detection breakdown, API/docs/LLM latency, peak memory
+- ✅ F7 Integration completion: `python -m abhedya serve --data <csv>` (ingests if needed, then serves), disputed-transfer choice in the UI, API/UI contract test (15), browser workflows 1–10 in headless Edge (10/10). Full suite 138 passed. Pushed `c78f08a`
+- ✅ F8 Performance (`bench/results.md`, 5 fresh-process runs each, 2M rows): ingest+index median **12.65 s**, detection **12.79 s**, complete pipeline **26.71 s** (budget 60 s), peak 1.38 GB; 4-hop trace p50 3.7 ms; full investigation incl. documents p50 0.5 s. Live AI: 8/10 accepted, median 15.3 s (`bench/llm_results.md`)
 - ✅ F9 Randomized runs: 53 worlds / ~656k rows (20 small dev, 20 small held-out, 10 medium, 3 large). Clear-cut mules 91.5–91.9%, false positives 4 / 18,839 legitimate accounts, victim L1 found 3,090/3,090, invariant problems 0 → `reports/adversarial/`
-- ⬜ F10 Final regression + `reports/final_test_matrix.md` + `reports/final_readiness_report.md`
+- ✅ F10 Final regression: 181 passed ×2 (0 skipped), official 1.0000/1.0000 + 300/300, official file hash unchanged, 4 independent suites identical to committed results → `reports/final_test_matrix.md`, `reports/final_readiness_report.md`, `README.md`
 
-### Bugs found and fixed in the final phase (so far)
+### Bugs found in the final phase: 19 found, 18 fixed, 1 partly fixed (#9)
 1. A malformed row aborted the whole ingest.
 2. A header-only file crashed.
 3. Missing or extra columns gave an obscure error.
@@ -121,6 +121,10 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
 13. The validator missed 'including …' role mislabels, guilt language, dates, IPs and wrong banks.
 14. Detection was 20x slower than necessary: DuckDB is slow on NumPy object arrays (official: 24 s → 12.9 s; 18k-row worlds: 26 s → <1 s).
 15. My own BOM-writing PowerShell corrupted `pyproject.toml`.
+16. UI type for ring results lacked `t_from`/`t_to` (found by the new contract test).
+17. The time slider could never show the last transfer of a trail (10 of 11 at the end; found by browser workflow 4).
+18. With the AI model stopped, document generation stalled ~2.3 s before falling back (Windows retries a refused connection); now ~1 s.
+19. An account id containing a NUL byte crashed `/api/risk/{id}` with a 500 (SQL literal cut short); now a 404.
 
 ## Waiting on teammates (for A11)
 - C: `web/`, `abhedya/{evidence,ai,docs}/`, `routes_docs.py`. Contract: `contracts/models.py`; sample: `contracts/fixtures/trace_KKBK10000000.json`.

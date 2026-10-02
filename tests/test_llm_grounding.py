@@ -8,6 +8,7 @@ Ollama answers on 127.0.0.1 and the full dataset is ingested.
 """
 import hashlib
 import json
+import time
 
 import duckdb
 import httpx
@@ -159,6 +160,15 @@ def test_documents_still_produced_when_model_is_down(sample_db, tmp_path, monkey
         assert (tmp_path / out["case_id"] / "diary.html").exists()
     finally:
         engine_mod._engine = old
+
+
+def test_model_not_running_falls_back_quickly(ev, monkeypatch):
+    """A stopped model server must not stall the investigator (was ~2.3 s on Windows)."""
+    monkeypatch.setattr(narrator, "OLLAMA_URL", "http://127.0.0.1:9")
+    t0 = time.perf_counter()
+    n, reason = narrator.narrate_with_status(ev)
+    assert n is None and "unavailable" in reason
+    assert time.perf_counter() - t0 < 1.5
 
 
 # ---- AI vs detection isolation: the narrative layer cannot change any fact or decision ----

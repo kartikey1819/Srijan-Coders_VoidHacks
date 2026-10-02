@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated 2026-10-02 05:56 by `python -m eval.evaluate`. Data: `VoidHacks8_MuleAccount_2M_Transactions.csv` (sha256 `2c9f81fd34f728c0…`). Ground truth: `ground_truth.json` (1,073 mules, 300 victims), built from the generator's own markers.
+Generated 2026-10-02 06:30 by `python -m eval.evaluate`. Data: `VoidHacks8_MuleAccount_2M_Transactions.csv` (sha256 `2c9f81fd34f728c0…`). Ground truth: `ground_truth.json` (1,073 mules, 300 victims), built from the generator's own markers.
 
 ## 1. Detection (jury criterion: precision and recall, 30%)
 Flagged (band HIGH, score >= 70): **1,073** accounts.
@@ -64,4 +64,4 @@ Every victim traced with `Engine.trace`; layers and transactions compared with t
 
 - Exact match (same L1, L2, L3 accounts and the same transactions): **300 / 300**
 - Mean Jaccard overlap with the true layer: L1 1.000, L2 1.000, L3 1.000
-- Trace latency in-process: p50 3.7 ms, max 15.7 ms
+- Trace latency in-process: p50 3.8 ms, max 15.3 ms
