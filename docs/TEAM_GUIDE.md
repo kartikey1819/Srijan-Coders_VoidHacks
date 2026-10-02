@@ -517,6 +517,7 @@ All routes are under `/api`. Money is integer paise in JSON. Unknown accounts gi
 | GET | `/api/export/flagged.csv`, `/api/export/ranked.csv` | exports |
 | POST | `/api/docs/{victim}` | build evidence and documents; body has FIR / NCRP numbers, station, IO, AI on/off, disputed transfers |
 | GET | `/api/docs/{case_id}/{file}` | a written document (FIR draft, case diary, notices, evidence, manifest) |
+| GET | `/api/docs/{case_id}/notices.zip` | every bank's freeze notice for the case, one file per bank |
 | GET | `/api/docs/{case_id}/case_file.zip` | the complete case file: every document, evidence, manifest, money trail CSV |
 | GET / POST / DELETE | `/api/datasets`, `/api/datasets/{id}/progress`, `/activate` | saved cases (upload is a raw POST body) |
 | GET | `/api/docs/llm` | whether the local AI model is installed |

@@ -228,6 +228,30 @@ def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
                       verification=verification, narrative_source=narrative_source)
 
 
+def notices_zip(case_dir: Path) -> bytes:
+    """Every bank's freeze notice of one case, one file per bank (freeze_notice_<BANK>_<victim>.html), plus a list."""
+    import io
+    import zipfile
+    ev = orjson.loads((case_dir / "evidence.json").read_bytes())
+    acc = {a["eid"]: a for a in ev["accounts"]}
+    victim = acc[ev["victim_eid"]]["account"]
+    banks: dict[str, list] = {}
+    for e in ev["freeze_eids"]:
+        a = acc[e]
+        banks.setdefault(a["bank_prefix"], []).append(a)
+    lines = [f"Freeze notices for victim {victim}, case {ev['case_id']}: one per bank, drafts for the officer's verification.", ""]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for prefix, rows in sorted(banks.items()):
+            f = case_dir / f"notice_{prefix}.html"
+            if not f.is_file():
+                continue
+            z.write(f, f"freeze_notice_{prefix}_{victim}.html")
+            lines.append(f"{rows[0]['bank_name']} ({prefix}): {len(rows)} account(s), hold {inr(sum(r['held_paise'] for r in rows))}")
+        z.writestr("README.txt", "\r\n".join(lines + ["", f"Facts fingerprint: {ev['facts_sha256']}", ""]))
+    return buf.getvalue()
+
+
 def case_file_zip(case_dir: Path) -> bytes:
     """Everything prepared for one case in one file: FIR draft, case diary, every bank notice, the evidence, the
     narrative, the manifest with each file's SHA-256, and the money trail as CSV (from the evidence)."""

@@ -100,8 +100,10 @@ A large dialog:
   - Prepare documents;
   - a **Verification passed / failed** box. It says how many accounts, IFSCs, transaction IDs and amounts the output
     firewall checked against the data, how many failed, and shows the evidence fingerprint.
-- **Right side:** tabs for Case diary, FIR draft, All freeze notices (N), and one per bank with its hold amount;
-  Complete case file (ZIP); Save HTML; Print / PDF; the document on paper.
+- **Right side:** tabs for Case diary, FIR draft and **Freeze notices (N banks)**; Complete case file (ZIP); Save HTML;
+  Print / PDF; the document on paper. The freeze notices tab lists the banks assigned automatically from the trace
+  (every bank holding the victim's money), each with its logo, accounts and hold amount, a View and a Download
+  button; **Download all notices (ZIP)** (one file per bank plus a list) and **Print all** export them in a batch.
 - **The documents:**
   - the FIR draft follows the Section 173 BNSS FIR layout (acts and sections, occurrence, complainant, suspected
     accounts by layer, property stolen, first information, action taken), marked as a draft format for the

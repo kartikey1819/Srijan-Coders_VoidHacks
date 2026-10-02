@@ -716,3 +716,19 @@ body { font-size: var(--fs); line-height: 1.5; }
 .bchips span.bank-ic, .bchips span.bank-ic span { border: 0; padding: 0; background: none; font-family: inherit; }
 .bchips > span { display: inline-flex; align-items: center; gap: 5px; }
 .bank-bars .bb-name { display: flex; align-items: center; }
+
+/* Documents dialog: freeze notices, banks assigned automatically */
+.fz-roster { border-bottom: 1px solid var(--rule); padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+.fz-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fz-head p { margin: 0; flex: 1 1 320px; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.fz-banks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.fz-banks li { display: flex; align-items: stretch; border: 1px solid var(--rule-2); border-radius: 8px; background: var(--sheet); overflow: hidden; }
+.fz-banks li.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.fz-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 7px 10px; border: 0; background: none; text-align: left;
+  font: inherit; color: var(--ink); cursor: pointer; }
+.fz-pick span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.fz-pick b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fz-pick small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fz-all { width: 20px; height: 20px; display: grid; place-items: center; color: var(--accent); }
+.fz-dl { display: grid; place-items: center; width: 38px; flex: none; border-left: 1px solid var(--rule); color: var(--ink-2); }
+@media (hover: hover) and (pointer: fine) { .fz-pick:hover, .fz-dl:hover { background: var(--grid); } }

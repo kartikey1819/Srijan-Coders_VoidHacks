@@ -146,7 +146,8 @@ def test_w5_w6_case_diary_and_bank_notice(page, base):
     _generate(page, base, use_llm=False)
     assert "Verification passed" in page.locator(".verify").inner_text()
     diary_url = page.locator(".paper iframe").get_attribute("src")
-    page.get_by_role("tab", name="Notice: ICICI Bank").click()
+    page.get_by_role("tab", name="Freeze notices").click()
+    page.get_by_role("button", name="Notice: ICICI Bank").click()
     page.wait_for_function("(document.querySelector('.paper iframe') || {}).src && document.querySelector('.paper iframe').src.includes('notice_ICIC')")
     notice_url = page.locator(".paper iframe").get_attribute("src")
     page.goto(base + diary_url)
@@ -255,7 +256,8 @@ def test_dashboard_first_view_shows_where_the_money_went(page, base):
     page.goto(f"{base}/#overview")
     flow = page.locator(".cflow")
     flow.wait_for(timeout=30_000)
-    page.wait_for_function("document.querySelector('.cf-st.l3 .cf-big').innerText.startsWith('385')")
+    page.wait_for_function("""(() => { const t = [...document.querySelectorAll('.cf-st .cf-big')].map(e => e.innerText);
+        return t.length === 4 && t[0].startsWith('300') && t[1].startsWith('129') && t[2].startsWith('559') && t[3].startsWith('385') })()""")   # figures count up
     chain = page.locator(".cf-chain").inner_text()
     for text in ("Victims", "300", "₹8.48 Cr", "Collectors", "129", "98% out in 15 min", "2.3 victims each",
                  "Distributors", "559", "96% out in 1 hour", "Cash-out", "385", "100% crypto / wallet", "+5 min", "+18 min"):
@@ -466,3 +468,20 @@ def test_dashboard_action_traces_the_largest_group_together(page, base):
     page.locator(".cf-acts a", has_text="Trace these").click()
     page.locator(".vcol").nth(1).wait_for(timeout=30_000)
     assert "#traceall=" in page.url and page.locator(".vcol").count() >= 2
+
+
+def test_freeze_notices_are_assigned_to_banks_and_export_in_a_batch(page, base):
+    """Expected: the freeze notices tab lists every bank that holds the victim's money (assigned automatically), each
+    downloadable on its own, and all of them as one ZIP."""
+    _generate(page, base, use_llm=False)
+    page.get_by_role("tab", name="Freeze notices").click()
+    picks = page.locator(".fz-banks li")
+    picks.first.wait_for()
+    assert picks.count() >= 2                                       # "All notices" + one per bank
+    assert page.get_by_role("link", name="Download the notice to ICICI Bank").get_attribute("download").startswith("freeze_notice_ICIC_")
+    with page.expect_download() as dl:
+        page.get_by_role("link", name="Download all notices (ZIP)").click()
+    import zipfile
+    names = zipfile.ZipFile(dl.value.path()).namelist()
+    assert "README.txt" in names and any(n.startswith("freeze_notice_ICIC_") for n in names)
+    assert len([n for n in names if n.startswith("freeze_notice_")]) == picks.count() - 1

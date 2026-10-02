@@ -152,6 +152,10 @@ def test_document_api(sample_db, tmp_path, monkeypatch):
         trail = zf.read("money_trail.csv").decode("utf-8-sig").splitlines()
         assert trail[0].startswith("ref,date_time,transaction_id") and len(trail) == 1 + 11
         assert c.get("/api/docs/not-a-case/case_file.zip").status_code == 404
+        nz = zipfile.ZipFile(io.BytesIO(c.get(f"/api/docs/{out['case_id']}/notices.zip").content))
+        assert sorted(n for n in nz.namelist() if n.startswith("freeze_notice_")) == sorted(
+            f"freeze_notice_{n['bank_prefix']}_KKBK10000000.html" for n in out["notices"])
+        assert c.get("/api/docs/not-a-case/notices.zip").status_code == 404
     finally:
         engine_mod._engine = old
 
