@@ -5,6 +5,7 @@ import { prefersReducedMotion } from '../../look'
 import type { TraceResult, TxnRow } from '../../types'
 import { RoleBadge } from '../Page'
 import { after, plainWarning, when, type Signs, type TraceView } from './model'
+import { BankIcon, BankName } from '../BankIcon'
 
 const roleVar = (r: string) => (r === 'L1' || r === 'L2' || r === 'L3' ? `var(--${r.toLowerCase()})` : 'var(--victim)')
 const ROLE_PLURAL: Record<string, [string, string]> = { L1: ['collector', 'collectors'], L2: ['distributor', 'distributors'], L3: ['cash-out account', 'cash-out accounts'] }
@@ -190,7 +191,8 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
   const off = pm !== null && pm > scale
   const at = (m: number) => `${(100 * Math.min(m, scale)) / scale}%`
   const byBank = new Map<string, number>()
-  for (const n of v.freeze) byBank.set(n.bank_name, (byBank.get(n.bank_name) ?? 0) + n.held_paise)
+  for (const n of v.freeze) byBank.set(n.bank_prefix, (byBank.get(n.bank_prefix) ?? 0) + n.held_paise)
+  const bankLabel = new Map(v.freeze.map((n) => [n.bank_prefix, n.bank_name]))
   const banks = [...byBank.entries()].sort((a, b) => b[1] - a[1])
   const topBank = Math.max(1, banks[0]?.[1] ?? 1)
   const moved = Math.max(0, t.loss_paise - v.freezeTotal)
@@ -214,7 +216,7 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
       </Card>
       <Card i={1} icon={TreeStructure} color="var(--l2)" title="How widely it was spread"
             foot={<span className="bchips" aria-label="Mule accounts by bank">
-              {mulesByBank.slice(0, mulesByBank.length > 8 ? 7 : 8).map(([b, n]) => <span key={b}>{b} <b>{n}</b></span>)}
+              {mulesByBank.slice(0, mulesByBank.length > 8 ? 7 : 8).map(([b, n]) => <span key={b} title={b}><BankIcon bank={b} size="sm" /> <b>{n}</b></span>)}
               {mulesByBank.length > 8 && <span className="more" title={mulesByBank.slice(7).map(([b, n]) => `${b} ${n}`).join(', ')}>+{mulesByBank.length - 7} more</span>}
             </span>}>
         <p className="ig-big ig-inline" style={{ color: 'var(--l2)' }}><CountUp value={v.mules.length} format={(n) => `${Math.round(n)}`} />
@@ -244,7 +246,7 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
         {banks.length > 0 && (
           <ul className="bank-bars" aria-label="Largest amounts to freeze, by bank">
             {banks.slice(0, 3).map(([b, amt], i) => (
-              <li key={b}><span className="bb-name">{b}</span>
+              <li key={b}><span className="bb-name" title={bankLabel.get(b) ?? b}><BankIcon bank={b} /></span>
                 <span className="bb-track"><i style={{ transform: `scaleX(${amt / topBank})`, ...delay(i, 110) }} /></span>
                 <b>{inrShort(amt)}</b></li>
             ))}
@@ -390,7 +392,7 @@ export function FreezeTable({ v, onOpen }: { v: TraceView; onOpen: (a: string) =
           <tr key={n.account} className="click" tabIndex={0} onClick={() => onOpen(n.account)}
               onKeyDown={(e) => { if (e.key === 'Enter') onOpen(n.account) }}>
             <td className="mono strong">{n.account}</td>
-            <td>{n.bank_name}<div className="mono sub">{n.ifsc}</div></td>
+            <td><BankName bank={n.bank_prefix} name={n.bank_name} /><div className="mono sub">{n.ifsc}</div></td>
             <td><RoleBadge role={n.role} /></td>
             <td className="num strong">{inr(n.held_paise)}</td>
           </tr>))}</tbody>

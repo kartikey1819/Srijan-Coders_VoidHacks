@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { api } from '../api'
 import { inr } from '../format'
 import type { CaseInfo, CaseOutput, LlmStatus } from '../types'
+import { BankIcon } from './BankIcon'
 
 const FIELDS: [keyof CaseInfo, string, string][] = [
   ['fir_no', 'FIR / Case No.', 'e.g. 0412/2026'],
@@ -119,7 +120,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
             {out?.notices.map((n) => (
               <button key={n.bank_prefix} role="tab" aria-selected={view === n.bank_prefix} className="chip" onClick={() => setView(n.bank_prefix)}
                       title={`${n.accounts} account${n.accounts === 1 ? '' : 's'} to hold`}>
-                Notice: {n.bank_name} <span className="muted">{inr(n.hold_paise)}</span></button>
+                <BankIcon bank={n.bank_prefix} size="sm" /> {n.bank_name} <span className="muted">{inr(n.hold_paise)}</span></button>
             ))}
             <span className="sp" />
             {out && <a className="btn" href={`/api/docs/${out.case_id}/case_file.zip`} download><FileZip size={15} /> Complete case file (ZIP)</a>}

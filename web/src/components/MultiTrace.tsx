@@ -6,6 +6,7 @@ import { go } from '../route'
 import type { TraceNode, TraceResult } from '../types'
 import { DocsModal } from './DocsModal'
 import { Page, Panel } from './Page'
+import { BankName } from './BankIcon'
 
 const ACCT = /[A-Z]{4}\d{8}/g
 const MAX = 20
@@ -129,7 +130,7 @@ export function MultiTrace({ accounts }: { accounts: string[] }) {
                 <thead><tr><th>Shared account</th><th>Bank</th><th>Role</th><th>Complainants</th><th className="num">Their money received</th><th className="num">Still held</th></tr></thead>
                 <tbody>{shared.map((s) => (
                   <tr key={s.account}>
-                    <td className="acct"><a href={`#ring=${s.account}`}>{s.account}</a></td><td>{s.bank}</td>
+                    <td className="acct"><a href={`#ring=${s.account}`}>{s.account}</a></td><td><BankName bank={s.account} name={s.bank} /></td>
                     <td>{[...s.roles].map((r) => ROLE_NAME[r] ?? r).join(', ')}</td>
                     <td>{s.victims.map((v) => <span key={v} className="vchip mono">{v}</span>)}</td>
                     <td className="num">{inr(s.received)}</td><td className="num ok">{inr(s.held)}</td>
@@ -159,7 +160,7 @@ function VictimColumn({ t, shared, onDocs }: { t: TraceResult; shared: Set<strin
   return (
     <section className="gpanel vcol" aria-label={`Trail of ${t.victim}`}>
       <header>
-        <b className="mono">{t.victim}</b><span className="muted small">{v?.bank_name}</span>
+        <b className="mono">{t.victim}</b><span className="muted small"><BankName bank={t.victim} name={v?.bank_name} /></span>
         <span className="vc-loss">{inr(t.loss_paise)} <small>taken</small></span>
         <span className="muted small">traced in {t.elapsed_ms} ms</span>
       </header>

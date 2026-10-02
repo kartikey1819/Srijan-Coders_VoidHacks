@@ -6,6 +6,7 @@ import { go } from '../route'
 import type { CountRow, DQSummary, FlowLayer, FlowSummary } from '../types'
 import { after } from './trace/model'
 import { CountUp } from './trace/TraceParts'
+import { BankIcon } from './BankIcon'
 
 type Icon = ComponentType<{ size?: number; weight?: 'regular' | 'fill' }>
 const delay = (i: number, step = 90): CSSProperties => ({ ['--d' as string]: `${i * step}ms` })
@@ -72,18 +73,22 @@ export function CaseFlow({ f, stats, days, banks }: { f: FlowSummary; stats: DQS
           <AccountsDonut accounts={stats?.accounts ?? 0} f={f} onOpen={open} />
           <dl className="cf-notes">
             <dt>Banks to notify</dt>
-            <dd>{banks.length ? <>{banks.length} bank{banks.length === 1 ? '' : 's'} hold suspect accounts; most are with {banks[0].label}.</> : 'No suspect accounts.'}</dd>
+            <dd>{banks.length ? <>{banks.length} bank{banks.length === 1 ? '' : 's'} hold suspect accounts; most are with {banks[0].label}.
+              {f.banks.length > 0 && <> Each gets a debit-hold notice for the victims' money it holds:</>}</> : 'No suspect accounts.'}
+              {f.banks.length > 0 && (
+                <ul className="cf-bklist">
+                  {f.banks.map((b) => (
+                    <li key={b.bank}><a href={`#flagged?bank=${b.bank}`} title={`${b.bank_name}: ${inr(b.held_paise)} in ${n(b.accounts)} accounts`}>
+                      <BankIcon bank={b.bank} /><span>{n(b.accounts)} a/c</span><b>{inrShort(b.held_paise)}</b></a></li>
+                  ))}
+                </ul>
+              )}</dd>
             <dt>Linked network</dt>
             <dd>{f.linked_groups <= 1 ? <>All {n(f.suspects)} suspect accounts are connected to one another.</>
               : <>{n(f.linked_groups)} separate groups; the largest holds {n(f.linked_largest)} of the {n(f.suspects)} suspect accounts.</>}</dd>
             <dt>Circular routing</dt>
             <dd>{f.sent_back === 0 ? 'None. No money was sent back to an earlier account.' : <>{n(f.sent_back)} transfer{f.sent_back === 1 ? '' : 's'} sent money back to an earlier account.</>}</dd>
           </dl>
-        </div>
-        <div className="cf-more">
-          <BankHolds f={f} />
-          <SharedCollectors f={f} />
-          <CashoutSpeed f={f} />
         </div>
       </div>
       <Freeze f={f} layers={[L3, L2, L1]} banks={banks} onOpen={open} />
@@ -151,9 +156,9 @@ function AccountsDonut({ accounts, f, onOpen }: { accounts: number; f: FlowSumma
     { k: 'OTHER', label: 'Other suspects', count: other, color: 'var(--unknown)' },
   ].filter((r) => r.count > 0)
   const total = Math.max(1, rows.reduce((s, r) => s + r.count, 0))
-  const S = 136, R = S / 2
+  const S = 172, R = S / 2
   const slices = pie<typeof rows[number]>().value((r) => r.count).sort(null).padAngle(0.012)(rows)
-  const a = arc<(typeof slices)[number]>().innerRadius(R - 17).outerRadius(R - 2).cornerRadius(2)
+  const a = arc<(typeof slices)[number]>().innerRadius(R - 20).outerRadius(R - 2).cornerRadius(2)
   const pickable = (k: string) => k === 'L1' || k === 'L2' || k === 'L3'
   const shown = rows.find((r) => r.k === hover)
   return (
@@ -214,78 +219,5 @@ function Actions({ f, layers, banks, onOpen }: { f: FlowSummary; layers: FlowLay
         )}
       </ol>
     </>
-  )
-}
-
-/** Where the money to freeze sits, bank by bank: what each notice will ask that bank to hold. */
-function BankHolds({ f }: { f: FlowSummary }) {
-  const top = Math.max(1, ...f.banks.map((b) => b.held_paise))
-  return (
-    <section className="cf-card" aria-label="Money to freeze by bank">
-      <h3>Money to freeze, by bank</h3>
-      <p className="cf-sub">{f.banks.length} debit-hold notices; click a bank for its accounts</p>
-      <ul className="cf-banks">
-        {f.banks.map((b, i) => (
-          <li key={b.bank}>
-            <a href={`#flagged?bank=${b.bank}`} title={`${b.bank_name}: ${inr(b.held_paise)} in ${n(b.accounts)} accounts`}>
-              <span className="cf-bk">{b.bank_name}</span>
-              <span className="cf-bt"><i style={{ transform: `scaleX(${b.held_paise / top})`, ...delay(i, 50) }} /></span>
-              <b>{inrShort(b.held_paise)}</b><small>{n(b.accounts)}</small>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-/** The collectors paid by the most victims: each one is a set of complaints to club, traced together in one click. */
-function SharedCollectors({ f }: { f: FlowSummary }) {
-  return (
-    <section className="cf-card" aria-label="Collectors shared by several victims">
-      <h3>Complaints to club</h3>
-      <p className="cf-sub">Collectors paid by the most victims</p>
-      {f.top_collectors.length ? (
-        <ol className="cf-coll">
-          {f.top_collectors.map((c) => (
-            <li key={c.account}>
-              <div><a className="mono" href={`#ring=${c.account}`}>{c.account}</a>
-                <span>{c.victims.length} victims · {inrShort(c.received_paise)}</span></div>
-              <a className="cf-go" href={`#traceall=${c.victims.join(',')}`}>Trace all {c.victims.length}</a>
-            </li>
-          ))}
-        </ol>
-      ) : <p className="muted small">No collector was paid by more than one victim.</p>}
-      {f.club_collectors > f.top_collectors.length && (
-        <p className="cf-sub">and {n(f.club_collectors - f.top_collectors.length)} more collectors shared by 2 or more victims</p>
-      )}
-    </section>
-  )
-}
-
-/** For each victim, minutes from the payment to the first cash-out account, as a histogram: the officer's window. */
-function CashoutSpeed({ f }: { f: FlowSummary }) {
-  const mins = f.to_l3_each_s.map((s) => s / 60)
-  if (!mins.length) return null
-  const step = 5, hi = Math.max(step, Math.ceil(Math.max(...mins) / step) * step)
-  const bins = Array.from({ length: hi / step }, (_, i) => mins.filter((m) => m >= i * step && (m < (i + 1) * step || (i + 1) * step === hi && m <= hi)).length)
-  const top = Math.max(1, ...bins)
-  const med = mins[Math.floor(mins.length / 2)]
-  const fastest = mins[0], within = mins.filter((m) => m <= 30).length
-  return (
-    <section className="cf-card" aria-label="How fast the money reached cash-out">
-      <h3>Time to cash-out</h3>
-      <p className="cf-sub">Minutes from each victim's payment to the first cash-out account</p>
-      <div className="cf-hist" role="img" aria-label={`Median ${Math.round(med)} minutes; fastest ${Math.round(fastest)} minutes`}>
-        {bins.map((c, i) => (
-          <div key={i} className="cf-hb" title={`${i * step}-${(i + 1) * step} min: ${c} victims`}>
-            <i style={{ transform: `scaleY(${c / top})`, ...delay(i, 40) }} /><small>{c || ''}</small>
-          </div>
-        ))}
-      </div>
-      <div className="cf-hx">{bins.map((_, i) => <span key={i}>{i * step}</span>)}<span>{hi} min</span></div>
-      <p className="cf-sub"><b>Median {Math.round(med)} min</b>, fastest {Math.round(fastest)} min; {within === mins.length ? 'every' : n(within)} victim{within === 1 ? "'s" : "s'"} money
-        {' '}reached cash-out within 30 minutes.</p>
-    </section>
   )
 }

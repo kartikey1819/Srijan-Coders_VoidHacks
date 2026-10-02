@@ -9,6 +9,7 @@ import type { RiskRow } from '../types'
 import { AccountPanel } from './AccountPanel'
 import { Page, RoleBadge } from './Page'
 import { PanelFrame } from './PanelFrame'
+import { BankIcon } from './BankIcon'
 
 interface Props { reasons: Record<string, string>; role: string | null; bank: string | null; reason: string | null }
 type SortKey = 'score' | 'account' | 'role'
@@ -82,7 +83,7 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
                 <tbody className="stagger">
                   {shown.slice(0, limit).map((r, i) => (
                     <tr key={r.account} aria-selected={open === r.account} style={{ ['--i' as string]: i }}>
-                      <td className="acct"><a href={`#account-${r.account}`} onClick={(e) => { e.preventDefault(); setOpen(r.account) }}>{r.account}</a></td>
+                      <td className="acct"><span className="acct-bank"><BankIcon bank={r.account} size="sm" /><a href={`#account-${r.account}`} onClick={(e) => { e.preventDefault(); setOpen(r.account) }}>{r.account}</a></span></td>
                       <td className="num"><span className={`badge ${r.band}`}>{r.score}</span></td>
                       <td>{r.role_hint ? <RoleBadge role={r.role_hint} /> : <span className="muted">-</span>}</td>
                       <td>{r.reasons.slice(0, 4).map((x) => {

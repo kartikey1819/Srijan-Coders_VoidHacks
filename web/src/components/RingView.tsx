@@ -15,6 +15,7 @@ import { Page } from './Page'
 import { PanelFrame } from './PanelFrame'
 import { RingTrail } from './RingTrail'
 import { Timeline } from './Timeline'
+import { BankIcon } from './BankIcon'
 
 interface Props { seed: string; reasons: Record<string, string> }
 type View = 'flow' | 'trail' | 'globe'
@@ -181,7 +182,7 @@ function HopList({ title, hops, onGo, onFlow }: { title: string; hops: Hop[]; on
       {shown.map((h) => (
         <div key={h.account} className="hop">
           <span className={`key ${h.role}`} aria-hidden="true" />
-          <div><div className="acct">{h.account}</div>
+          <div><div className="acct acct-bank"><BankIcon bank={h.account} size="sm" />{h.account}</div>
             <div className="small muted">{ROLE_TEXT[h.role] ?? h.role} · {h.bank} · {h.n} transfer{h.n === 1 ? '' : 's'} · first {h.first.slice(5, 16)}</div></div>
           <div style={{ textAlign: 'right' }}><div className="num">{inr(h.total)}</div>
             <div className="row gap" style={{ justifyContent: 'flex-end' }}>

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { inr } from '../format'
 import type { AccountSummary, ScoreExplain, TxnRow } from '../types'
+import { BankName } from './BankIcon'
 
 interface Props {
   account: string
@@ -47,7 +48,7 @@ export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Pr
         {r && <span className={`badge ${r.band}`}>Risk {r.score} · {r.band}{r.role_hint ? ` · ${r.role_hint}` : ''}</span>}
       </div>
       <dl className="kv">
-        <dt>Bank</dt><dd>{s.bank_name}</dd>
+        <dt>Bank</dt><dd><BankName bank={s.account} name={s.bank_name} /></dd>
         <dt>IFSC</dt><dd className="mono">{s.ifsc}</dd>
         <dt>Active</dt><dd>{s.first_ts?.slice(0, 16)} to {s.last_ts?.slice(0, 16)}</dd>
       </dl>

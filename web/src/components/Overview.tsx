@@ -7,6 +7,7 @@ import type { DQSummary, FlowSummary, Overview as OverviewData, VictimCandidate 
 import { CaseFlow } from './CaseFlow'
 import { DataInUse } from './DataInUse'
 import { Page } from './Page'
+import { BankIcon } from './BankIcon'
 
 /** Plain names for the reason codes on the Overview (the full sentence is the row's detail). */
 const REASON_NAME: Record<string, string> = {
@@ -48,7 +49,7 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
         <section className="sheet sheet-body w6">
           <BarList title="Suspect accounts by bank" sub="Each bank receives its own freeze notice." source="account prefix"
                    total={flagged} max={6} pickHint="View this bank's accounts"
-                   rows={o.flagged_by_bank.map((r) => ({ key: r.key, label: r.label, detail: `${r.label} (${r.key}), one freeze notice to its nodal officer`, count: r.count }))}
+                   rows={o.flagged_by_bank.map((r) => ({ key: r.key, label: r.label, icon: <BankIcon bank={r.key} />, detail: `${r.label} (${r.key}), one freeze notice to its nodal officer`, count: r.count }))}
                    onPick={(k) => go({ name: 'flagged', role: null, bank: k, reason: null })} />
         </section>
         <section className="sheet sheet-body w6">

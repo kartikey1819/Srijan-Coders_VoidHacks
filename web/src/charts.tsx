@@ -34,7 +34,7 @@ export function Chart({ title, sub, source, children, tip }: {
  *  hover or focus highlights it and dims the rest, the detail line explains it, a click opens the filtered list.
  *  The value column carries the share of `total` when given, so no number is colour-only or tooltip-only. */
 export function BarList({ title, sub, source, rows, color = 'var(--ink-2)', colorOf, onPick, max = 10, format, total, unit = 'accounts', pickHint = 'View accounts' }: {
-  title: ReactNode; sub?: ReactNode; source?: string; rows: { key: string; label: string; count: number; detail?: string }[]
+  title: ReactNode; sub?: ReactNode; source?: string; rows: { key: string; label: string; count: number; detail?: string; icon?: ReactNode }[]
   color?: string; colorOf?: (key: string) => string; onPick?: (key: string) => void; max?: number; format?: (n: number) => string
   total?: number; unit?: string; pickHint?: string
 }) {
@@ -51,7 +51,7 @@ export function BarList({ title, sub, source, rows, color = 'var(--ink-2)', colo
         {shown.map((r, i) => {
           const body = (
             <>
-              <span className="b-label" title={r.detail ?? r.label}>{r.label}</span>
+              <span className="b-label" title={r.detail ?? r.label}>{r.icon}{r.label}</span>
               <span className="b-track"><span className="b-bar grow-x" style={{ width: `${(100 * r.count) / top}%`, background: colorOf?.(r.key) ?? color, animationDelay: `${Math.min(i, 10) * 30}ms` }} /></span>
               <span className="b-val">{fmt(r.count)}</span>
               {total ? <span className="b-pct">{pct(r.count)}</span> : null}
