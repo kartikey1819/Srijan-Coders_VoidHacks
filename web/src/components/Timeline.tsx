@@ -12,14 +12,23 @@ interface Props {
   label?: string
 }
 
-const SPEEDS = [1, 5, 30]
+const SPEEDS: [number, string][] = [[1, '1 min'], [5, '5 min'], [30, '30 min'], [120, '2 h'], [720, '12 h'], [1440, '1 day']]
+const TICK_MS = 180
+const RATES = [1, 1.25, 1.5, 1.75, 2]
 
 /** Minute-by-minute playback of the money's spread. Transfers are ticks on the track; arrows step between them. */
 export function Timeline({ times, value, onChange, t0, fullRange, label = 'Show transfers up to this minute' }: Props) {
   const [playing, setPlaying] = useState(false)
-  const [speed, setSpeed] = useState(1)
   const [whole, setWhole] = useState(false)
   const first = times[0] ?? 0, last = times[times.length - 1] ?? 0
+  // default speed: a full replay takes about 20 s, whatever the span (minutes for a trail, days for a ring)
+  const auto = useMemo(() => {
+    const want = (last - first) / 60 / (20000 / TICK_MS)
+    return SPEEDS.reduce((best, [s]) => (Math.abs(Math.log((s || 1) / Math.max(want, 1))) < Math.abs(Math.log(best / Math.max(want, 1))) ? s : best), 1)
+  }, [first, last])
+  const [speed, setSpeed] = useState(auto)
+  const [rate, setRate] = useState(1)
+  useEffect(() => setSpeed(auto), [auto])
   const lo = whole && fullRange ? fullRange[0] : first
   // whole-minute steps from lo; round the end UP so the last position includes the last transfer
   const hi = lo + Math.max(60, Math.ceil(((whole && fullRange ? fullRange[1] : last) - lo) / 60) * 60)
@@ -33,9 +42,9 @@ export function Timeline({ times, value, onChange, t0, fullRange, label = 'Show 
       const next = Math.min(hi, val.current + 60 * speed)
       onChange(next)
       if (next >= hi) setPlaying(false)
-    }, 250)
+    }, TICK_MS / rate)
     return () => window.clearInterval(id)
-  }, [playing, speed, hi, onChange])
+  }, [playing, speed, rate, hi, onChange])
 
   const shown = useMemo(() => {       // binary search: times are sorted
     let lo = 0, hi = times.length
@@ -62,7 +71,10 @@ export function Timeline({ times, value, onChange, t0, fullRange, label = 'Show 
         <button className="btn" onClick={() => { if (v >= hi) onChange(lo); setPlaying((p) => !p) }}
                 aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause weight="fill" /> : <Play weight="fill" />}{playing ? 'Pause' : 'Play'}</button>
         <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Playback speed">
-          {SPEEDS.map((s) => <option key={s} value={s}>{s} min / step</option>)}
+          {SPEEDS.map(([s, l]) => <option key={s} value={s}>{l} / step</option>)}
+        </select>
+        <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Playback rate" title="Playback rate">
+          {RATES.map((r) => <option key={r} value={r}>{r}×</option>)}
         </select>
         <button className="btn sm" onClick={() => step(-1)} aria-label="Previous transfer" title="Previous transfer"><CaretLeft /></button>
         <button className="btn sm" onClick={() => step(1)} aria-label="Next transfer" title="Next transfer"><CaretRight /></button>

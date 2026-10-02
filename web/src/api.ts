@@ -25,6 +25,7 @@ export const api = {
   trace: (victim: string, seeds?: number[] | null) =>
     req<TraceResult>(`/api/trace/${enc(victim)}${seeds?.length ? '?' + seeds.map((s) => `seed_txn=${s}`).join('&') : ''}`),
   account: (a: string) => req<AccountSummary>(`/api/account/${enc(a)}`),
+  byIndex: (idx: number[]) => req<TxnRow[]>(`/api/txns?${idx.slice(0, 500).map((i) => `idx=${i}`).join('&')}`),
   txns: (a: string, limit = 50, offset = 0) => req<TxnRow[]>(`/api/account/${enc(a)}/txns?limit=${limit}&offset=${offset}`),
   reasons: () => req<Record<string, string>>('/api/risk/reasons'),
   top: (band: string, limit = 5000) => req<RiskRow[]>(`/api/risk/top?band=${band}&limit=${limit}`),

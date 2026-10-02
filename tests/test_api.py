@@ -126,3 +126,11 @@ def test_upload_rejects_a_file_without_the_columns(client, tmp_path, monkeypatch
     assert r.status_code == 422 and "Sender_Account" in r.json()["detail"]
     assert client.post("/api/datasets?name=e.csv", content=b"").status_code == 422
     assert client.get("/api/datasets/zzz/progress").status_code == 404
+
+
+def test_transactions_by_row_number(client):
+    rows = client.get("/api/txns", params={"idx": [0, 1, 2]}).json()
+    assert [r["txn_idx"] for r in sorted(rows, key=lambda r: r["txn_idx"])] == [0, 1, 2]
+    assert client.get("/api/txns", params={"idx": ["x"]}).status_code == 422
+    assert client.get("/api/txns", params={"idx": list(range(501))}).status_code == 422
+    assert client.get("/api/txns", params={"idx": [10 ** 9]}).json() == []

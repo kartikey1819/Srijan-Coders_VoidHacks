@@ -290,3 +290,17 @@ def test_panel_size_persists_across_reload(page, base):
     page.reload()
     page.get_by_text("Accounts on the money trail").wait_for()
     assert abs(page.locator("#register").bounding_box()["width"] - after) < 30
+
+
+def test_ring_transfer_flow_panel(page, base):
+    """Expected: from the journey, Flow opens everything behind one link: both ends, totals, the transaction rows,
+    and the money before and after; Back returns to the journey."""
+    page.goto(f"{base}/#ring={L1}")
+    page.get_by_role("heading", name="Money came from (4)").wait_for(timeout=20_000)
+    page.get_by_role("button", name=f"Transfer flow with {VICTIM}").click()
+    page.get_by_role("heading", name="Transfer flow").first.wait_for()
+    page.get_by_text("moved on this link").wait_for()
+    page.locator(".flow table.tbl tbody tr").first.wait_for()
+    assert page.locator(".flow table.tbl tbody tr").count() >= 1
+    page.get_by_role("button", name="Back to the journey").click()
+    page.get_by_role("heading", name="Money came from (4)").wait_for()

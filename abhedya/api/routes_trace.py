@@ -46,6 +46,12 @@ def account_txns(acct: str, limit: int = Query(200, ge=1, le=5000), offset: int 
     return get_engine().account_txns(acct, limit, offset)
 
 
+@router.get("/txns", response_model=list[TxnRow])
+def txns_by_index(idx: list[int] = Query(..., max_length=500)):
+    """Transactions by their row number in the file (the ids a ring edge carries). Read-only; integers only."""
+    return get_engine().txns([i for i in idx if i >= 0])
+
+
 @router.get("/ring/{acct}", response_model=RingResult)
 def ring(acct: str, t_from: str | None = None, t_to: str | None = None):
     return get_engine().ring(acct, t_from, t_to)

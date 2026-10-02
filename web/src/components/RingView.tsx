@@ -10,8 +10,9 @@ import { cssVar, useLookTick } from '../look'
 import { go } from '../route'
 import { journeyOf, ringIndex, type Hop } from '../ringJourney'
 import { safeStorage } from '../store'
-import type { RingResult } from '../types'
+import type { GraphEdge, RingResult } from '../types'
 import { AccountPanel } from './AccountPanel'
+import { EdgeFlow } from './EdgeFlow'
 import { Globe, type GlobeHandle } from './Globe'
 import { PanelFrame } from './PanelFrame'
 import { Timeline } from './Timeline'
@@ -35,6 +36,7 @@ export function RingView({ seed, reasons }: Props) {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'columns' ? 'columns' : 'globe'))
   const [sha, setSha] = useState('')
+  const [edge, setEdge] = useState<GraphEdge | null>(null)
   const globe = useRef<GlobeHandle>(null)
   const cols = useRef<{ snapshot: () => string | null }>(null)
   const layout = useDefaultLayout({ id: 'ring-h', storage: safeStorage })
@@ -60,6 +62,7 @@ export function RingView({ seed, reasons }: Props) {
   }, [ring])
 
   const pick = useCallback((id: string | null) => {
+    setEdge(null)
     setSelected(id)
     if (id) setTrail((t) => (t[t.length - 1] === id ? t : [...t.slice(-7), id]))
   }, [])
@@ -110,18 +113,22 @@ export function RingView({ seed, reasons }: Props) {
           <Group orientation="horizontal" id="ring-h" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
             <Panel id="ring-graph" defaultSize="64%" minSize="30%">
               <PanelFrame label="Ring graph" title={view === 'globe' ? 'Every account in the ring' : 'Victims · L1 · L2 · L3'}
-                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn, scroll to zoom, click a dot' : 'Zoom in for labels; click an account'}</span>}>
+                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : 'Click an account · double-click a link'}</span>}>
                 <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
                   {view === 'globe'
-                    ? <Globe ref={globe} ring={ring} journey={journey} selected={selected} hidden={hidden} cutoff={cut} onPick={pick} />
-                    : <Columns ref={cols} ring={ring} selected={selected} hidden={hidden} cutoff={cut} onPick={pick} journey={journey?.nodes ?? null} />}
+                    ? <Globe ref={globe} ring={ring} journey={journey} selected={selected} hotLink={edge ? `${edge.src}>${edge.dst}` : null}
+                             hidden={hidden} cutoff={cut} onPick={pick} onOpenLink={setEdge} />
+                    : <Columns ref={cols} ring={ring} selected={selected} hidden={hidden} cutoff={cut} onPick={pick} journey={journey?.nodes ?? null}
+                               onOpenLink={setEdge} />}
                 </div>
               </PanelFrame>
             </Panel>
             <Separator className="sep-v" />
             <Panel id="ring-side" minSize="22%">
-              <PanelFrame label="Journey and account" title={selected ? 'Money journey' : 'Pick an account'}>
+              <PanelFrame label="Journey and account" title={edge ? 'Transfer flow' : selected ? 'Money journey' : 'Pick an account'}>
                 <div className="sheet-body journey">
+                  {edge && <EdgeFlow edge={edge} ix={ix} onBack={() => setEdge(null)} onGo={pick} />}
+                  {!edge && <>
                   {trail.length > 1 && (
                     <nav className="crumbs" aria-label="Where you came from">
                       {trail.map((a, i) => (
@@ -134,14 +141,17 @@ export function RingView({ seed, reasons }: Props) {
                     <>
                       <p className="small" style={{ margin: '8px 0' }}><b className="acct">{selected}</b> sits on paths through <b>{journey.upstream}</b> accounts
                         upstream and <b>{journey.downstream}</b> downstream (up to 4 hops, in time order).</p>
-                      <HopList title={`Money came from (${journey.from.length})`} hops={journey.from} onGo={pick} />
-                      <HopList title={`Money went to (${journey.to.length})`} hops={journey.to} onGo={pick} />
+                      <HopList title={`Money came from (${journey.from.length})`} hops={journey.from} onGo={pick}
+                               onFlow={(a) => { const e = (ix.out.get(a) ?? []).find((x) => x.dst === selected); if (e) setEdge(e) }} />
+                      <HopList title={`Money went to (${journey.to.length})`} hops={journey.to} onGo={pick}
+                               onFlow={(a) => { const e = (ix.out.get(selected) ?? []).find((x) => x.dst === a); if (e) setEdge(e) }} />
                       <div style={{ marginTop: 14 }}>
                         <AccountPanel account={selected} reasons={reasons} onSelect={pick}
                           onTrace={(a) => go({ name: 'investigate', account: a, seeds: null })} onRing={(a) => go({ name: 'ring', account: a })} />
                       </div>
                     </>
                   )}
+                  </>}
                 </div>
               </PanelFrame>
             </Panel>
@@ -154,7 +164,7 @@ export function RingView({ seed, reasons }: Props) {
   )
 }
 
-function HopList({ title, hops, onGo }: { title: string; hops: Hop[]; onGo: (a: string) => void }) {
+function HopList({ title, hops, onGo, onFlow }: { title: string; hops: Hop[]; onGo: (a: string) => void; onFlow: (a: string) => void }) {
   const [all, setAll] = useState(false)
   if (!hops.length) return null
   const shown = all ? hops : hops.slice(0, 6)
@@ -167,7 +177,9 @@ function HopList({ title, hops, onGo }: { title: string; hops: Hop[]; onGo: (a: 
           <div><div className="acct">{h.account}</div>
             <div className="small muted">{ROLE_TEXT[h.role] ?? h.role} · {h.bank} · {h.n} transfer{h.n === 1 ? '' : 's'} · first {h.first.slice(5, 16)}</div></div>
           <div style={{ textAlign: 'right' }}><div className="num">{inr(h.total)}</div>
-            <button className="btn ghost sm" onClick={() => onGo(h.account)} aria-label={`Go to ${h.account}`}>Go here</button></div>
+            <div className="row gap" style={{ justifyContent: 'flex-end' }}>
+              <button className="btn ghost sm" onClick={() => onFlow(h.account)} aria-label={`Transfer flow with ${h.account}`}>Flow</button>
+              <button className="btn ghost sm" onClick={() => onGo(h.account)} aria-label={`Go to ${h.account}`}>Go here</button></div></div>
         </div>
       ))}
       {hops.length > 6 && <button className="btn ghost sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${hops.length}`}</button>}
@@ -175,10 +187,10 @@ function HopList({ title, hops, onGo }: { title: string; hops: Hop[]; onGo: (a: 
   )
 }
 
-interface ColProps { ring: RingResult; selected: string | null; hidden: Set<string>; cutoff: number; onPick: (a: string | null) => void; journey: Set<string> | null }
+interface ColProps { ring: RingResult; selected: string | null; hidden: Set<string>; cutoff: number; onPick: (a: string | null) => void; journey: Set<string> | null; onOpenLink: (e: GraphEdge) => void }
 
 /** The strict layered view: victims | L1 | L2 | L3 columns. Scrubbing touches only elements whose state changes. */
-const Columns = forwardRef<{ snapshot: () => string | null }, ColProps>(function Columns({ ring, selected, hidden, cutoff, onPick, journey }, ref) {
+const Columns = forwardRef<{ snapshot: () => string | null }, ColProps>(function Columns({ ring, selected, hidden, cutoff, onPick, journey, onOpenLink }, ref) {
   const box = useRef<HTMLDivElement>(null)
   const cy = useRef<cytoscape.Core | null>(null)
   const edgesByT = useRef<cytoscape.EdgeSingular[]>([])
@@ -187,6 +199,8 @@ const Columns = forwardRef<{ snapshot: () => string | null }, ColProps>(function
   const nodesUpTo = useRef(-1)
   const pickRef = useRef(onPick)
   pickRef.current = onPick
+  const openRef = useRef(onOpenLink)
+  openRef.current = onOpenLink
   const tick = useLookTick()
 
   useImperativeHandle(ref, () => ({ snapshot: () => cy.current?.png({ full: false, scale: 2, bg: cssVar('--sheet') }) ?? null }), [])
@@ -212,6 +226,8 @@ const Columns = forwardRef<{ snapshot: () => string | null }, ColProps>(function
     })
     c.on('tap', 'node', (e) => pickRef.current(e.target.id()))
     c.on('tap', (e) => { if (e.target === c) pickRef.current(null) })
+    const byKey = new Map(ring.edges.map((e) => [`${e.src}>${e.dst}`, e]))
+    c.on('dbltap', 'edge', (e) => { const g = byKey.get(e.target.id()); if (g) openRef.current(g) })
     edgesByT.current = c.edges().toArray().sort((a, b) => a.data('t') - b.data('t')) as cytoscape.EdgeSingular[]
     nodesByT.current = c.nodes().toArray().sort((a, b) => a.data('first') - b.data('first')) as cytoscape.NodeSingular[]
     shownUpTo.current = edgesByT.current.length - 1
