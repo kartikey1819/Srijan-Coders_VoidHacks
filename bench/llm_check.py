@@ -1,6 +1,6 @@
 """Check the local AI narrator against the real model -> bench/llm_results.md.
 
-Usage: python bench/llm_check.py [--n 10] [--model qwen2.5:3b]
+Usage: python bench/llm_check.py [--n 10] [--model qwen2.5:3b] [--out bench/llm_results.md]
 Needs Ollama running (ollama serve) with the model pulled, and an ingested data/case.duckdb.
 """
 import argparse
@@ -32,6 +32,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=10)
     ap.add_argument("--model", default=os.environ.get("ABHEDYA_LLM_MODEL", "qwen2.5:3b"))
+    ap.add_argument("--out", type=Path, default=ROOT / "bench" / "llm_results.md")
     a = ap.parse_args()
     os.environ["ABHEDYA_LLM_MODEL"] = a.model
 
@@ -82,8 +83,7 @@ def main() -> None:
             for p in s.paragraphs:
                 L.append(f"- **{s.section_id}**: {p.text} _(refs: {', '.join(p.refs) or 'none'})_")
         L.append("")
-    out = ROOT / "bench" / "llm_results.md"
-    out.write_text("\n".join(L), encoding="utf-8")
+    a.out.write_text("\n".join(L), encoding="utf-8")
     print("\n".join(L[:9]))
 
 

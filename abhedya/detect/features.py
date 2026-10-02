@@ -15,7 +15,7 @@ FEATURES = (
     "n_in", "n_out", "sum_in_paise", "sum_out_paise", "uniq_senders", "uniq_receivers",
     "pt_strict", "pt_lenient", "pt_outflows", "episodes_3_7", "max_episode_k", "burst_senders_60m",
     "term_out_n", "term_out_anom_n", "term_in_n", "term_in_from_anom", "script_out_n", "foreign_out_n",
-    "sink_ratio", "cycles_2_4",
+    "sink_ratio", "ring_cycles", "fanin_drains", "fanin_drain_share", "term_in_anom_share", "term_out_anom_share",
 )
 
 
@@ -26,7 +26,7 @@ def load_edges(con: duckdb.DuckDBPyConnection, p: DetectParams) -> dict[str, np.
                    narr_category IN ({cats}) AS term,
                    device_class = 'script' AS script,
                    ip_class = 'foreign_proxy' AS foreign_ip
-            FROM txn WHERE src_id IS NOT NULL AND dst_id IS NOT NULL"""
+            FROM txn WHERE usable"""
     ).fetchnumpy()
     return {
         "src": np.asarray(d["src_id"], dtype=np.int64),
@@ -65,6 +65,12 @@ def compute(con: duckdb.DuckDBPyConnection, p: DetectParams) -> tuple[dict[str, 
         "script_out_n": _count(src, V, e["script"]),
         "foreign_out_n": _count(src, V, e["foreign"]),
     }
+    cash_anom = e["term"] & anom          # cash-out transfers sent from a script device or foreign proxy
+    with np.errstate(divide="ignore", invalid="ignore"):
+        f["term_in_anom_share"] = np.where(f["sum_in_paise"] > 0, _sum(dst[cash_anom], amt[cash_anom], V)
+                                           / np.maximum(f["sum_in_paise"], 1), 0.0)
+        f["term_out_anom_share"] = np.where(f["sum_out_paise"] > 0, _sum(src[cash_anom], amt[cash_anom], V)
+                                            / np.maximum(f["sum_out_paise"], 1), 0.0)
     pairs = np.unique(src * V + dst)
     f["uniq_receivers"] = np.bincount(pairs // V, minlength=V).astype(np.int64)
     f["uniq_senders"] = np.bincount(pairs % V, minlength=V).astype(np.int64)
@@ -83,7 +89,7 @@ def compute(con: duckdb.DuckDBPyConnection, p: DetectParams) -> tuple[dict[str, 
     stream = _stream_features(V, optr, iptr, S, f["sum_in_paise"], p)
     f.update(stream)
 
-    f["cycles_2_4"] = _cycles(V, np.flatnonzero(f["n_out"] > 0).tolist(), optr, S, p)
+    f["ring_cycles"] = _cycles(V, np.flatnonzero(f["n_out"] > 0).tolist(), optr, S, p)
     return f, e
 
 
@@ -94,7 +100,8 @@ def _stream_features(V, optr, iptr, S, sum_in, p: DetectParams) -> dict[str, np.
     ew, (kmin, kmax) = p.episode_window_s, p.episode_k
     bw = p.burst_window_s
     pt_s, pt_l = np.zeros(V), np.zeros(V)
-    pt_o, ep, maxk, burst = (np.zeros(V, dtype=np.int64) for _ in range(4))
+    pt_o, ep, maxk, burst, drains = (np.zeros(V, dtype=np.int64) for _ in range(5))
+    drained = np.zeros(V)
 
     for u in range(V):
         a0, a1, b0, b1 = iptr[u], iptr[u + 1], optr[u], optr[u + 1]
@@ -156,32 +163,49 @@ def _stream_features(V, optr, iptr, S, sum_in, p: DetectParams) -> dict[str, np.
                         maxk[u] = k
                     if kmin <= k <= kmax:
                         ep[u] += 1
-        # -- fan-in burst: most distinct senders inside any 60-min window
+        # -- fan-in burst: most distinct senders inside any 60-min window; and "drains": a burst of
+        #    >= burst_min_senders senders whose money (>= pt_flag_ratio of it) leaves within 15 min of the
+        #    burst's last credit (a collector account emptied at once)
         if a1 - a0 >= p.burst_min_senders:
+            pre = [0]
+            for j in range(b0, b1):
+                pre.append(pre[-1] + o_amt[j])
             cnt: dict[int, int] = {}
-            left = a0
-            best = 0
+            left, best, w_sum = a0, 0, 0
             for r in range(a0, a1):
                 cnt[i_src[r]] = cnt.get(i_src[r], 0) + 1
+                w_sum += i_amt[r]
                 while i_ts[r] - i_ts[left] > bw:
                     s = i_src[left]
                     cnt[s] -= 1
                     if not cnt[s]:
                         del cnt[s]
+                    w_sum -= i_amt[left]
                     left += 1
                 if len(cnt) > best:
                     best = len(cnt)
+                if len(cnt) >= p.burst_min_senders and b0 < b1:
+                    jb = bisect_right(o_ts, i_ts[r], b0, b1)
+                    je = bisect_right(o_ts, i_ts[r] + ew, b0, b1)
+                    if pre[je - b0] - pre[jb - b0] >= p.pt_flag_ratio * w_sum:
+                        drains[u] += 1
+                        drained[u] += w_sum
+                        cnt.clear()
+                        w_sum, left = 0, r + 1
             burst[u] = best
     return {"pt_strict": pt_s, "pt_lenient": pt_l, "pt_outflows": pt_o, "episodes_3_7": ep,
-            "max_episode_k": maxk, "burst_senders_60m": burst}
+            "max_episode_k": maxk, "burst_senders_60m": burst, "fanin_drains": drains,
+            # how much of the account's money went through collect-then-empty events
+            "fanin_drain_share": np.where(sum_in > 0, drained / np.maximum(sum_in, 1), 0.0)}
 
 
 def _cycles(V, starts, optr, S, p: DetectParams) -> np.ndarray:
-    """Smurfing loops: time-respecting loops of length 2..cycle_max_len that return to their start within
-    cycle_window_s, every hop within +-cycle_amount_tol of the first amount. Returns, per account, how many
-    times money went round the SAME set of accounts (busy accounts close one-off loops by chance;
-    smurfing repeats a ring). A loop is only visible from the account that starts it, so every member
-    of a found ring is credited."""
+    """Smurfing rings: time-respecting loops through 3..cycle_max_len accounts that return to their start
+    within cycle_window_s, each hop within +-cycle_amount_tol of the hop before (rings take a cut per hop).
+    Two-account back-and-forth (couples, sweeps between one's own accounts) is everyday legitimate behaviour
+    and is not counted. Returns, per account, how many times money went round the SAME ring (busy accounts
+    close one-off loops by chance; smurfing repeats a ring). A loop is only visible from the account that
+    starts it, so every member of a found ring is credited."""
     o_ts, o_amt, o_dst = S["o_ts"], S["o_amt"], S["o_dst"]
     rings: dict[frozenset, int] = {}
     tol, win, max_len, cap = p.cycle_amount_tol, p.cycle_window_s, p.cycle_max_len, p.cycle_cap
@@ -194,22 +218,24 @@ def _cycles(V, starts, optr, S, p: DetectParams) -> np.ndarray:
             t0, a0, d0 = o_ts[j], o_amt[j], o_dst[j]
             if d0 == s:
                 continue
-            amin, amax, tend = a0 * (1 - tol), a0 * (1 + tol), t0 + win
-            stack = [(d0, t0, (s, d0))]
+            tend = t0 + win
+            stack = [(d0, t0, (s, d0), a0)]
             while stack and found < cap and budget > 0:
-                u, t, path = stack.pop()
+                u, t, path, prev = stack.pop()
                 budget -= 1
                 b, e = optr[u], optr[u + 1]
+                amin, amax = prev * (1 - tol), prev * (1 + tol)
                 for k in range(bisect_right(o_ts, t, b, e), bisect_right(o_ts, tend, b, e)):
                     if not amin <= o_amt[k] <= amax:
                         continue
                     v = o_dst[k]
                     if v == s:
-                        found += 1
-                        ring = frozenset(path)
-                        rings[ring] = rings.get(ring, 0) + 1
+                        if len(path) >= 3:
+                            found += 1
+                            ring = frozenset(path)
+                            rings[ring] = rings.get(ring, 0) + 1
                     elif len(path) < max_len and v not in path:
-                        stack.append((v, o_ts[k], path + (v,)))
+                        stack.append((v, o_ts[k], path + (v,), o_amt[k]))
     out = np.zeros(V, dtype=np.int64)
     for ring, n in rings.items():
         for a in ring:

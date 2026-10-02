@@ -22,7 +22,7 @@ def _cat_code_sql() -> str:
 def build_arrays(con: duckdb.DuckDBPyConnection, out_dir: Path) -> dict:
     d = con.execute(
         f"""SELECT src_id, dst_id, ts_epoch, amount_paise, txn_idx, {_cat_code_sql()} AS cat
-            FROM txn WHERE src_id IS NOT NULL AND dst_id IS NOT NULL"""
+            FROM txn WHERE usable   -- only rows that can move money (see derive.py)"""
     ).fetchnumpy()
     src = np.asarray(d["src_id"], dtype=np.int32)
     dst = np.asarray(d["dst_id"], dtype=np.int32)

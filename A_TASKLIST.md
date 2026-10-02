@@ -1,4 +1,4 @@
-﻿# A: Task List and Progress (main PC)
+# A: Task List and Progress (main PC)
 
 Status: â¬œ todo Â· ðŸ”„ in progress Â· âœ… done Â· âš ï¸ blocked/issue
 Updated as work proceeds. Brief: `plan/A_ENGINE.md`. B and C work in their own repos; we merge their work at the end (A11).
@@ -88,6 +88,39 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
     - Role mix-ups (cash-out accounts called "victim's accounts"). The validator now rejects role words attached to the wrong evidence IDs; the model gets the correction once, then the template is used.
     - A stray Chinese character: non-English text is rejected.
   - The AI writes only summary / modus operandi / recommendation; layer and holding paragraphs always come from templates.
+
+## Final phase: integration, adversarial QA, performance, anti-hallucination
+- ✅ F1 Baseline audit → `reports/final_integration_baseline.md`. Found 4 input bugs (B1 malformed row aborts ingest, B2 header-only crash, B3/B4 missing/extra column → obscure error), now **fixed**:
+  - every record is kept, bad values are flagged (BAD_AMOUNT / BAD_TIMESTAMP / MISSING_FIELD / AMOUNT_PRECISION) and left out of the money graph
+  - columns are matched by name, with a clear missing-column message
+  - quote handling follows RFC 4180
+  `tests/test_robustness.py` (8 tests) passes. Official results unchanged (1.0000/1.0000, 300/300); ingest+index 10.9 s → 15.3 s
+- ✅ F2 External pattern research → `reports/external_pattern_research.md` (AMLworld/NeurIPS 2023, FBI-Europol mule PSA, FinCEN 2020/2014/2025 advisories, false-positive literature, PIB I4C–RBIH)
+- ✅ F3 Independent scenario generator (`tests/adversarial_data/`): 9 laundering + 14 legitimate families, labels from scenario meaning, dev + held-out wording
+- ⬜ F4 Adversarial suites: timing boundaries, amounts, network shapes, data quality, broken inputs
+- ✅ F5 Property-based tests (`tests/test_properties.py`, Hypothesis, ~120 random datasets): score bounds, trace conservation/time/real edges, determinism, unrelated component, DQ never changes risk, file order. Source-file hash test in `test_robustness.py`
+- ✅ F6 LLM grounding (`tests/test_llm_grounding.py`, 37 tests incl. live model): hostile replies, injection via payment mode (fixed: only known rails reach the model), evidence self-check, AI-vs-detection isolation; validator now also blocks dates/times/IPs, guilt language, banks not in the case, bank or role mislabels
+- ⬜ F7 Integration completion: one-command start, disputed-transfer choice in UI, API/UI contract test, browser workflows 1–10
+- ⬜ F8 Performance: 2M tests 1–4, repeated runs, detection breakdown, API/docs/LLM latency, peak memory
+- ✅ F9 Randomized runs: 53 worlds / ~656k rows (20 small dev, 20 small held-out, 10 medium, 3 large). Clear-cut mules 91.5–91.9%, false positives 4 / 18,839 legitimate accounts, victim L1 found 3,090/3,090, invariant problems 0 → `reports/adversarial/`
+- ⬜ F10 Final regression + `reports/final_test_matrix.md` + `reports/final_readiness_report.md`
+
+### Bugs found and fixed in the final phase (so far)
+1. A malformed row aborted the whole ingest.
+2. A header-only file crashed.
+3. Missing or extra columns gave an obscure error.
+4. Reordered columns broke the row-order check.
+5. A stray quote mid-field misnumbered rows.
+6. Cash-out detection depended on the literal words CRYPTO/WALLET: unseen wording dropped clear-cut recall to 56.8% (now ~92%).
+7. Two-account back-and-forth was flagged as smurfing (couples, own-account sweeps).
+8. One anomalous wallet top-up made an account HIGH.
+9. Collector-and-drain funnels were missed (only partly fixed: ~36%).
+10. Coincidental fan-in bursts on busy accounts were flagged (26 official false positives, introduced and then fixed).
+11. Rings of 5 accounts were missed.
+12. Raw payment-mode text reached the LLM prompt.
+13. The validator missed 'including …' role mislabels, guilt language, dates, IPs and wrong banks.
+14. Detection was 20x slower than necessary: DuckDB is slow on NumPy object arrays (official: 24 s → 12.9 s; 18k-row worlds: 26 s → <1 s).
+15. My own BOM-writing PowerShell corrupted `pyproject.toml`.
 
 ## Waiting on teammates (for A11)
 - C: `web/`, `abhedya/{evidence,ai,docs}/`, `routes_docs.py`. Contract: `contracts/models.py`; sample: `contracts/fixtures/trace_KKBK10000000.json`.

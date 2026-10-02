@@ -8,8 +8,14 @@ import duckdb
 
 from abhedya import config
 
-# flag name -> SQL condition (raw column names; amount_paise, dup_count provided by derive.py)
+# flag name -> SQL condition over the raw text columns plus the safely parsed values from derive.py
+# (amount_paise, ts_parsed, dup_count). A missing value raises its own flag, never an unrelated one.
 DQ_RULES: dict[str, str] = {
+    "MISSING_FIELD": "Transaction_ID IS NULL OR Sender_Account IS NULL OR Receiver_Account IS NULL "
+                     "OR Amount IS NULL OR Timestamp IS NULL",
+    "BAD_AMOUNT": "Amount IS NOT NULL AND amount_paise IS NULL",
+    "AMOUNT_PRECISION": r"regexp_matches(trim(Amount), '\.[0-9]{3,}$')",
+    "BAD_TIMESTAMP": "Timestamp IS NOT NULL AND ts_parsed IS NULL",
     "BAD_ACCT_ID": f"NOT regexp_full_match(Sender_Account, '{config.ACCT_RE}') "
                    f"OR NOT regexp_full_match(Receiver_Account, '{config.ACCT_RE}')",
     "BAD_IFSC": f"NOT regexp_full_match(Sender_IFSC, '{config.IFSC_RE}') "
@@ -20,16 +26,16 @@ DQ_RULES: dict[str, str] = {
     "RTGS_BELOW_MIN": f"Payment_Mode = 'RTGS' AND amount_paise < {config.RTGS_MIN_PAISE}",
     "UPI_ABOVE_P2P_LIMIT": f"Payment_Mode = 'UPI' AND amount_paise > {config.UPI_P2P_LIMIT_PAISE}",
     "IMPS_ABOVE_LIMIT": f"Payment_Mode = 'IMPS' AND amount_paise > {config.IMPS_LIMIT_PAISE}",
-    "UNKNOWN_MODE": "Payment_Mode NOT IN (" + ", ".join(f"'{m}'" for m in config.MODES) + ")",
+    "UNKNOWN_MODE": "coalesce(Payment_Mode, '') NOT IN (" + ", ".join(f"'{m}'" for m in config.MODES) + ")",
     "NONPOSITIVE_AMOUNT": "amount_paise <= 0",
-    "TS_OUT_OF_RANGE": f"Timestamp < TIMESTAMP '{config.DATASET_WINDOW[0]}' "
-                       f"OR Timestamp >= TIMESTAMP '{config.DATASET_WINDOW[1]}'",
+    "TS_OUT_OF_RANGE": f"ts_parsed < TIMESTAMP '{config.DATASET_WINDOW[0]}' "
+                       f"OR ts_parsed >= TIMESTAMP '{config.DATASET_WINDOW[1]}'",
     "SELF_LOOP": "Sender_Account = Receiver_Account",
 }
 
 
 def dq_flags_sql() -> str:
-    items = ", ".join(f"CASE WHEN coalesce({cond}, true) THEN '{name}' END" for name, cond in DQ_RULES.items())
+    items = ", ".join(f"CASE WHEN coalesce({cond}, false) THEN '{name}' END" for name, cond in DQ_RULES.items())
     return f"list_filter([{items}], lambda x: x IS NOT NULL)"
 
 

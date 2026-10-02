@@ -1,0 +1,287 @@
+﻿ingest holdout_small_401.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.04 s
+  dq_summary          0.01 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.15 s   (2,908 rows, 222 accounts)
+  detect              2.54 s   bands {'HIGH': 72, 'MEDIUM': 41, 'LOW': 109}
+seed 401: rows 2908, pipeline 2.93 s, tiers {'MUST_NOT_FLAG': '0/86', 'MUST_FLAG': '61/71', 'SHOULD_FLAG': '10/32', 'EXPECTED_MISS': '0/10', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_402.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.04 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,903 rows, 241 accounts)
+  detect              2.82 s   bands {'HIGH': 101, 'MEDIUM': 40, 'LOW': 100}
+seed 402: rows 2903, pipeline 3.12 s, tiers {'MUST_NOT_FLAG': '0/84', 'MUST_FLAG': '82/86', 'SHOULD_FLAG': '17/29', 'EXPECTED_MISS': '0/16', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_403.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,995 rows, 254 accounts)
+  detect              2.82 s   bands {'HIGH': 109, 'MEDIUM': 39, 'LOW': 106}
+seed 403: rows 2995, pipeline 3.12 s, tiers {'MUST_NOT_FLAG': '0/89', 'MUST_FLAG': '84/89', 'SHOULD_FLAG': '24/40', 'EXPECTED_MISS': '0/16', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_404.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (3,020 rows, 274 accounts)
+  detect              3.05 s   bands {'HIGH': 116, 'MEDIUM': 41, 'LOW': 117}
+seed 404: rows 3020, pipeline 3.35 s, tiers {'MUST_NOT_FLAG': '0/88', 'MUST_FLAG': '100/109', 'SHOULD_FLAG': '15/35', 'EXPECTED_MISS': '0/19', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_405.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,907 rows, 259 accounts)
+  detect              2.85 s   bands {'HIGH': 100, 'MEDIUM': 53, 'LOW': 106}
+seed 405: rows 2907, pipeline 3.15 s, tiers {'MUST_NOT_FLAG': '0/87', 'MUST_FLAG': '77/83', 'SHOULD_FLAG': '21/38', 'EXPECTED_MISS': '0/23', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_406.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,931 rows, 296 accounts)
+  detect              3.44 s   bands {'HIGH': 120, 'MEDIUM': 61, 'LOW': 115}
+seed 406: rows 2931, pipeline 3.73 s, tiers {'MUST_NOT_FLAG': '0/87', 'MUST_FLAG': '102/111', 'SHOULD_FLAG': '16/38', 'EXPECTED_MISS': '0/32', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_407.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,888 rows, 240 accounts)
+  detect              2.65 s   bands {'HIGH': 74, 'MEDIUM': 45, 'LOW': 121}
+seed 407: rows 2888, pipeline 2.93 s, tiers {'MUST_NOT_FLAG': '0/86', 'EXPECTED_MISS': '0/20', 'MUST_FLAG': '68/75', 'SHOULD_FLAG': '4/33', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_408.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,850 rows, 259 accounts)
+  detect              2.86 s   bands {'HIGH': 93, 'MEDIUM': 60, 'LOW': 106}
+seed 408: rows 2850, pipeline 3.16 s, tiers {'MUST_NOT_FLAG': '0/89', 'SHOULD_FLAG': '18/35', 'MUST_FLAG': '74/84', 'EXPECTED_MISS': '0/21', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_409.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.02 s
+  INGEST+INDEX        0.14 s   (3,005 rows, 295 accounts)
+  detect              3.28 s   bands {'HIGH': 108, 'MEDIUM': 63, 'LOW': 124}
+seed 409: rows 3005, pipeline 3.56 s, tiers {'MUST_NOT_FLAG': '0/88', 'MUST_FLAG': '87/98', 'SHOULD_FLAG': '19/45', 'EXPECTED_MISS': '0/33', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_410.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,986 rows, 272 accounts)
+  detect              3.05 s   bands {'HIGH': 104, 'MEDIUM': 45, 'LOW': 123}
+seed 410: rows 2986, pipeline 3.34 s, tiers {'MUST_NOT_FLAG': '0/88', 'MUST_FLAG': '83/90', 'SHOULD_FLAG': '20/43', 'EXPECTED_MISS': '0/25', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_411.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (3,031 rows, 261 accounts)
+  detect              3.17 s   bands {'HIGH': 89, 'MEDIUM': 69, 'LOW': 103}
+seed 411: rows 3031, pipeline 3.45 s, tiers {'MUST_NOT_FLAG': '0/89', 'MUST_FLAG': '75/84', 'EXPECTED_MISS': '0/22', 'SHOULD_FLAG': '13/34', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_412.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,996 rows, 266 accounts)
+  detect              2.94 s   bands {'HIGH': 108, 'MEDIUM': 47, 'LOW': 111}
+seed 412: rows 2996, pipeline 3.22 s, tiers {'MUST_NOT_FLAG': '0/87', 'MUST_FLAG': '87/94', 'EXPECTED_MISS': '0/17', 'SHOULD_FLAG': '19/39', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_413.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (3,124 rows, 300 accounts)
+  detect              3.31 s   bands {'HIGH': 115, 'MEDIUM': 58, 'LOW': 127}
+seed 413: rows 3124, pipeline 3.6 s, tiers {'MUST_NOT_FLAG': '0/87', 'MUST_FLAG': '95/104', 'SHOULD_FLAG': '19/49', 'EXPECTED_MISS': '0/31', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_414.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,912 rows, 270 accounts)
+  detect              2.94 s   bands {'HIGH': 105, 'MEDIUM': 54, 'LOW': 111}
+seed 414: rows 2912, pipeline 3.23 s, tiers {'MUST_NOT_FLAG': '0/87', 'MUST_FLAG': '92/101', 'SHOULD_FLAG': '12/38', 'EXPECTED_MISS': '0/15', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_415.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.13 s   (2,983 rows, 239 accounts)
+  detect              2.60 s   bands {'HIGH': 84, 'MEDIUM': 43, 'LOW': 112}
+seed 415: rows 2983, pipeline 2.89 s, tiers {'MUST_NOT_FLAG': '0/88', 'MUST_FLAG': '64/70', 'EXPECTED_MISS': '0/29', 'SHOULD_FLAG': '19/32', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_416.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,873 rows, 240 accounts)
+  detect              2.68 s   bands {'HIGH': 92, 'MEDIUM': 40, 'LOW': 108}
+seed 416: rows 2873, pipeline 2.97 s, tiers {'MUST_NOT_FLAG': '0/86', 'MUST_FLAG': '83/90', 'SHOULD_FLAG': '8/31', 'EXPECTED_MISS': '0/13', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_417.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.15 s   (3,001 rows, 258 accounts)
+  detect              2.85 s   bands {'HIGH': 103, 'MEDIUM': 40, 'LOW': 115}
+seed 417: rows 3001, pipeline 3.14 s, tiers {'MUST_NOT_FLAG': '0/86', 'MUST_FLAG': '89/96', 'SHOULD_FLAG': '12/39', 'EXPECTED_MISS': '0/13', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_418.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.13 s   (3,022 rows, 279 accounts)
+  detect              3.10 s   bands {'HIGH': 104, 'MEDIUM': 63, 'LOW': 112}
+seed 418: rows 3022, pipeline 3.37 s, tiers {'MUST_NOT_FLAG': '0/86', 'MUST_FLAG': '85/92', 'SHOULD_FLAG': '18/41', 'EXPECTED_MISS': '0/31', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+ingest holdout_small_419.csv
+  hash                0.01 s
+  load_csv            0.07 s
+  verify_order        0.01 s
+  account_map         0.00 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.13 s   (2,879 rows, 256 accounts)
+  detect              2.86 s   bands {'HIGH': 104, 'MEDIUM': 51, 'LOW': 101}
+seed 419: rows 2879, pipeline 3.14 s, tiers {'MUST_NOT_FLAG': '0/85', 'MUST_FLAG': '87/92', 'SHOULD_FLAG': '15/32', 'EXPECTED_MISS': '0/11', 'AMBIGUOUS': '2/3'}, FP 0, problems 0
+ingest holdout_small_420.csv
+  hash                0.01 s
+  load_csv            0.06 s
+  verify_order        0.01 s
+  account_map         0.01 s
+  derive+validate     0.03 s
+  dq_summary          0.00 s
+  account_table       0.01 s
+  graph_arrays        0.01 s
+  INGEST+INDEX        0.14 s   (2,911 rows, 249 accounts)
+  detect              2.78 s   bands {'HIGH': 95, 'MEDIUM': 47, 'LOW': 107}
+seed 420: rows 2911, pipeline 3.06 s, tiers {'MUST_NOT_FLAG': '0/88', 'SHOULD_FLAG': '13/36', 'EXPECTED_MISS': '0/15', 'MUST_FLAG': '81/87', 'AMBIGUOUS': '1/1'}, FP 0, problems 0
+Worlds: 20 (small; vocab holdout; seeds 401–420), 59,125 rows in total.
+
+| Tier | Flagged HIGH | Meaning |
+|---|---|---|
+| MUST_FLAG | 1656/1806 (91.7%) | mules showing ≥ 2 statement indicators: higher is better |
+| SHOULD_FLAG | 312/739 (42.2%) | mules showing 1 indicator |
+| EXPECTED_MISS | 0/412 (0.0%) | mules showing none (cannot be found from the statement's signals) |
+| MUST_NOT_FLAG | 0/1741 (0.0%) | legitimate accounts: **false positives**, lower is better |
+| AMBIGUOUS | 28/36 (77.8%) | legitimate accounts showing ≥ 2 statement indicators |
+
+| Family | Flagged HIGH |
+|---|---|
+| legit:api_business | 0/20 (0.0%) |
+| legit:background | 0/1200 (0.0%) |
+| legit:client | 0/60 (0.0%) |
+| legit:couple_back_and_forth | 0/40 (0.0%) |
+| legit:crypto_investor | 0/20 (0.0%) |
+| legit:employer | 0/20 (0.0%) |
+| legit:exchange | 0/72 (0.0%) |
+| legit:family_pool | 0/20 (0.0%) |
+| legit:hospital | 0/20 (0.0%) |
+| legit:merchant | 0/60 (0.0%) |
+| legit:payment_aggregator | 0/20 (0.0%) |
+| legit:payroll_large | 0/20 (0.0%) |
+| legit:payroll_small | 20/20 (100.0%) |
+| legit:refunding_merchant | 0/20 (0.0%) |
+| legit:traveller_foreign_ip | 0/20 (0.0%) |
+| legit:treasury_sweep | 0/40 (0.0%) |
+| legit:vendor | 0/97 (0.0%) |
+| legit:wallet_provider | 8/8 (100.0%) |
+| mule:chain_basic | 325/424 (76.7%) |
+| mule:chain_deep | 376/536 (70.1%) |
+| mule:chain_plain_cashout | 114/384 (29.7%) |
+| mule:chain_slow | 254/436 (58.3%) |
+| mule:chain_unwitting | 267/410 (65.1%) |
+| mule:funnel | 19/52 (36.5%) |
+| mule:scatter_gather | 119/124 (96.0%) |
+| mule:shared_l1 | 417/514 (81.1%) |
+| mule:smurf_cycle | 77/77 (100.0%) |
+
+False positives by family: none
+
+Victim traces (from the disputed transfer): seed 401: L1 13/13, recall 1.0, precision 0.972; seed 402: L1 14/14, recall 1.0, precision 1.0; seed 403: L1 13/13, recall 1.0, precision 0.955; seed 404: L1 14/14, recall 0.982, precision 0.963; seed 405: L1 13/13, recall 0.988, precision 1.0 …
+Mean trace recall 0.985, mean precision 0.975, L1 found 272/272, slowest trace 11 ms.
+Pipeline time per world: median 3.2 s, max 3.7 s.
+
+Invariant problems: 0

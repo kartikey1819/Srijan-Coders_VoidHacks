@@ -7,6 +7,8 @@ The model writes only the prose sections (AI_SECTIONS); list-like sections come 
 """
 import orjson
 
+from abhedya import config
+from abhedya.docs.banks import BANKS
 from contracts.models import Evidence
 
 SECTIONS = ("summary", "modus_operandi", "layer_l1", "layer_l2", "layer_l3", "holding", "recommendation")
@@ -43,14 +45,23 @@ def _timing(delay_s: int | None) -> str:
     return "after more than an hour"
 
 
+def _channel(mode: str) -> str:
+    """Payment mode comes from the bank export (untrusted text): only the four known rails reach the model."""
+    return mode if mode in config.MODES else "other channel"
+
+
+def _bank(name: str) -> str:
+    return name if name in BANKS.values() else "another bank"
+
+
 def facts(ev: Evidence) -> dict:
     acc = {a.eid: a for a in ev.accounts}
     onward = [t for t in ev.txns if t.rule != "seed"]
     f = {
-        "accounts": {a.eid: f"{ROLE_WORDS[a.role]}, {a.bank_name}" for a in ev.accounts},
+        "accounts": {a.eid: f"{ROLE_WORDS[a.role]}, {_bank(a.bank_name)}" for a in ev.accounts},
         "victim": ev.victim_eid,
         "layer_counts": {r: sum(1 for a in ev.accounts if a.role == r) for r in ("L1", "L2", "L3")},
-        "transfers": [f"{t.eid}: {t.src_eid} to {t.dst_eid}, {t.mode}, {_timing(t.delay_s)}"
+        "transfers": [f"{t.eid}: {t.src_eid} to {t.dst_eid}, {_channel(t.mode)}, {_timing(t.delay_s)}"
                       + (", cash-out via wallet or crypto P2P" if acc[t.dst_eid].role == "L3" else "")
                       for t in ev.txns[:MAX_TRANSFERS]]
                      + ([f"and {len(ev.txns) - MAX_TRANSFERS} more transfers"] if len(ev.txns) > MAX_TRANSFERS else []),

@@ -59,3 +59,31 @@ def build_evidence(trace: TraceResult, txns: list[TxnRow], case: CaseInfo, now: 
                                    "trace_sha256", "warnings", "dq_notes"})
     ev.facts_sha256 = _sha(facts)
     return ev
+
+
+def verify_evidence(ev: Evidence) -> list[str]:
+    """Internal consistency of an Evidence package. Documents are refused if any check fails."""
+    errs: list[str] = []
+    acc = {a.eid: a for a in ev.accounts}
+    if len(acc) != len(ev.accounts) or len({t.eid for t in ev.txns}) != len(ev.txns):
+        errs.append("duplicate evidence IDs")
+    if ev.victim_eid not in acc:
+        errs.append("the victim is not among the accounts")
+    for t in ev.txns:
+        if t.src_eid not in acc or t.dst_eid not in acc:
+            errs.append(f"{t.eid} refers to an unknown account")
+        if not 0 < t.attributed_paise <= t.amount_paise:
+            errs.append(f"{t.eid}: victim money {t.attributed_paise} is not within the transfer amount {t.amount_paise}")
+    for a in ev.accounts:
+        if a.eid != ev.victim_eid and not 0 <= a.held_paise <= a.received_paise:
+            errs.append(f"{a.eid} holds {a.held_paise} but received {a.received_paise}")
+    for e in ev.freeze_eids:
+        if e not in acc or acc[e].held_paise <= 0:
+            errs.append(f"freeze list entry {e} holds no victim money")
+    if sum(t.attributed_paise for t in ev.txns if t.rule == "seed") != ev.loss_paise:
+        errs.append("the disputed transfers do not add up to the loss")
+    held = sum(a.held_paise for a in ev.accounts if a.eid != ev.victim_eid)
+    returned = acc[ev.victim_eid].received_paise if ev.victim_eid in acc else 0
+    if held + returned != ev.loss_paise:
+        errs.append(f"money does not balance: held {held} + returned {returned} != loss {ev.loss_paise}")
+    return errs

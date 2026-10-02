@@ -1,0 +1,1494 @@
+[
+ {
+  "seed": 201,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 17849,
+  "pipeline_s": 17.95,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    511
+   ],
+   "MUST_FLAG": [
+    478,
+    521
+   ],
+   "SHOULD_FLAG": [
+    99,
+    221
+   ],
+   "EXPECTED_MISS": [
+    0,
+    143
+   ],
+   "AMBIGUOUS": [
+    10,
+    14
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    71,
+    108
+   ],
+   "mule:chain_deep": [
+    83,
+    123
+   ],
+   "mule:chain_slow": [
+    99,
+    136
+   ],
+   "mule:chain_unwitting": [
+    85,
+    112
+   ],
+   "mule:chain_plain_cashout": [
+    30,
+    144
+   ],
+   "mule:shared_l1": [
+    139,
+    180
+   ],
+   "mule:funnel": [
+    6,
+    14
+   ],
+   "mule:smurf_cycle": [
+    27,
+    27
+   ],
+   "mule:scatter_gather": [
+    37,
+    41
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    21
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    4,
+    4
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    29
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 84,
+   "l1_found": 84,
+   "recall_mean": 0.977,
+   "precision_mean": 0.982,
+   "max_ms": 28
+  }
+ },
+ {
+  "seed": 202,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 17406,
+  "pipeline_s": 19.57,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    1,
+    512
+   ],
+   "MUST_FLAG": [
+    538,
+    583
+   ],
+   "SHOULD_FLAG": [
+    105,
+    233
+   ],
+   "EXPECTED_MISS": [
+    0,
+    141
+   ],
+   "AMBIGUOUS": [
+    9,
+    12
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    77,
+    118
+   ],
+   "mule:chain_deep": [
+    106,
+    141
+   ],
+   "mule:chain_slow": [
+    81,
+    134
+   ],
+   "mule:chain_unwitting": [
+    92,
+    140
+   ],
+   "mule:chain_plain_cashout": [
+    49,
+    144
+   ],
+   "mule:shared_l1": [
+    176,
+    204
+   ],
+   "mule:funnel": [
+    5,
+    15
+   ],
+   "mule:smurf_cycle": [
+    24,
+    24
+   ],
+   "mule:scatter_gather": [
+    33,
+    37
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    20
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    30
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    1,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    3,
+    3
+   ]
+  },
+  "fp": [
+   [
+    "IPOS59904347",
+    "family_pool",
+    70
+   ]
+  ],
+  "problems": [],
+  "trace": {
+   "victims": 87,
+   "l1_found": 87,
+   "recall_mean": 0.964,
+   "precision_mean": 0.971,
+   "max_ms": 32
+  }
+ },
+ {
+  "seed": 203,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 18176,
+  "pipeline_s": 21.49,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    518
+   ],
+   "MUST_FLAG": [
+    618,
+    660
+   ],
+   "SHOULD_FLAG": [
+    112,
+    237
+   ],
+   "EXPECTED_MISS": [
+    0,
+    156
+   ],
+   "AMBIGUOUS": [
+    8,
+    10
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    103,
+    136
+   ],
+   "mule:chain_deep": [
+    140,
+    179
+   ],
+   "mule:chain_slow": [
+    94,
+    134
+   ],
+   "mule:chain_unwitting": [
+    93,
+    152
+   ],
+   "mule:chain_plain_cashout": [
+    50,
+    156
+   ],
+   "mule:shared_l1": [
+    181,
+    216
+   ],
+   "mule:funnel": [
+    6,
+    14
+   ],
+   "mule:smurf_cycle": [
+    27,
+    27
+   ],
+   "mule:scatter_gather": [
+    36,
+    39
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    25
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    30
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    2,
+    2
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 84,
+   "l1_found": 84,
+   "recall_mean": 0.974,
+   "precision_mean": 0.983,
+   "max_ms": 22
+  }
+ },
+ {
+  "seed": 204,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 18274,
+  "pipeline_s": 21.06,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    516
+   ],
+   "MUST_FLAG": [
+    577,
+    638
+   ],
+   "SHOULD_FLAG": [
+    86,
+    218
+   ],
+   "EXPECTED_MISS": [
+    0,
+    142
+   ],
+   "AMBIGUOUS": [
+    9,
+    12
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    95,
+    128
+   ],
+   "mule:chain_deep": [
+    90,
+    131
+   ],
+   "mule:chain_slow": [
+    95,
+    140
+   ],
+   "mule:chain_unwitting": [
+    111,
+    152
+   ],
+   "mule:chain_plain_cashout": [
+    28,
+    158
+   ],
+   "mule:shared_l1": [
+    173,
+    208
+   ],
+   "mule:funnel": [
+    5,
+    14
+   ],
+   "mule:smurf_cycle": [
+    26,
+    26
+   ],
+   "mule:scatter_gather": [
+    40,
+    41
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    24
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    30
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    3,
+    3
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 85,
+   "l1_found": 85,
+   "recall_mean": 0.974,
+   "precision_mean": 0.986,
+   "max_ms": 26
+  }
+ },
+ {
+  "seed": 205,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 17624,
+  "pipeline_s": 21.44,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    509
+   ],
+   "MUST_FLAG": [
+    477,
+    537
+   ],
+   "SHOULD_FLAG": [
+    88,
+    247
+   ],
+   "EXPECTED_MISS": [
+    0,
+    137
+   ],
+   "AMBIGUOUS": [
+    9,
+    12
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    118,
+    156
+   ],
+   "mule:chain_deep": [
+    124,
+    173
+   ],
+   "mule:chain_slow": [
+    71,
+    132
+   ],
+   "mule:chain_unwitting": [
+    78,
+    114
+   ],
+   "mule:chain_plain_cashout": [
+    39,
+    158
+   ],
+   "mule:shared_l1": [
+    69,
+    110
+   ],
+   "mule:funnel": [
+    5,
+    15
+   ],
+   "mule:smurf_cycle": [
+    24,
+    24
+   ],
+   "mule:scatter_gather": [
+    37,
+    39
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    18
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    3,
+    3
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    29
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 79,
+   "l1_found": 79,
+   "recall_mean": 0.993,
+   "precision_mean": 0.97,
+   "max_ms": 34
+  }
+ },
+ {
+  "seed": 206,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 17626,
+  "pipeline_s": 20.33,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    511
+   ],
+   "MUST_FLAG": [
+    576,
+    629
+   ],
+   "SHOULD_FLAG": [
+    76,
+    196
+   ],
+   "EXPECTED_MISS": [
+    0,
+    115
+   ],
+   "AMBIGUOUS": [
+    8,
+    10
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    122,
+    150
+   ],
+   "mule:chain_deep": [
+    126,
+    160
+   ],
+   "mule:chain_slow": [
+    102,
+    154
+   ],
+   "mule:chain_unwitting": [
+    87,
+    124
+   ],
+   "mule:chain_plain_cashout": [
+    33,
+    122
+   ],
+   "mule:shared_l1": [
+    118,
+    156
+   ],
+   "mule:funnel": [
+    6,
+    15
+   ],
+   "mule:smurf_cycle": [
+    22,
+    22
+   ],
+   "mule:scatter_gather": [
+    36,
+    37
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    21
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    2,
+    2
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    27
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 84,
+   "l1_found": 84,
+   "recall_mean": 0.986,
+   "precision_mean": 0.981,
+   "max_ms": 53
+  }
+ },
+ {
+  "seed": 207,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 17972,
+  "pipeline_s": 21.1,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    514
+   ],
+   "MUST_FLAG": [
+    568,
+    611
+   ],
+   "SHOULD_FLAG": [
+    100,
+    214
+   ],
+   "EXPECTED_MISS": [
+    0,
+    127
+   ],
+   "AMBIGUOUS": [
+    9,
+    12
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    111,
+    136
+   ],
+   "mule:chain_deep": [
+    92,
+    128
+   ],
+   "mule:chain_slow": [
+    103,
+    144
+   ],
+   "mule:chain_unwitting": [
+    100,
+    138
+   ],
+   "mule:chain_plain_cashout": [
+    33,
+    132
+   ],
+   "mule:shared_l1": [
+    165,
+    196
+   ],
+   "mule:funnel": [
+    6,
+    15
+   ],
+   "mule:smurf_cycle": [
+    22,
+    22
+   ],
+   "mule:scatter_gather": [
+    36,
+    41
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    24
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    3,
+    3
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    28
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 84,
+   "l1_found": 84,
+   "recall_mean": 0.989,
+   "precision_mean": 0.987,
+   "max_ms": 43
+  }
+ },
+ {
+  "seed": 208,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 18017,
+  "pipeline_s": 19.76,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    512
+   ],
+   "MUST_FLAG": [
+    564,
+    609
+   ],
+   "SHOULD_FLAG": [
+    75,
+    218
+   ],
+   "EXPECTED_MISS": [
+    0,
+    134
+   ],
+   "AMBIGUOUS": [
+    8,
+    10
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    106,
+    140
+   ],
+   "mule:chain_deep": [
+    112,
+    147
+   ],
+   "mule:chain_slow": [
+    89,
+    138
+   ],
+   "mule:chain_unwitting": [
+    81,
+    120
+   ],
+   "mule:chain_plain_cashout": [
+    22,
+    134
+   ],
+   "mule:shared_l1": [
+    164,
+    206
+   ],
+   "mule:funnel": [
+    6,
+    16
+   ],
+   "mule:smurf_cycle": [
+    22,
+    22
+   ],
+   "mule:scatter_gather": [
+    37,
+    38
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    22
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    2,
+    2
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    27
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 85,
+   "l1_found": 85,
+   "recall_mean": 0.992,
+   "precision_mean": 0.987,
+   "max_ms": 25
+  }
+ },
+ {
+  "seed": 209,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 18129,
+  "pipeline_s": 19.47,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    1,
+    514
+   ],
+   "MUST_FLAG": [
+    533,
+    588
+   ],
+   "SHOULD_FLAG": [
+    109,
+    251
+   ],
+   "EXPECTED_MISS": [
+    0,
+    152
+   ],
+   "AMBIGUOUS": [
+    10,
+    14
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    110,
+    138
+   ],
+   "mule:chain_deep": [
+    104,
+    139
+   ],
+   "mule:chain_slow": [
+    80,
+    140
+   ],
+   "mule:chain_unwitting": [
+    86,
+    130
+   ],
+   "mule:chain_plain_cashout": [
+    45,
+    160
+   ],
+   "mule:shared_l1": [
+    151,
+    204
+   ],
+   "mule:funnel": [
+    5,
+    15
+   ],
+   "mule:smurf_cycle": [
+    25,
+    25
+   ],
+   "mule:scatter_gather": [
+    36,
+    40
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    23
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    30
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    1,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    4,
+    4
+   ]
+  },
+  "fp": [
+   [
+    "ICIC31127110",
+    "family_pool",
+    70
+   ]
+  ],
+  "problems": [],
+  "trace": {
+   "victims": 86,
+   "l1_found": 86,
+   "recall_mean": 0.977,
+   "precision_mean": 0.982,
+   "max_ms": 26
+  }
+ },
+ {
+  "seed": 210,
+  "size": "medium",
+  "vocab": "dev",
+  "rows": 17731,
+  "pipeline_s": 19.82,
+  "tiers": {
+   "MUST_NOT_FLAG": [
+    0,
+    508
+   ],
+   "MUST_FLAG": [
+    558,
+    601
+   ],
+   "SHOULD_FLAG": [
+    124,
+    259
+   ],
+   "EXPECTED_MISS": [
+    0,
+    133
+   ],
+   "AMBIGUOUS": [
+    9,
+    12
+   ]
+  },
+  "families": {
+   "legit:background": [
+    0,
+    360
+   ],
+   "legit:merchant": [
+    0,
+    9
+   ],
+   "mule:chain_basic": [
+    90,
+    126
+   ],
+   "mule:chain_deep": [
+    120,
+    173
+   ],
+   "mule:chain_slow": [
+    99,
+    144
+   ],
+   "mule:chain_unwitting": [
+    85,
+    136
+   ],
+   "mule:chain_plain_cashout": [
+    39,
+    114
+   ],
+   "mule:shared_l1": [
+    192,
+    228
+   ],
+   "mule:funnel": [
+    6,
+    13
+   ],
+   "mule:smurf_cycle": [
+    21,
+    21
+   ],
+   "mule:scatter_gather": [
+    30,
+    38
+   ],
+   "legit:payroll_small": [
+    6,
+    6
+   ],
+   "legit:client": [
+    0,
+    18
+   ],
+   "legit:payroll_large": [
+    0,
+    6
+   ],
+   "legit:payment_aggregator": [
+    0,
+    6
+   ],
+   "legit:couple_back_and_forth": [
+    0,
+    12
+   ],
+   "legit:crypto_investor": [
+    0,
+    6
+   ],
+   "legit:employer": [
+    0,
+    6
+   ],
+   "legit:exchange": [
+    0,
+    16
+   ],
+   "legit:traveller_foreign_ip": [
+    0,
+    6
+   ],
+   "legit:api_business": [
+    0,
+    6
+   ],
+   "legit:vendor": [
+    0,
+    30
+   ],
+   "legit:treasury_sweep": [
+    0,
+    12
+   ],
+   "legit:family_pool": [
+    0,
+    6
+   ],
+   "legit:hospital": [
+    0,
+    6
+   ],
+   "legit:refunding_merchant": [
+    0,
+    6
+   ],
+   "legit:wallet_provider": [
+    3,
+    3
+   ]
+  },
+  "fp": [],
+  "problems": [],
+  "trace": {
+   "victims": 87,
+   "l1_found": 87,
+   "recall_mean": 0.974,
+   "precision_mean": 0.994,
+   "max_ms": 23
+  }
+ }
+]

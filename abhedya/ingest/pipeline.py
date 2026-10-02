@@ -41,7 +41,7 @@ def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool 
     con = duckdb.connect(str(db_path))
     sha = stage("hash", lambda: audit.sha256_file(csv_path))
     raw = stage("load_csv", lambda: load_raw(con, csv_path))
-    stage("verify_order", lambda: verify_row_order(con, csv_path))
+    stage("verify_order", lambda: verify_row_order(con, csv_path, raw["id_index"]))
     n_acct = stage("account_map", lambda: build_account_map(con))
     stage("derive+validate", lambda: build_txn(con))
     dq = stage("dq_summary", lambda: write_dq_summary(con))
@@ -67,6 +67,7 @@ def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool 
         "input_sha256": sha,
         "rows": raw["rows"],
         "rejects": raw["rejects"],
+        "extra_columns_ignored": raw["extra_columns"],
         "accounts": n_acct,
         "graph": graph,
         "dq_counts": dq,

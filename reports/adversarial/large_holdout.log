@@ -1,0 +1,83 @@
+﻿ingest holdout_large_301.csv
+  hash                0.05 s
+  load_csv            0.48 s
+  verify_order        0.01 s
+  account_map         0.03 s
+  derive+validate     0.88 s
+  dq_summary          0.01 s
+  account_table       0.03 s
+  graph_arrays        0.07 s
+  INGEST+INDEX        1.55 s   (119,565 rows, 11,135 accounts)
+  detect             13.16 s   bands {'HIGH': 4496, 'MEDIUM': 2165, 'LOW': 4474}
+seed 301: rows 119565, pipeline 15.04 s, tiers {'MUST_NOT_FLAG': '1/3413', 'MUST_FLAG': '3752/4055', 'SHOULD_FLAG': '690/1630', 'EXPECTED_MISS': '0/910', 'AMBIGUOUS': '53/66'}, FP 1, problems 0
+ingest holdout_large_302.csv
+  hash                0.06 s
+  load_csv            0.53 s
+  verify_order        0.01 s
+  account_map         0.03 s
+  derive+validate     1.02 s
+  dq_summary          0.01 s
+  account_table       0.03 s
+  graph_arrays        0.08 s
+  INGEST+INDEX        1.78 s   (119,282 rows, 11,030 accounts)
+  detect             12.98 s   bands {'HIGH': 4323, 'MEDIUM': 2212, 'LOW': 4495}
+seed 302: rows 119282, pipeline 15.01 s, tiers {'MUST_NOT_FLAG': '1/3406', 'SHOULD_FLAG': '673/1598', 'MUST_FLAG': '3591/3926', 'EXPECTED_MISS': '0/926', 'AMBIGUOUS': '58/76'}, FP 1, problems 0
+ingest holdout_large_303.csv
+  hash                0.05 s
+  load_csv            0.52 s
+  verify_order        0.01 s
+  account_map         0.02 s
+  derive+validate     1.06 s
+  dq_summary          0.01 s
+  account_table       0.03 s
+  graph_arrays        0.08 s
+  INGEST+INDEX        1.77 s   (119,277 rows, 11,050 accounts)
+  detect             13.16 s   bands {'HIGH': 4440, 'MEDIUM': 2127, 'LOW': 4483}
+seed 303: rows 119277, pipeline 15.19 s, tiers {'MUST_NOT_FLAG': '0/3415', 'MUST_FLAG': '3714/4056', 'SHOULD_FLAG': '671/1594', 'EXPECTED_MISS': '0/872', 'AMBIGUOUS': '55/70'}, FP 0, problems 0
+Worlds: 3 (large; vocab holdout; seeds 301–303), 358,124 rows in total.
+
+| Tier | Flagged HIGH | Meaning |
+|---|---|---|
+| MUST_FLAG | 11057/12037 (91.9%) | mules showing ≥ 2 statement indicators: higher is better |
+| SHOULD_FLAG | 2034/4822 (42.2%) | mules showing 1 indicator |
+| EXPECTED_MISS | 0/2708 (0.0%) | mules showing none (cannot be found from the statement's signals) |
+| MUST_NOT_FLAG | 2/10234 (0.0%) | legitimate accounts: **false positives**, lower is better |
+| AMBIGUOUS | 166/212 (78.3%) | legitimate accounts showing ≥ 2 statement indicators |
+
+| Family | Flagged HIGH |
+|---|---|
+| legit:api_business | 0/120 (0.0%) |
+| legit:background | 1/7200 (0.0%) |
+| legit:client | 0/360 (0.0%) |
+| legit:couple_back_and_forth | 0/240 (0.0%) |
+| legit:crypto_investor | 0/120 (0.0%) |
+| legit:employer | 0/120 (0.0%) |
+| legit:exchange | 0/403 (0.0%) |
+| legit:family_pool | 1/120 (0.8%) |
+| legit:hospital | 0/120 (0.0%) |
+| legit:merchant | 0/180 (0.0%) |
+| legit:payment_aggregator | 0/120 (0.0%) |
+| legit:payroll_large | 0/120 (0.0%) |
+| legit:payroll_small | 120/120 (100.0%) |
+| legit:refunding_merchant | 0/120 (0.0%) |
+| legit:traveller_foreign_ip | 0/120 (0.0%) |
+| legit:treasury_sweep | 0/240 (0.0%) |
+| legit:vendor | 0/577 (0.0%) |
+| legit:wallet_provider | 46/46 (100.0%) |
+| mule:chain_basic | 1968/2656 (74.1%) |
+| mule:chain_deep | 2496/3333 (74.9%) |
+| mule:chain_plain_cashout | 695/2798 (24.8%) |
+| mule:chain_slow | 1756/2686 (65.4%) |
+| mule:chain_unwitting | 1821/2716 (67.0%) |
+| mule:funnel | 107/294 (36.4%) |
+| mule:scatter_gather | 741/794 (93.3%) |
+| mule:shared_l1 | 3031/3814 (79.5%) |
+| mule:smurf_cycle | 476/476 (100.0%) |
+
+False positives by family: {'background': 1, 'family_pool': 1}
+
+Victim traces (from the disputed transfer): seed 301: L1 563/563, recall 0.975, precision 0.981; seed 302: L1 564/564, recall 0.971, precision 0.983; seed 303: L1 566/566, recall 0.987, precision 0.984
+Mean trace recall 0.978, mean precision 0.983, L1 found 1693/1693, slowest trace 63 ms.
+Pipeline time per world: median 15.0 s, max 15.2 s.
+
+Invariant problems: 0

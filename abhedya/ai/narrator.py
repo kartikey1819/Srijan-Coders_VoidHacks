@@ -74,7 +74,7 @@ def narrate_with_status(ev: Evidence, client: httpx.Client | None = None) -> tup
             except ValidationError:
                 errors = ["the reply did not match the JSON schema"]
                 continue
-            errors = validate_narrative(n, ev)
+            errors = validate_narrative(n, ev, AI_SECTIONS)
             if not errors:
                 return n, None
         return None, "AI narrative rejected by the validator: " + "; ".join(errors[:3])

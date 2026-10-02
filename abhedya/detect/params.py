@@ -18,7 +18,7 @@ class DetectParams(BaseModel):
     burst_window_s: int = 3600
     burst_min_senders: int = 4
     # cyclical smurfing (labelled defaults)
-    cycle_max_len: int = 4
+    cycle_max_len: int = 5          # ring of up to 5 accounts (4 cost the same and missed 5-account rings)
     cycle_window_s: int = 86_400
     cycle_amount_tol: float = 0.20
     cycle_cap: int = 50
@@ -32,11 +32,14 @@ class DetectParams(BaseModel):
     network_seed_min: int = 50     # pass-1 score that makes an account a "suspect" for G4
     floor_pass_through: int = 70
     floor_fanout: int = 60
-    floor_term_in_anom: int = 70    # received a cash-out transfer sent from a script device / foreign proxy
-    floor_term_out_anom: int = 70   # sent a cash-out transfer from a script device / foreign proxy
+    floor_term_in_anom: int = 70    # receives mainly cash-out transfers sent from script devices / foreign proxies
+    floor_term_out_anom: int = 70   # sends mainly cash-out transfers from script devices / foreign proxies
+    anom_cashout_min_share: float = 0.5   # "mainly": share of the account's money in / out (one-off events do not count)
+    floor_fanin_drain: int = 70     # collector: many senders within an hour, then emptied within 15 minutes ...
+    drain_min_share: float = 0.5    # ... for at least half of all the money it received (not a one-off coincidence)
     floor_term_linked: int = 70     # cash-out channel + at least half its money from/to suspects
     term_linked_min: float = 0.5
-    cycle_min_loops: int = 2        # repeated loops = cyclical smurfing
+    cycle_min_loops: int = 2        # the same ring (3+ accounts) repeated = cyclical smurfing
     floor_cycles: int = 70
     band_high: int = 70            # HIGH = flagged
     band_medium: int = 40

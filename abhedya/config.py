@@ -22,7 +22,11 @@ FREEZE_MIN_PAISE = 100                   # hold only accounts holding >= Rs 1 of
 
 # ---- narration categories: first match wins (upper-cased text, regex) ----
 NARR_RULES = (
-    ("crypto", "CRYPTO"),
+    # crypto cash-out: the word itself, major exchanges, and coin tickers as whole words.
+    # A bare "P2P" is NOT used: in UPI it means person-to-person, not crypto.
+    ("crypto", "CRYPTO|BITCOIN|ETHEREUM|BINANCE|WAZIRX|COINDCX|COINSWITCH|ZEBPAY|BITBNS|MUDREX|KUCOIN"
+               "|(^|[^A-Z])(USDT|USDC|BTC|ETH)([^A-Z]|$)"),
+    # wallet load: "AMAZONPAY" alone is NOT used: it is ordinary shopping in the official export
     ("wallet", "WALLET"),
     ("task_refund", "TASK|REFUND"),
     ("settlement", "SETTLEMENT"),

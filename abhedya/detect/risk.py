@@ -17,7 +17,8 @@ def _signals(f: dict[str, np.ndarray], p: DetectParams) -> dict[str, np.ndarray]
         "pt": np.where(f["pt_outflows"] >= p.pt_min_outflows, f["pt_strict"], 0.0),
         "episodes": np.minimum(1.0, f["episodes_3_7"] / 2.0),
         "burst": np.clip((f["burst_senders_60m"] - (p.burst_min_senders - 1)) / 3.0, 0.0, 1.0),
-        "cycle": np.minimum(1.0, f["cycles_2_4"] / max(p.cycle_min_loops, 1)),
+        "cycle": np.minimum(1.0, f["ring_cycles"] / max(p.cycle_min_loops, 1)),
+        "drain": np.clip(f["fanin_drain_share"], 0.0, 1.0),
         "term_out": np.where(f["term_out_anom_n"] > 0, 1.0, np.where(f["term_out_n"] > 0, 0.6, 0.0)),
         "term_in_anom": (f["term_in_from_anom"] > 0).astype(float),
         "term_in": np.where(f["term_in_n"] > 0, 0.6 * f["sink_ratio"], 0.0),
@@ -25,7 +26,7 @@ def _signals(f: dict[str, np.ndarray], p: DetectParams) -> dict[str, np.ndarray]
         "foreign": f["foreign_out_n"] / n_out,
     }
     s["G1"] = s["pt"]
-    s["G2"] = np.maximum.reduce([s["episodes"], s["burst"], s["cycle"]])
+    s["G2"] = np.maximum.reduce([s["episodes"], s["burst"], s["cycle"], s["drain"]])
     s["G3"] = np.maximum.reduce([s["term_out"], s["term_in_anom"], s["term_in"], s["script"], s["foreign"]])
     return s
 
@@ -42,9 +43,10 @@ def _floors(score: np.ndarray, f: dict[str, np.ndarray], p: DetectParams, g4: np
     rules = [
         ((f["pt_strict"] >= p.pt_flag_ratio) & (f["pt_outflows"] >= p.pt_min_outflows), p.floor_pass_through),
         ((f["episodes_3_7"] >= 1) & (f["pt_strict"] >= 0.5), p.floor_fanout),
-        (f["term_in_from_anom"] >= 1, p.floor_term_in_anom),
-        (f["term_out_anom_n"] >= 1, p.floor_term_out_anom),
-        (f["cycles_2_4"] >= p.cycle_min_loops, p.floor_cycles),
+        ((f["term_in_from_anom"] >= 1) & (f["term_in_anom_share"] >= p.anom_cashout_min_share), p.floor_term_in_anom),
+        ((f["term_out_anom_n"] >= 1) & (f["term_out_anom_share"] >= p.anom_cashout_min_share), p.floor_term_out_anom),
+        (f["ring_cycles"] >= p.cycle_min_loops, p.floor_cycles),
+        ((f["fanin_drains"] >= 1) & (f["fanin_drain_share"] >= p.drain_min_share), p.floor_fanin_drain),
     ]
     if g4 is not None:
         rules.append((((f["term_out_n"] >= 1) | (f["term_in_n"] >= 1)) & (g4 >= p.term_linked_min), p.floor_term_linked))
@@ -84,7 +86,8 @@ def _reasons(f: dict[str, np.ndarray], s: dict[str, np.ndarray], p: DetectParams
         ("PT_STRICT", w1 * s["pt"], s["pt"] >= 0.5, lambda i: f"{f['pt_strict'][i]:.2f}"),
         ("FANOUT_EPISODES", w2 * s["episodes"], f["episodes_3_7"] >= 1, lambda i: f"{f['episodes_3_7'][i]}"),
         ("FANIN_BURST", w2 * s["burst"], s["burst"] > 0, lambda i: f"{f['burst_senders_60m'][i]}"),
-        ("CYCLE", w2 * s["cycle"], f["cycles_2_4"] > 0, lambda i: f"{f['cycles_2_4'][i]}"),
+        ("CYCLE", w2 * s["cycle"], f["ring_cycles"] > 0, lambda i: f"{f['ring_cycles'][i]}"),
+        ("FANIN_DRAIN", w2 * s["drain"], f["fanin_drain_share"] >= 0.2, lambda i: f"{f['fanin_drain_share'][i]:.2f}"),
         ("TERM_IN_FROM_SCRIPT_OR_FOREIGN", w3 * s["term_in_anom"], f["term_in_from_anom"] > 0,
          lambda i: f"{f['term_in_from_anom'][i]}"),
         ("TERM_OUT", w3 * s["term_out"], f["term_out_n"] > 0, lambda i: f"{f['term_out_n'][i]}"),
@@ -116,9 +119,9 @@ def write_tables(con: duckdb.DuckDBPyConnection, f: dict[str, np.ndarray], r: di
     con.register("_risk", {
         "acct_id": np.arange(V, dtype=np.int32),
         "score": r["score"].astype(np.int32),
-        "band": np.asarray(r["band"], dtype=object),
-        "role_hint": np.asarray(r["role_hint"], dtype=object),
-        "reasons": np.asarray(r["reasons"], dtype=object),
+        "band": np.asarray(r["band"], dtype=str),          # typed text: DuckDB is ~400x slower on object arrays
+        "role_hint": np.asarray(r["role_hint"], dtype=str),
+        "reasons": np.asarray(r["reasons"], dtype=str),
     })
     con.execute(
         f"""CREATE OR REPLACE TABLE risk AS

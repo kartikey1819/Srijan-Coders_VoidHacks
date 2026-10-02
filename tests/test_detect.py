@@ -151,5 +151,37 @@ def test_repeated_ring_is_smurfing_but_one_off_loops_are_not(tmp_path):
         rows.append(row(i, other, "KKBK10000009", "7800.00", f"2026-09-{day} 15:00:00"))
     e = make_engine(tmp_path, rows, detect=True)
     for a in ring:
-        assert feats(e, a)["cycles_2_4"] == 2 and risk(e, a).band == "HIGH"
-    assert feats(e, "KKBK10000009")["cycles_2_4"] == 1 and risk(e, "KKBK10000009").band != "HIGH"
+        assert feats(e, a)["ring_cycles"] == 2 and risk(e, a).band == "HIGH"
+    assert feats(e, "KKBK10000009")["ring_cycles"] == 0 and risk(e, "KKBK10000009").band != "HIGH"
+
+
+def test_two_account_back_and_forth_is_not_smurfing(tmp_path):
+    rows = []
+    for i, day in enumerate(range(16, 28, 2)):        # a couple moving the same money back and forth
+        rows.append(row(2 * i, "SBIN10000001", "HDFC10000002", "20000.00", f"2026-09-{day} 09:00:00", "UPI/Family/1", "UPI"))
+        rows.append(row(2 * i + 1, "HDFC10000002", "SBIN10000001", "19800.00", f"2026-09-{day} 13:00:00", "UPI/Family/2", "UPI"))
+    e = make_engine(tmp_path, rows, detect=True)
+    for a in ("SBIN10000001", "HDFC10000002"):
+        assert feats(e, a)["ring_cycles"] == 0 and risk(e, a).band == "LOW"
+
+
+def test_one_off_anomalous_cashout_is_not_enough(tmp_path):
+    # a wallet provider receiving mostly ordinary top-ups, and one from a customer abroad
+    rows = [row(i, f"PUNB1000{i:04d}", "AIRP10009999", "800.00", at(3600 * i), "UPI/WALLET LOAD/1", "UPI")
+            for i in range(1, 30)]
+    rows.append(row(99, "KKBK10000005", "AIRP10009999", "500.00", at(200_000), "UPI/WALLET LOAD/2", "UPI",
+                    "194.1.2.3", "Android"))
+    e = make_engine(tmp_path, rows, detect=True)
+    f = feats(e, "AIRP10009999")
+    assert f["term_in_from_anom"] == 1 and f["term_in_anom_share"] < 0.5
+    assert risk(e, "AIRP10009999").band != "HIGH"
+
+
+def test_collector_drained_at_once_is_flagged(tmp_path):
+    rows = [row(i, f"SBIN1000{i:04d}", "HDFC10000077", "5000.00", at(300 * i)) for i in range(1, 7)]   # 6 senders, 30 min
+    rows.append(row(50, "HDFC10000077", "ICIC10000088", "29500.00", at(300 * 6 + 240)))               # emptied 4 min later
+    e = make_engine(tmp_path, rows, detect=True)
+    f = feats(e, "HDFC10000077")
+    assert f["fanin_drains"] == 1
+    r = risk(e, "HDFC10000077")
+    assert r.band == "HIGH" and any(x.startswith("FANIN_DRAIN") for x in r.reasons)

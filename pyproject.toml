@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "hypothesis>=6"]
 
 [tool.setuptools.packages.find]
 include = ["abhedya*", "contracts*"]

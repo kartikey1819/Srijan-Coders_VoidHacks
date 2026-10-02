@@ -28,7 +28,8 @@ def make_documents(victim: str, case: CaseInfo):
     used_llm = narrative is not None
     if used_llm:
         narrative = with_template_sections(narrative, ev)
-        source = (f"Summary, modus operandi and recommendation drafted by the local AI model ({narrator.MODEL}) from "
+        source = (f"AI-DRAFTED, VERIFY BEFORE SIGNING. Summary, modus operandi and recommendation drafted by the "
+                  f"local AI model ({narrator.MODEL}) from "
                   "evidence IDs only and checked by the validator; layer and holding paragraphs from fixed templates. "
                   "Every account, amount and transaction ID in this diary is inserted from the evidence.")
     else:

@@ -56,5 +56,6 @@ def candidate_victims(con: duckdb.DuckDBPyConnection, limit: int = 50) -> list[V
            FROM txn t
            JOIN risk d ON d.acct_id = t.dst_id AND d.band = 'HIGH' AND d.role_hint = 'L1'
            JOIN risk s ON s.acct_id = t.src_id AND s.band <> 'HIGH'
+           WHERE t.usable
            GROUP BY s.account ORDER BY 2 DESC, 1 LIMIT ?""", [limit]).fetchall()
     return [VictimCandidate(account=a, out_paise_to_flagged=int(p), first_ts=t) for a, p, t in rows]

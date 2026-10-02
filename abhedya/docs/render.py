@@ -120,6 +120,10 @@ def _context(ev: Evidence, narrative: Narrative | None, narrative_source: str) -
 def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
                 narrative_source: str = "Narrative generated from fixed templates.", used_llm: bool = False,
                 llm_fallback_reason: str | None = None, url_prefix: str = "") -> CaseOutput:
+    from abhedya.evidence.build import verify_evidence
+    problems = verify_evidence(ev)
+    if problems:
+        raise FirewallError("evidence is inconsistent, documents refused: " + "; ".join(problems[:5]))
     amounts: set[str] = set()
     env = _env(amounts)
     ctx = _context(ev, narrative, narrative_source)

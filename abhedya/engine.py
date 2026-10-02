@@ -15,9 +15,12 @@ from abhedya.graph.trace import fmt_ts, trace_core
 from contracts.models import (AccountSummary, Counterparty, DQSummary, RingResult, RiskRow, TraceEdge,
                               TraceNode, TraceResult, TxnRow)
 
-_TXN_COLS = """txn_idx, transaction_id, sender, receiver, sender_ifsc, receiver_ifsc, amount_paise,
-               strftime(ts, '%Y-%m-%d %H:%M:%S') AS ts, mode, narration, narr_category, ip, ip_class,
-               device, device_class, dq_flags"""
+# flagged rows may lack values; the API shows them as empty / 0 together with their data-quality flags
+_TXN_COLS = """txn_idx, coalesce(transaction_id, ''), coalesce(sender, ''), coalesce(receiver, ''),
+               coalesce(sender_ifsc, ''), coalesce(receiver_ifsc, ''), coalesce(amount_paise, 0),
+               coalesce(strftime(ts, '%Y-%m-%d %H:%M:%S'), ts_raw, '') AS ts, coalesce(mode, ''),
+               coalesce(narration, ''), narr_category, coalesce(ip, ''), ip_class, coalesce(device, ''),
+               device_class, dq_flags"""
 _TXN_FIELDS = ("txn_idx", "transaction_id", "sender", "receiver", "sender_ifsc", "receiver_ifsc", "amount_paise",
                "ts", "mode", "narration", "narr_category", "ip", "ip_class", "device", "device_class", "dq_flags")
 
@@ -188,12 +191,10 @@ class Engine:
         warnings = []
         if audit.sha256_file(csv_path) != self.data_sha256:
             warnings.append("Source CSV on disk no longer matches the ingested file hash.")
-        lines = []
+        from abhedya.ingest.records import iter_records
         with open(csv_path, "rb") as f:
             header = f.readline()
-            for i, line in enumerate(f):
-                if i in want:
-                    lines.append(line if line.endswith(b"\n") else line + b"\n")
+        lines = [r if r.endswith(b"\n") else r + b"\n" for i, r in enumerate(iter_records(csv_path)) if i in want]
         tx_bytes = header + b"".join(lines)
         mem =["account,role,bank_prefix,bank_name,ifsc,risk_score,risk_band"]
         for nd in ring.nodes:

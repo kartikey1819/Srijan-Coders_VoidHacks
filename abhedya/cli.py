@@ -18,8 +18,12 @@ def main(argv: list[str] | None = None) -> None:
     a = ap.parse_args(argv)
 
     if a.cmd == "ingest":
+        from abhedya.ingest.load import IngestError
         from abhedya.ingest.pipeline import run_ingest
-        run_ingest(a.data, a.db, run_detect=not a.skip_detect)
+        try:
+            run_ingest(a.data, a.db, run_detect=not a.skip_detect)
+        except (IngestError, FileNotFoundError) as e:
+            raise SystemExit(f"ingest failed: {e}")
     elif a.cmd == "serve":
         import os
 
