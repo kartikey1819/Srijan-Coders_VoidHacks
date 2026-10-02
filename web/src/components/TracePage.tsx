@@ -116,22 +116,19 @@ export function TracePage({ account, seeds, reasons }: Props) {
             <FileText size={17} /> Police reports &amp; freeze notices</button> : undefined}>
       <Panel className="pick-panel">
         <form className="pick-row" onSubmit={(e) => { e.preventDefault(); submit(input) }}>
-          <label className="gfield acct-field"><span>Victim account number</span>
-            <div className="inbox"><MagnifyingGlass size={16} aria-hidden="true" />
-              <input className="mono" value={input} onChange={(e) => setInput(e.target.value.toUpperCase())} placeholder="e.g. KKBK10000000"
-                     spellCheck={false} autoComplete="off" aria-label="Victim account number" /></div></label>
-          <label className="gfield"><span>Follow money up to</span>
-            <select value={hops} onChange={(e) => setHops(Number(e.target.value))}>
-              {[1, 2, 3, 4].map((h) => <option key={h} value={h}>{h} transfer{h > 1 ? 's' : ''} away</option>)}
-            </select></label>
-          <button className="btn primary big" disabled={busy}>{busy ? <SpinnerGap size={16} className="spin" /> : <PathIcon size={16} />} Trace funds</button>
-          <a className="btn big" href="#traceall" title="Trace several complainants at once and see the accounts they share"><UsersThree size={16} /> Several victims</a>
-          <span className="sp" />
-          <label className="gfield victim-pick"><span>Or choose an identified victim</span>
-            <select value="" onChange={(e) => e.target.value && submit(e.target.value)}>
-              <option value="">Select from {victims.length} victims (largest loss first)</option>
-              {victims.map((v) => <option key={v.account} value={v.account}>{v.account} · {inr(v.out_paise_to_flagged)} · {when(v.first_ts)}</option>)}
-            </select></label>
+          <div className="inbox acct-field"><MagnifyingGlass size={16} aria-hidden="true" />
+            <input className="mono" value={input} onChange={(e) => setInput(e.target.value.toUpperCase())} placeholder="Victim account, e.g. KKBK10000000"
+                   spellCheck={false} autoComplete="off" aria-label="Victim account number" /></div>
+          <select value={hops} onChange={(e) => setHops(Number(e.target.value))} aria-label="Follow money up to" title="Follow money up to">
+            {[1, 2, 3, 4].map((h) => <option key={h} value={h}>{h} transfer{h > 1 ? 's' : ''} away</option>)}
+          </select>
+          <button className="btn primary" disabled={busy}>{busy ? <SpinnerGap size={16} className="spin" /> : <PathIcon size={16} />} Trace funds</button>
+          <span className="pick-or">or</span>
+          <select className="victim-pick" value="" onChange={(e) => e.target.value && submit(e.target.value)} aria-label="Choose an identified victim">
+            <option value="">Choose from {victims.length} identified victims</option>
+            {victims.map((v) => <option key={v.account} value={v.account}>{v.account} · {inr(v.out_paise_to_flagged)} · {when(v.first_ts)}</option>)}
+          </select>
+          <a className="btn" href="#traceall" title="Trace several complainants at once and see the accounts they share"><UsersThree size={16} /> Several victims</a>
         </form>
         {trace && account && (nSeeds > 1 || seeds || autoSeeds) && (
           <DisputedPicker victim={trace.victim} seeds={seeds} auto={autoSeeds ? nSeeds : null}

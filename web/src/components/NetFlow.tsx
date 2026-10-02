@@ -38,10 +38,10 @@ export function NetFlow({ ix, center, hidden, cutoff, onPick }: {
 }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
   const [hover, setHover] = useState<string | null>(null)
-  const [ref, width, height] = useSize<HTMLDivElement>()
+  const [ref, width] = useSize<HTMLDivElement>()
   useEffect(() => { setOpen(new Set()) }, [center])
   const flow = useMemo(() => buildFlow(ix, center, hidden), [ix, center, hidden])
-  const fit = Math.max(3, Math.floor((height - TOP - 8) / ROW))          // rows that fit the panel's height
+  const fit = 7                                                          // accounts per column before "+N more"
   const cols: Col[] = useMemo(() => flow.steps.map((step) => {
     const ids = flow.byStep.get(step) ?? []
     const show = open.has(step) || ids.length <= fit ? ids : ids.slice(0, fit - 1)
@@ -71,7 +71,7 @@ export function NetFlow({ ix, center, hidden, cutoff, onPick }: {
 
   return (
     <div className="netflow" ref={ref}>
-      {width > 0 && height > 0 && (
+      {width > 0 && (
         <div className="tree-canvas" style={{ width: W, height: H }}>
           <svg className={`tree${hl ? ' dim' : ''}`} width={W} height={H} role="img" aria-label={`Money flow around ${center}`}>
             {cols.map((c, ci) => (

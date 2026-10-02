@@ -776,3 +776,58 @@ body { font-size: var(--fs); line-height: 1.5; }
 .hop-top .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hop-acts { display: flex; gap: 6px; margin-top: 2px; }
 .hop-acts .btn { padding-left: 8px; padding-right: 8px; }
+
+/* Network page: panels as tall as their content; the page scrolls, the panels don't */
+.net-work { height: auto !important; }
+.net-work [data-group], .net-work [data-panel-group] { align-items: flex-start; }
+.net-work .pframe { height: auto; }
+.net-work .pframe > .pbody { overflow: visible; }
+.netflow { overflow: visible; }
+.rt-scroll { overflow: visible; }
+.rt-fit { overflow: visible; }
+.journey { overflow: visible; }
+.globe-box { position: relative; height: 600px; }
+
+/* Playback: a slim strip */
+.gpage .timeline, .trail-time .timeline { padding: 4px 10px; gap: 10px; }
+.timeline .ctrls { gap: 4px; }
+.timeline .ctrls .btn, .timeline .row .btn { min-height: 28px; height: 28px; padding: 0 9px; font-size: 12.5px; }
+.timeline .ctrls select { height: 28px; font-size: 12.5px; padding: 0 6px; }
+.timeline .ticks { height: 14px; }
+.timeline input[type="range"] { height: 14px; }
+.timeline .clock { font-size: 12px; }
+.timeline .clock b { display: inline; font-size: 12.5px; margin-right: 6px; }
+.timeline .check { font-size: 12px; }
+
+/* Theme: one small button */
+.theme-btn { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--rule-2);
+  background: var(--sheet); color: var(--ink); cursor: pointer; transition: transform 160ms var(--ease); }
+.theme-btn:active { transform: scale(0.94); }
+@media (hover: hover) and (pointer: fine) { .theme-btn:hover { background: var(--grid); } }
+.theme-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Sidebar: collapses to icons */
+.side-top { display: flex; align-items: center; justify-content: space-between; padding-right: 4px; }
+.side-toggle { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; border: 0; background: transparent;
+  color: var(--side-muted); cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .side-toggle:hover { background: var(--navy-2); color: var(--side-ink); } }
+.side-toggle:focus-visible { outline: 2px solid #ffbf66; }
+.gov.side-min .shell { grid-template-columns: 64px minmax(0, 1fr); }
+.gov.side-min .side { padding: 14px 8px; }
+.gov.side-min .side-btn span, .gov.side-min .side-sec, .gov.side-min .side-foot { display: none; }
+.gov.side-min .side-btn { justify-content: center; padding: 11px 0; }
+.gov.side-min .side-top { justify-content: center; padding: 0; margin-bottom: 6px; }
+
+/* Trace Victim Funds: the picker on one slim line */
+.pick-row { flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.pick-row .acct-field { width: 290px; }
+.pick-row > select, .pick-row .victim-pick { height: 36px; }
+.pick-row .victim-pick { width: 330px; flex: 0 1 330px; }
+.pick-or { color: var(--muted); font-size: 13px; }
+.pick-panel .gpanel-b { padding: 10px 14px; }
+
+/* Network page: the trail / flow stays in view while the page scrolls down the (longer) money journey */
+.net-work [data-group] { overflow: visible !important; align-items: stretch; }
+.net-work #ring-graph > div { height: 100% !important; max-height: none !important; }
+.net-work [data-panel], .net-work [data-panel] > div { overflow: visible !important; }
+.net-work #ring-graph .pframe { position: sticky; top: 10px; }

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { inr, inrShort } from '../format'
 import type { ringIndex } from '../ringJourney'
@@ -42,28 +42,6 @@ export function RingTrail({ ix, seed, mark, cursor, onSelect }: {
     return () => { live = false }
   }, [victim])
 
-  // the tree shrinks to fit the panel (never below 55%), like the money flow, so the whole trail is in view
-  const fit = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(1)
-  const [fitH, setFitH] = useState<number | undefined>(undefined)
-  useLayoutEffect(() => {
-    const box = fit.current
-    if (!box) return
-    const measure = () => {
-      const canvas = box.querySelector<HTMLElement>('.tree-canvas')
-      if (!canvas) return
-      const avail = box.clientHeight
-      setFitH(avail - 4)                                // rows squeeze to this first (text stays full size)
-      const natural = canvas.offsetHeight
-      setScale(natural && avail ? Math.max(0.8, Math.min(1, (avail - 4) / natural)) : 1)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)            // the tree draws once its width is known: watch it appear
-    ro.observe(box)
-    if (box.firstElementChild) ro.observe(box.firstElementChild)
-    return () => ro.disconnect()
-  }, [trace])
-
   if (!victims.length) return <p className="muted rt-empty">No victim's money reaches {seed} inside this network. Switch to the Globe to see every account.</p>
   const count = (r: string) => trace?.nodes.filter((n) => n.role === r).length ?? 0
   const reaches = !trace || trace.nodes.some((n) => n.account === seed)
@@ -82,8 +60,8 @@ export function RingTrail({ ix, seed, mark, cursor, onSelect }: {
       {!reaches && <p className="banner small" role="status">The traced money of this victim does not reach {seed}: the rules matched its payments to other money. Pick another victim, or use the Globe.</p>}
       {err && <p className="banner bad" role="alert">{err}</p>}
       {!trace && !err && <p className="muted">Tracing {victim}…</p>}
-      <div className="rt-fit" ref={fit}>
-        {trace && <div style={{ zoom: scale }}><TrailTree trace={trace} cursor={cursor} onSelect={onSelect} mark={mark ?? seed} fitHeight={fitH} /></div>}
+      <div className="rt-fit">
+        {trace && <TrailTree trace={trace} cursor={cursor} onSelect={onSelect} mark={mark ?? seed} />}
       </div>
       {trace && (
         <div className="tree-legend">

@@ -1,5 +1,5 @@
 import { DownloadSimple, FileText, FlowArrow, Globe as GlobeIcon, TreeStructure } from '@phosphor-icons/react'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
 import { inr, ROLE_TEXT, spanText, toEpoch } from '../format'
@@ -17,7 +17,6 @@ import { RingTrail, victimsReaching } from './RingTrail'
 import { Timeline } from './Timeline'
 import { BankIcon } from './BankIcon'
 import { DocsModal } from './DocsModal'
-import { pageZoom } from '../look'
 
 interface Props { seed: string; reasons: Record<string, string> }
 type View = 'flow' | 'trail' | 'globe'
@@ -41,28 +40,6 @@ export function RingView({ seed, reasons }: Props) {
   const [docs, setDocs] = useState(false)
   const globe = useRef<GlobeHandle>(null)
   const layout = useDefaultLayout({ id: 'ring-h2', storage: safeStorage })
-  // the network panels and the time slider under them fill the window from where they start, so the whole picture
-  // is on screen without scrolling (never shorter than 300 px)
-  const work = useRef<HTMLDivElement>(null)
-  const [workH, setWorkH] = useState<number | null>(null)
-  useLayoutEffect(() => {
-    const el = work.current
-    if (!el) return
-    const tl = el.nextElementSibling as HTMLElement | null           // the time slider
-    const fit = () => {
-      let scrolled = 0                                                 // the page may scroll inside an ancestor
-      for (let p = el.parentElement; p; p = p.parentElement) scrolled += p.scrollTop
-      const r = el.getBoundingClientRect()
-      const tail = tl ? tl.getBoundingClientRect().bottom - r.bottom : 0  // gap + slider under the panels
-      const z = pageZoom()                                              // measurements are screen px; heights are CSS px
-      setWorkH(Math.max(300, Math.floor((window.innerHeight - 14 - (r.top + scrolled * z) - tail) / z)))
-    }
-    fit()
-    const ro = new ResizeObserver(fit)                                 // the slider can wrap onto two rows
-    if (tl) ro.observe(tl)
-    window.addEventListener('resize', fit)
-    return () => { ro.disconnect(); window.removeEventListener('resize', fit) }
-  }, [ring])
 
   useEffect(() => {
     let live = true
@@ -126,13 +103,13 @@ export function RingView({ seed, reasons }: Props) {
       {err && <div className="banner bad" role="alert"><b>{err}</b></div>}
       {!ring && !err && <p className="muted">Finding the network around {seed}…</p>}
       {ring && ix && (
-        <div className="net-work" ref={work} style={workH ? { height: workH } : undefined}>
+        <div className="net-work">
           <Group orientation="horizontal" id="ring-h2" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
             <Panel id="ring-graph" defaultSize="76%" minSize="30%">
               <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : view === 'flow' ? `Money flow around ${selected ?? seed}` : `Money trail through ${seed}`}
                 actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : view === 'flow' ? 'Point at an account for its amounts · click one to put it in the centre' : 'Point at an account for its amounts · click one for its journey'}</span>}>
                 {view === 'globe'
-                  ? <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                  ? <div className="globe-box">
                       <Globe ref={globe} ring={ring} journey={journey} selected={selected} hotLink={edge ? `${edge.src}>${edge.dst}` : null}
                              hidden={hidden} cutoff={cut} onPick={pick} onOpenLink={setEdge} />
                     </div>

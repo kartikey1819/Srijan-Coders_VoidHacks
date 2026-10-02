@@ -81,7 +81,7 @@ export function Timeline({ times, value, onChange, t0, fullRange, label = 'Show 
   return (
     <div className="sheet timeline" role="group" aria-label="Timeline">
       <div className="ctrls">
-        <button className="btn" onClick={() => { if (v >= hi) onChange(lo); setPlaying((p) => !p) }}
+        <button className="btn sm" onClick={() => { if (v >= hi) onChange(lo); setPlaying((p) => !p) }}
                 aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause weight="fill" /> : <Play weight="fill" />}{playing ? 'Pause' : 'Play'}</button>
         <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Playback speed">
           <option value={EVENT}>Transfer by transfer</option>
@@ -96,10 +96,10 @@ export function Timeline({ times, value, onChange, t0, fullRange, label = 'Show 
       <div className="track">
         <svg className="ticks" aria-hidden="true" preserveAspectRatio="none">
           {bins ? bins.map((b, i) => (
-            <rect key={i} x={`${(i / bins.length) * 100}%`} width={`${100 / bins.length * 0.8}%`} y={24 - b.h} height={b.h}
+            <rect key={i} x={`${(i / bins.length) * 100}%`} width={`${100 / bins.length * 0.8}%`} y={14 - b.h * 0.6} height={b.h * 0.6}
                   fill={b.t <= v ? 'var(--ink-2)' : 'var(--rule-2)'} />
           )) : times.map((t, i) => (
-            <line key={i} x1={pct(t)} x2={pct(t)} y1={t <= v ? 4 : 10} y2={24}
+            <line key={i} x1={pct(t)} x2={pct(t)} y1={t <= v ? 2 : 6} y2={14}
                   stroke={t <= v ? 'var(--ink)' : 'var(--rule-2)'} strokeWidth={2} />
           ))}
         </svg>

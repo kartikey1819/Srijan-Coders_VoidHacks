@@ -1,4 +1,4 @@
-import { ChartBar, Graph, MagnifyingGlass, Moon, Path, ShieldStar, Sun, UserFocus } from '@phosphor-icons/react'
+import { CaretDoubleLeft, CaretDoubleRight, ChartBar, Graph, MagnifyingGlass, Moon, Path, ShieldStar, Sun, UserFocus } from '@phosphor-icons/react'
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { api } from './api'
 import { FlaggedTable } from './components/FlaggedTable'
@@ -22,6 +22,8 @@ const NAV: { name: Route['name']; label: string; hi: string; icon: ComponentType
 export default function App() {
   const route = useRoute()
   const [theme, setTheme] = useTheme()
+  const [sideMin, setSideMin] = useState(() => { try { return localStorage.getItem('abhedya.sideMin') === '1' } catch { return false } })
+  useEffect(() => { try { localStorage.setItem('abhedya.sideMin', sideMin ? '1' : '0') } catch { /* ignore */ } }, [sideMin])
   const [stats, setStats] = useState<DQSummary | null>(null)
   const [down, setDown] = useState(false)
   const [reasons, setReasons] = useState<Record<string, string>>({})
@@ -52,7 +54,7 @@ export default function App() {
     : n === 'ring' ? (lastRing.current ? `#ring=${lastRing.current}` : '#ring') : `#${n}`
 
   return (
-    <div className="gov">
+    <div className={`gov${sideMin ? ' side-min' : ''}`}>
       <header className="mast">
         <div className="tricolour" aria-hidden="true" />
         <div className="mast-row">
@@ -64,10 +66,10 @@ export default function App() {
           </div>
           <div className="mast-right">
             <MastSearch />
-            <div className="daynight" role="group" aria-label="Display">
-              <button aria-pressed={theme === 'light'} onClick={() => setTheme('light')}><Sun size={15} /> Day</button>
-              <button aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}><Moon size={15} /> Night</button>
-            </div>
+            <button className="theme-btn" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                    aria-label={theme === 'light' ? 'Switch to night theme' : 'Switch to day theme'}
+                    title={theme === 'light' ? 'Day theme · click for night' : 'Night theme · click for day'}>
+              {theme === 'light' ? <Sun size={18} weight="bold" /> : <Moon size={18} weight="bold" />}</button>
             <Clock />
             <span className="official">For official use only</span>
           </div>
@@ -75,9 +77,12 @@ export default function App() {
       </header>
       <div className="shell">
         <nav className="side" aria-label="Main menu">
-          <div className="side-sec">MENU</div>
+          <div className="side-top"><span className="side-sec">MENU</span>
+            <button className="side-toggle" onClick={() => setSideMin((m) => !m)} aria-expanded={!sideMin}
+                    aria-label={sideMin ? 'Expand the menu' : 'Collapse the menu to icons'} title={sideMin ? 'Expand the menu' : 'Collapse the menu'}>
+              {sideMin ? <CaretDoubleRight size={16} /> : <CaretDoubleLeft size={16} />}</button></div>
           {NAV.map((n) => (
-            <a key={n.name} href={hrefOf(n.name)} className="side-btn" aria-current={route.name === n.name || (route.name === 'multi' && n.name === 'investigate') ? 'page' : undefined}>
+            <a key={n.name} href={hrefOf(n.name)} title={sideMin ? n.label : undefined} aria-label={sideMin ? n.label : undefined} className="side-btn" aria-current={route.name === n.name || (route.name === 'multi' && n.name === 'investigate') ? 'page' : undefined}>
               <n.icon size={20} /><span>{n.label}<small lang="hi">{n.hi}</small></span>
             </a>
           ))}

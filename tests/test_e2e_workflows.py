@@ -217,7 +217,7 @@ def test_day_night_switch_and_persistence(page, base):
     open_trace(page, base)
     assert page.evaluate("document.documentElement.dataset.theme") == "light"
     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
-    page.get_by_role("button", name="Night").click()
+    page.get_by_role("button", name="Switch to night theme").click()
     assert page.evaluate("document.documentElement.dataset.theme") == "dark"
     assert page.evaluate("getComputedStyle(document.body).backgroundColor") != bg
     page.reload()
