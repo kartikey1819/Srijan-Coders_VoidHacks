@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { BarList, DailyColumns, ScoreHistogram } from '../charts'
+import { BarList, DailyColumns, LayerDonut, ScoreSpread } from '../charts'
 import { useCopy } from '../copy'
 import { inr } from '../format'
 import { go } from '../route'
@@ -19,7 +19,6 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
   if (err) return <div className="page"><div className="banner bad"><b>{err}</b></div></div>
   if (!o) return <div className="page"><p className="muted">Loading the case-load summary…</p></div>
   const flagged = o.bands.HIGH ?? 0
-  const roleColor = (k: string) => (k === 'L1' || k === 'L2' || k === 'L3' ? `var(--${k.toLowerCase()})` : '#8d97a3')
   const totalToFlagged = victims.reduce((s, v) => s + v.out_paise_to_flagged, 0)
   return (
     <div className="page">
@@ -32,11 +31,13 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
         </p>
       </div>
       <div className="overview">
-        <section className="sheet sheet-body w7"><ScoreHistogram hist={o.score_hist} onPick={() => go({ name: 'flagged', role: null, bank: null, reason: null })} /></section>
-        <section className="sheet sheet-body w5">
-          <BarList title="Flagged accounts by layer" sub="Role hint from the pattern each account shows." source="risk table"
-                   rows={o.flagged_by_role} colorOf={roleColor}
-                   onPick={(k) => go({ name: 'flagged', role: k === 'none' ? null : k, bank: null, reason: null })} />
+        <section className="sheet sheet-body w8">
+          <ScoreSpread hist={o.score_hist} bands={o.bands} onPick={() => go({ name: 'flagged', role: null, bank: null, reason: null })} />
+        </section>
+        <section className="sheet sheet-body w4">
+          <LayerDonut title="Flagged accounts by layer" sub="Role each account plays in the chain. Click a slice for the list."
+                      source="risk table" rows={o.flagged_by_role}
+                      onPick={(k) => go({ name: 'flagged', role: k === 'none' ? null : k, bank: null, reason: null })} />
         </section>
         <section className="sheet sheet-body w6">
           <BarList title="Why accounts were flagged" sub="How many flagged accounts show each signal." source="risk reason codes"

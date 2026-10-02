@@ -224,9 +224,9 @@ def test_overview_charts_render_in_both_looks(page, base):
     """Expected: the Overview's charts draw with data in both looks, and a bar opens the filtered list."""
     for look in ("official", "briefing"):
         page.goto(f"{base}/?look={look}#overview")
-        page.get_by_text("accounts score 70 or more").wait_for()
+        page.get_by_text("accounts are flagged").first.wait_for()
         assert page.locator(".chart svg").count() >= 2 and page.locator(".barlist .bar").count() >= 3
-    page.locator(".barlist .lbl", has_text="L1 collector").click()
+    page.locator(".donut-legend").get_by_role("button", name="L1 collector").click()
     page.get_by_text("Flagged mule accounts:").wait_for()
     assert "role=L1" in page.url
 
