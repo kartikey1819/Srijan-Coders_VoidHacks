@@ -1,8 +1,6 @@
 import { scaleBand, scaleLinear } from 'd3-scale'
-import { arc, area, curveStepAfter, line, pie } from 'd3-shape'
+import { arc, pie } from 'd3-shape'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { inr, inrShort, tPlus } from './format'
-import { heldAt, LAYERS, type Trail } from './trail'
 
 /** Width of an element, tracked (charts redraw to their container). */
 export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
@@ -267,69 +265,6 @@ export function DailyColumns({ title, sub, source, days }: {
             <line x1={m.l} x2={w - m.r} y1={y(0)} y2={y(0)} stroke="var(--rule-2)" />
           </svg>
         )}
-      </div>
-    </Chart>
-  )
-}
-
-/** Where the victim's money sat over time, stacked by layer, with the shared time cursor. */
-export function HeldOverTime({ trail, cursor, onCursor, height = 150 }: {
-  trail: Trail; cursor: number; onCursor: (t: number) => void; height?: number
-}) {
-  const [ref, w] = useWidth<HTMLDivElement>()
-  const [hover, setHover] = useState<number | null>(null)
-  const m = { t: 8, r: 64, b: 22, l: 52 }
-  const t1 = Math.max(trail.tEnd, trail.t0 + 60)
-  const x = scaleLinear().domain([trail.t0, t1]).range([m.l, Math.max(m.l + 1, w - m.r)])
-  const pts = [...trail.held, { ...trail.held[trail.held.length - 1], t: t1 }]
-  const maxTotal = Math.max(1, ...pts.map((p) => p.L1 + p.L2 + p.L3))
-  const y = scaleLinear().domain([0, maxTotal]).nice().range([height - m.b, m.t])
-  const base = (p: typeof pts[number], k: number) => LAYERS.slice(0, k).reduce((s, l) => s + p[l], 0)
-  const at = heldAt(trail, hover ?? Math.min(cursor, t1))
-  const tAt = hover ?? Math.min(cursor, t1)
-  const now = heldAt(trail, Math.min(cursor, t1))
-  const total = now.L1 + now.L2 + now.L3
-  const pick = (clientX: number, el: SVGSVGElement) => {
-    const r = el.getBoundingClientRect()
-    return Math.round(Math.min(t1, Math.max(trail.t0, x.invert(clientX - r.left))))
-  }
-  return (
-    <Chart title={<>Victim money still in mule accounts at {tPlus(Math.min(cursor, t1) - trail.t0)}: <span className="held">{inr(total)}</span></>}
-           sub="Stacked by layer. Click the chart to move the time cursor." source="trace edges (attributed amounts)">
-      <div ref={ref} style={{ position: 'relative' }}>
-        {w > 0 && (
-          <svg height={height} role="img" aria-label={`Victim money held by layer over time; ${inr(total)} at the cursor`}
-               onPointerMove={(e) => setHover(pick(e.clientX, e.currentTarget))} onPointerLeave={() => setHover(null)}
-               onClick={(e) => onCursor(pick(e.clientX, e.currentTarget))} style={{ cursor: 'crosshair' }}>
-            <g className="grid">{y.ticks(3).map((v) => <line key={v} x1={m.l} x2={w - m.r} y1={y(v)} y2={y(v)} />)}</g>
-            {y.ticks(3).map((v) => <text key={v} x={m.l - 6} y={y(v) + 4} textAnchor="end">{inrShort(v)}</text>)}
-            {LAYERS.map((l, k) => {
-              const a = area<typeof pts[number]>().curve(curveStepAfter).x((p) => x(p.t)).y0((p) => y(base(p, k))).y1((p) => y(base(p, k) + p[l]))
-              const ln = line<typeof pts[number]>().curve(curveStepAfter).x((p) => x(p.t)).y((p) => y(base(p, k) + p[l]))
-              return (
-                <g key={l}>
-                  <path className="fade-in" d={a(pts) ?? ''} fill={`var(--${l.toLowerCase()})`} fillOpacity={0.22} />
-                  <path className="draw" pathLength={1} d={ln(pts) ?? ''} fill="none" stroke={`var(--${l.toLowerCase()})`} strokeWidth={2} />
-                </g>
-              )
-            })}
-            <line x1={m.l} x2={w - m.r} y1={y(0)} y2={y(0)} stroke="var(--rule-2)" />
-            <text x={m.l} y={height - 6}>theft</text>
-            <text x={w - m.r} y={height - 6} textAnchor="end">{tPlus(t1 - trail.t0)}</text>
-            <line x1={x(Math.min(cursor, t1))} x2={x(Math.min(cursor, t1))} y1={m.t} y2={height - m.b} stroke="var(--ink)" strokeWidth={1.5} />
-            {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={m.t} y2={height - m.b} stroke="var(--muted)" strokeWidth={1} />}
-            {LAYERS.map((l, k) => {
-              const p = pts[pts.length - 1]
-              const v = p[l]
-              if (v <= 0) return null
-              return <text key={l} x={w - m.r + 6} y={y(base(p, k) + v / 2) + 4} style={{ fill: 'var(--ink-2)' }}>{l} {inrShort(v)}</text>
-            })}
-          </svg>
-        )}
-        <div className="legend" style={{ marginTop: 2 }}>
-          {LAYERS.map((l) => <span key={l}><span className={`key ${l}`} />{l} {inr(at[l])}</span>)}
-          <span className="muted">at {tPlus(tAt - trail.t0)}</span>
-        </div>
       </div>
     </Chart>
   )

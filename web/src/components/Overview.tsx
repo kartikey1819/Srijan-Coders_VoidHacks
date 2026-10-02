@@ -4,6 +4,7 @@ import { BarList, DailyColumns, LayerDonut, ScoreSpread } from '../charts'
 import { inr, REASON_SHORT, ROLE_TEXT } from '../format'
 import { go } from '../route'
 import type { DQSummary, Overview as OverviewData, VictimCandidate } from '../types'
+import { DataInUse } from './DataInUse'
 import { Page } from './Page'
 
 /** Plain names for the reason codes on the Overview (the full sentence is the row's detail). */
@@ -24,13 +25,15 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
     api.victims(300).then(setVictims).catch(() => setVictims([]))
   }, [])
   const head = (body: ReactNode) => (
-    <Page title="Dashboard" hi="डैशबोर्ड" desc="What this transaction file contains: suspect mule accounts, victims and where the money went.">{body}</Page>)
+    <Page title="Dashboard" hi="डैशबोर्ड" desc="What this transaction file contains: suspect mule accounts, victims and where the money went."
+          actions={<DataInUse stats={stats} />}>{body}</Page>)
   if (err) return head(<div className="banner bad"><b>{err}</b></div>)
   if (!o) return head(<p className="muted">Loading the summary…</p>)
   const flagged = o.bands.HIGH ?? 0
   const totalToFlagged = victims.reduce((s, v) => s + v.out_paise_to_flagged, 0)
   return (
-    <Page title="Dashboard" hi="डैशबोर्ड" desc="What this transaction file contains: suspect mule accounts, victims and where the money went.">
+    <Page title="Dashboard" hi="डैशबोर्ड" desc="What this transaction file contains: suspect mule accounts, victims and where the money went."
+          actions={<DataInUse stats={stats} />}>
       <section className="gpanel gpanel-b">
         <p className="headline">
           {stats ? <>{stats.rows.toLocaleString('en-IN')} transactions between {o.accounts.toLocaleString('en-IN')} accounts were checked. </> : null}

@@ -20,7 +20,7 @@ the UI section (10.5) and the test counts in `HOW_IT_WORKS.md` predate the last 
 9. [Ring isolation and export](#9-ring-isolation-and-export)
 10. [Evidence, documents and the AI guardrails](#10-evidence-documents-and-the-ai-guardrails)
 11. [Saved cases (datasets)](#11-saved-cases-datasets)
-12. [Data Management and file integrity](#12-data-management-and-file-integrity)
+12. [Data in use and file integrity](#12-data-in-use-and-file-integrity)
 13. [The user interface](#13-the-user-interface)
 14. [API reference](#14-api-reference)
 15. [Files on disk](#15-files-on-disk)
@@ -141,7 +141,7 @@ flowchart TD
   LLM --> REN["Diary + one notice per bank, output firewall"]
   TPL --> REN
   ENG --> API["FastAPI on 127.0.0.1:8000"]
-  API --> UI["React UI: Dashboard, Trace Victim Funds, Suspect Accounts, Fraud Networks, Data Management"]
+  API --> UI["React UI: Dashboard, Trace Victim Funds, Suspect Accounts, Fraud Networks"]
 ```
 
 In words:
@@ -429,29 +429,30 @@ evidence. The prose can still be clumsy, which is why the diary marks AI text as
 
 ## 11. Saved cases (datasets)
 
-`abhedya/datasets.py` and `/api/datasets`. Investigators can analyse any export from the Data Management screen.
+`abhedya/datasets.py` and `/api/datasets`. Investigators can analyse any export with Upload new file on the Dashboard.
 
 - **Upload:** the file streams to disk while being hashed (1 GB limit, header checked for the 11 required columns),
   then is stored by hash in `data/datasets/<first 12 hex of SHA-256>/` as `source.csv` with its own `case.duckdb`.
   The same file uploaded twice opens the existing case.
-- **Analysis** runs in a background thread with live per-stage progress (Data Management shows each stage's real
+- **Analysis** runs in a background thread with live per-stage progress (the upload dialog shows each stage's real
   timing). A 50,000-row file is ready in about 3 s.
 - **Switching** cases swaps the engine the API uses. The open case is remembered in `data/datasets/active.txt` and
   reopened after a restart.
-- **Removing** a case (Data Management, Saved cases, Remove, then confirm) deletes its database, graph cache and stored copy. For
+- **Removing** a case (Dashboard, Upload new file, Saved cases, Remove, then confirm) deletes its database, graph cache and stored copy. For
   the official case only what was built from the file is deleted; the original CSV stays, and a marker
   (`official.removed`) stops `serve --data` from rebuilding it. Removing the open case opens another; the last
   remaining case cannot be removed.
 
 ---
 
-## 12. Data Management and file integrity
+## 12. Data in use and file integrity
 
 The Evidence tab was removed after the judges' feedback (too much for an officer). What remains:
 - **Fingerprint:** the file's SHA-256 is taken at loading, shown in the sidebar footer, and printed on every
   document's footer with the facts fingerprint.
-- **Data Management:** the six steps of how the system works, each with a live figure from the open file; upload with
-  live stage timings; saved cases (open, remove).
+- **Data in use:** there is no separate data page. The Dashboard's top-right card names the dataset every report
+  uses (switchable) with its transactions and accounts; Upload new file opens the analyse dialog with live stage
+  timings and the saved cases (open, remove).
 - **Data-quality flags:** still computed for every row. They appear in the diary's points to verify and in the
   account panel.
 
@@ -462,16 +463,15 @@ The Evidence tab was removed after the judges' feedback (too much for an officer
 React 19 + Vite 8 + TypeScript 6, served by the same FastAPI process. Every screen has a shareable address
 (`web/src/route.ts`), so Back / Forward and pasted links work.
 
-The left sidebar has five screens, each in English with the Hindi name beneath. Pages scroll normally; only the
+The left sidebar has four screens, each in English with the Hindi name beneath. Pages scroll normally; only the
 masthead and sidebar stay put.
 
 | Screen | Address | What it shows |
 |---|---|---|
-| Dashboard (डैशबोर्ड) | `#overview` (default) | headline sentence; score distribution with the 70 line; suspect accounts by role (donut); why accounts were flagged; suspects by bank; daily activity; victims found |
-| Trace Victim Funds (पीड़ित राशि का पता लगाएँ) | `#trace=ACCOUNT` | one scrolling report: select the victim; summary sentence and journey strip (collector, distributors, cash-out, can still be frozen); four insight cards; **How the money moved** (money-trail tree driven by the minute-by-minute timeline, Replay); where the money sat over time; collector's first minutes and the trace record; accounts to freeze; transactions in the trail |
+| Dashboard (डैशबोर्ड) | `#overview` (default; old `#home` / `#data` go here) | data in use for every report, with Upload new file; headline sentence; score distribution with the 70 line; suspect accounts by role (donut); why accounts were flagged; suspects by bank; daily activity; victims found |
+| Trace Victim Funds (पीड़ित राशि का पता लगाएँ) | `#trace=ACCOUNT` | one scrolling report: select the victim; summary sentence and journey strip (collector, distributors, cash-out, can still be frozen); four insight cards; **How the money moved** (money-trail tree; pointing at a box shows received / passed on / still holds; timeline whose steps fit the trail, with Transfer by transfer; Replay); collector's first minutes and the trace record; accounts to freeze; transactions in the trail |
 | Suspect Accounts (संदिग्ध खाते) | `#flagged?role=&bank=&reason=` | the flagged list with role badges and reasons in words, filters, account panel, CSV downloads |
-| Fraud Networks (धोखाधड़ी नेटवर्क) | `#ring` / `#ring=ACCOUNT` | start list of collectors; then the 3D globe (click a dot for its money journey, double-click a link for its flow) or strict columns; layer filters, time slider, ZIP export, PNG picture |
-| Data Management (डेटा प्रबंधन) | `#data` (old `#home` goes here) | how the system works (six steps with live figures); upload and live analysis; saved cases |
+| Fraud Networks (धोखाधड़ी नेटवर्क) | `#ring` / `#ring=ACCOUNT` | start list of collectors; then **Money flow** (default: who paid into the account and where its money went, step by step; point at an account for received / passed on / kept; click to re-centre) or the optional 3D globe; layer filters, time slider, ZIP export |
 
 Things worth knowing:
 
@@ -673,7 +673,7 @@ test set; traces on generated data used samples of 15-100 victims.
 | Add an API route | a router in `abhedya/api/`, models in `contracts/models.py`, types in `web/src/types.ts`, client in `web/src/api.ts` | a test in `tests/test_api.py` |
 | Change UI wording for one look | `web/src/copy.ts` | `npm run build`, browser tests |
 | Change colours / fonts / motion | `web/src/index.css` (tokens), `web/src/ui.css` | keep the colour-blind checks in `DESIGN.md` |
-| Measure on new data | `python -m abhedya ingest --data <csv>` or upload on Data Management | for labelled data use `tools/external_eval.py` (local) |
+| Measure on new data | `python -m abhedya ingest --data <csv>` or Upload new file on the Dashboard | for labelled data use `tools/external_eval.py` (local) |
 
 ---
 
@@ -685,7 +685,7 @@ test set; traces on generated data used samples of 15-100 victims.
    - Read the summary sentence and the journey strip: 1 collector, 5 distributors, 5 cash-out, amount that can still
      be frozen.
    - Walk the four insight cards, then **How the money moved**: press Replay, or Play on the timeline, to show the money
-     moving minute by minute. Point at a box to follow its path, and click it for the account.
+     moving transfer by transfer. Point at a box to follow its path, and click it for the account.
    - Show the collector's first 15 minutes and the trace record (the method in plain words).
 3. **Prepare case diary and freeze notices:**
    - fill FIR / IO / rank;
@@ -693,10 +693,10 @@ test set; traces on generated data used samples of 15-100 victims.
    - open the diary and one bank's notice; Print / PDF.
 
    Mention the AI can be off with no loss.
-4. **Fraud Networks:** View fraud network from the trace. Show the globe, click a dot to light its journey, double-click
-   a link for the flow, switch to Columns, and export the ZIP (original rows, byte-identical).
+4. **Fraud Networks:** View fraud network from the trace. Show the money flow, point at an account for what it kept,
+   click one to follow its money, switch to Globe for the whole network, and export the ZIP (original rows, byte-identical).
 5. **Suspect Accounts:** filter by role or bank; open an account to show the reasons in words.
-6. **Robustness (if asked):** on Data Management, drop `sample.csv` and show it analysed live in about 3 seconds.
+6. **Robustness (if asked):** on the Dashboard, click Upload new file, drop `sample.csv` and show it analysed live in about 3 seconds.
 7. **Night mode (if asked):** the Day / Night switch in the masthead.
 
 ---

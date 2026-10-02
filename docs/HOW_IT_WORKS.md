@@ -96,7 +96,7 @@ Plain-text version of the same pipeline:
 | Model client | **httpx** | Separate connect and read timeouts, so a stopped model falls back to templates quickly. |
 | Optional narrator | **Ollama** serving **qwen2.5:3b** on 127.0.0.1:11434 | Runs locally, so nothing leaves the machine. Ollama accepts a JSON schema as the output `format`, which bounds what the model can emit. A small model is enough because it only writes three short paragraphs. |
 | Benchmark support | **psutil** | Peak process memory for `bench/run.py`. |
-| User interface | **React 19 + Vite 8 + TypeScript 6 + Cytoscape 3** (`web/`) | Cytoscape is one of the graph libraries the problem statement names. It renders the layered trace and the whole official ring (1,373 accounts in the browser workflow, `reports/final_readiness_report.md`) with a preset layout, so there is no physics simulation. Vite builds static files that FastAPI serves, so the UI needs no internet. TypeScript types mirror the pydantic models and are checked by a contract test. |
+| User interface | **React 19 + Vite 8 + TypeScript 6** (`web/`) | The trace tree and the network money flow are plain SVG with a fixed left-to-right layout, so there is no physics simulation; the optional globe uses react-force-graph-3d for the whole official ring (1,373 accounts in the browser workflow, `reports/final_readiness_report.md`). Vite builds static files that FastAPI serves, so the UI needs no internet. TypeScript types mirror the pydantic models and are checked by a contract test. |
 | Tests | **pytest**, **Hypothesis** (property tests), **Playwright** driving headless Microsoft Edge | Unit, adversarial and property tests in Python; real browser workflows against the real API. |
 
 ---
@@ -1116,14 +1116,15 @@ with the database present (`bench/results.md`).
 ### 10.5 UI screens (`web/src`)
 
 The UI is a React single-page app in a police workstation frame: a masthead (crest, account search, Day / Night, IST
-clock) and a left sidebar with five screens, in English and Hindi:
-- Dashboard (`#overview`);
+clock) and a left sidebar with four screens, in English and Hindi:
+- Dashboard (`#overview`, with the dataset in use and Upload new file);
 - Trace Victim Funds (`#trace=ACCOUNT`), one scrolling report: summary and journey strip, insight cards, the money-trail
-  tree driven by the minute-by-minute timeline, the collector's first minutes, the trace record, accounts to freeze,
+  tree driven by the timeline, the collector's first minutes, the trace record, accounts to freeze,
   and the transactions;
 - Suspect Accounts (`#flagged`);
-- Fraud Networks (`#ring=ACCOUNT`, 3D globe or columns);
-- Data Management (`#data`, upload and saved cases).
+- Fraud Networks (`#ring=ACCOUNT`, money flow by default, optional 3D globe).
+
+The Dashboard names the dataset in use and uploads new files (there is no separate data page).
 
 Case documents open in a dialog with the case particulars, the firewall's verification counts and one tab per document.
 `DESIGN.md` and `docs/TEAM_GUIDE.md` (section 13) describe every screen.

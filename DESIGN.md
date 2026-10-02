@@ -10,14 +10,14 @@ masthead, navy sidebar) around quiet, ruled report pages. Product facts live in 
   - a crest, "Indore Police Commissionerate · Cyber Crime Cell" with its Hindi line, and the system name;
   - account search (Enter traces it);
   - the Day / Night switch, the IST date and time, and "For official use only".
-- **Left sidebar (navy):** five screens, each in English with the Hindi name beneath:
+- **Left sidebar (navy):** four screens, each in English with the Hindi name beneath:
   - Dashboard (डैशबोर्ड);
   - Trace Victim Funds (पीड़ित राशि का पता लगाएँ);
   - Suspect Accounts (संदिग्ध खाते);
-  - Fraud Networks (धोखाधड़ी नेटवर्क);
-  - Data Management (डेटा प्रबंधन).
+  - Fraud Networks (धोखाधड़ी नेटवर्क).
 
-  The footer shows the loaded data (case switcher, rows, accounts, file fingerprint) and that nothing leaves the computer.
+  The footer shows the open case (switcher, transactions, accounts) and that nothing leaves the computer. There is no
+  separate data page: the Dashboard names the dataset every report uses and uploads new files.
 - **Pages scroll naturally;** only the masthead and the sidebar stay put. Every page starts with a breadcrumb, the
   English title with the Hindi title beside it, one line on what the page is for, and its actions. It ends with a
   footer saying results are investigative aids to verify against bank records.
@@ -55,34 +55,39 @@ One token set per theme on `<html data-theme>` (`light` default, `dark`), rememb
 
 ## Trace Victim Funds (the page the jury tests)
 One scrolling report, top to bottom:
-1. **Select the victim account:** account number, "Follow money up to N transfers away", Trace, or choose an
+The first screen shows the selector, the summary and the insight cards together, without scrolling.
+
+1. **Select the victim account** (a compact bar): account number, "Follow money up to N transfers away", Trace, or choose an
    identified victim (largest loss first). It also asks "Which payments did the victim report?" (the disputed-transfer
    picker).
 2. **Summary:** one plain sentence, then the journey strip: taken from victim, then N collectors, N distributors,
    N cash-out accounts, then can still be frozen. Each station shows its count and amount, with the time on each
-   arrow.
+   arrow. Arrows carry a slow, continuous flow (off with reduced motion). Download trail, View fraud network and
+   Prepare case diary sit in the summary's header.
 3. **Four insight cards:**
-   - how fast the money moved (the collector's pass-on time);
+   - how fast the money moved (the collector's pass-on time, in minutes, hours or days; the ruler reads 0-60 min
+     around the 3-15 minute mule pattern, and slower trails sit at its far end);
    - how widely it was spread (mini fan and bank chips);
    - signs of an organised operation (foreign proxy IPs, scripts, wallet / crypto cash-outs);
    - amount that can be recovered.
 4. **How the money moved:** the money-trail tree.
    - Columns run Victim, Layer 1 Collector, Layer 2 Distributors, Layer 3 Cash-out. Each account sits under the account
      that first paid it.
-   - Pointing at a box follows its path; a click opens the account; Replay builds the tree transfer by transfer.
-   - The minute-by-minute timeline (play, step size, 1x-2x, previous / next, 15-day switch) drives it, and later boxes
-     are faded.
+   - Pointing at a box follows its path and shows what the account received from this victim, passed on and still
+     holds; a click opens the account panel; Replay builds the tree transfer by transfer.
+   - The timeline (play, step, 1x-2x, previous / next, 15-day switch) drives it, and later boxes are faded. Step sizes
+     fit the trail: only steps that leave at least four frames are offered, and "Transfer by transfer" jumps from one
+     transfer to the next (the default for trails longer than two hours).
    - Solid lines mean money moved within the hour, dashed means later. More than six accounts paid by one account
      fold into "+N more", which expands on a click.
-5. **Where the money sat, minute by minute:** a stacked chart that shares the time cursor.
-6. **Collector account: first minutes after the victim's payment** (credit up, debits down, balance draining), next to
+5. **Collector account: first minutes after the victim's payment** (credit up, debits down, balance draining), next to
    the **Trace record**:
    - victim and payments followed;
    - how far, and the method in plain words (3-15 minute window, at least 90 % amount match, own money first);
    - accounts per layer, warning signs, points to check, and time taken.
-7. **Accounts to freeze** next to **Transactions in the trail** (mode and device, with foreign proxies in red).
+6. **Accounts to freeze** next to **Transactions in the trail** (mode and device, with foreign proxies in red).
 
-Header actions: Download trail (CSV), View fraud network, and **Prepare case diary and freeze notices**.
+Summary actions: Download trail (CSV), View fraud network, and **Prepare case diary and freeze notices**.
 
 ## Case documents
 A large dialog:
@@ -101,6 +106,9 @@ A large dialog:
 
 ## Other screens
 - **Dashboard:**
+  - top right, **Data in use for every report**: the open dataset (switchable), its transactions and
+    accounts, and **Upload new file**, which opens the analyse dialog (drop zone, live stages, saved cases with Open /
+    Remove);
   - a headline sentence;
   - the score distribution with the 70 line;
   - suspect accounts by role (donut);
@@ -111,13 +119,16 @@ A large dialog:
   divider is resizable and remembered), and CSV downloads.
 - **Fraud Networks:**
   - Without an account: a start list of collector accounts.
-  - With one: the 3D globe (click a dot to light its money journey; double-click a link for its flow) or the strict
-    Columns view, with layer filters, the time slider, PNG picture and ZIP export.
-- **Data Management:** the six steps of how the system works, each with a live figure; upload with live stage
-  timings; saved cases (open, remove).
+  - With one: **Money flow** (default) shows only that account's money, left to right: who paid in (two steps back),
+    the account, then where its money went (three time-respecting steps on). Line thickness is the amount; columns
+    over seven fold into "+N more". Pointing at an account shows what it received in the network, passed on and
+    kept; a click puts it in the centre. **Globe** is the optional whole-network view (click a dot to light its
+    journey; double-click a link for its flow). Layer filters, the time slider and ZIP export work in both.
 
 ## Motion (Emil Kowalski's design-engineering rules)
 - Ease-out `cubic-bezier(0.23, 1, 0.32, 1)`; UI motion 160-200 ms; only `transform` and `opacity` animate.
 - Buttons press to `scale(0.97)`; hover effects only with a fine pointer.
 - `prefers-reduced-motion` switches movement off.
+- Fixed overlays (account panel, dialogs) are portalled to `<body>`: a transformed ancestor would otherwise capture
+  `position: fixed`. Screen entrances therefore animate opacity only.
 - The impeccable design detector reports 0 findings on `web/src`.

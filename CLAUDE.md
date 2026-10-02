@@ -1,6 +1,6 @@
 # Abhedya-Chakra: shared context for Claude Code
 
-Offline money-mule investigation workstation for Void Hacks 8.0. Stack: Python 3.12, DuckDB, NumPy and FastAPI; React + Cytoscape in `web/`.
+Offline money-mule investigation workstation for Void Hacks 8.0. Stack: Python 3.12, DuckDB, NumPy and FastAPI; React (SVG views, optional 3D globe) in `web/`.
 Read `plan/00_OVERVIEW.md` (the contracts) and `DATA_HANDLING.md` before coding. A's progress is tracked in `A_TASKLIST.md`.
 
 ## Ownership: edit only your own folders

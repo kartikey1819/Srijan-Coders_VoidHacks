@@ -194,19 +194,21 @@ def test_link_pasted_into_an_open_tab_navigates(page, base):
     page.get_by_role("heading", name="1,073 suspect accounts").wait_for(timeout=10_000)
 
 
-def test_sidebar_has_the_five_screens_and_no_evidence_page(page, base):
-    """Expected: the left menu lists the five screens in English and Hindi; old #home / #data links open Data
-    Management; there is no Evidence screen."""
+def test_sidebar_has_the_four_screens_and_no_separate_data_page(page, base):
+    """Expected: the left menu lists the four screens in English and Hindi; old #home / #data links open the
+    Dashboard, which names the dataset in use; there is no Evidence or Data Management screen."""
     page.goto(base + "/")
     items = page.locator("nav.side a.side-btn")
     items.first.wait_for()
-    assert items.count() == 5
+    assert items.count() == 4
     text = " ".join(items.all_inner_texts())
-    for label in ("Dashboard", "Trace Victim Funds", "Suspect Accounts", "Fraud Networks", "Data Management", "डैशबोर्ड"):
+    for label in ("Dashboard", "Trace Victim Funds", "Suspect Accounts", "Fraud Networks", "डैशबोर्ड"):
         assert label in text
-    page.goto(f"{base}/#home")
-    page.get_by_role("heading", name="Data Management").wait_for()
-    assert "Evidence" not in page.locator("nav.side").inner_text()
+    assert "Data Management" not in text and "Evidence" not in text
+    for old in ("#home", "#data"):
+        page.goto(f"{base}/{old}")
+        page.get_by_role("heading", name="Dashboard").wait_for()
+        page.locator(".diu").get_by_text("Data in use for every report").wait_for()
 
 
 def test_day_night_switch_and_persistence(page, base):
@@ -253,40 +255,52 @@ def test_mistyped_id_gets_a_format_hint(page, base):
     page.get_by_text("Account IDs are 12 characters").wait_for()
 
 
-def test_data_management_explains_the_flow_and_analyses_an_upload(page, base):
-    """Expected: Data Management shows the six steps with live figures; a dropped CSV is analysed stage by stage, can be
-    opened, and the case switcher brings the official data back."""
-    page.goto(f"{base}/#data")
-    page.get_by_text("Load and check every row").wait_for()
-    assert page.locator(".steps6 .step6").count() == 6
-    page.get_by_text("50,000").first.wait_for()                       # live figure from the loaded file
+def _open_upload(page, base):
+    page.goto(f"{base}/#overview")
+    page.locator(".diu").get_by_text("50,000 transactions").wait_for()   # the dataset in use, named on the Dashboard
+    page.get_by_role("button", name="Upload new file").click()
+    page.get_by_role("dialog", name="Upload a transaction file").wait_for()
+
+
+def test_dashboard_upload_analyses_a_file_and_switches_the_dataset(page, base):
+    """Expected: Upload new file on the Dashboard analyses a dropped CSV stage by stage; it can be opened, and the
+    Dashboard's dataset switcher brings the official data back."""
+    _open_upload(page, base)
     small = b"".join(SAMPLE_PATH.read_bytes().splitlines(keepends=True)[:2001])
     page.locator("input[type=file]").set_input_files({"name": "small_case.csv", "mimeType": "text/csv", "buffer": small})
     page.get_by_text("Analysis complete").wait_for(timeout=60_000)
     assert page.locator(".stages li.done").count() == 9
     page.get_by_role("button", name="Open this case").click()
-    page.get_by_text("2,000 transactions").first.wait_for(timeout=20_000)
-    page.get_by_label("Open case").select_option("official")
-    page.get_by_text("50,000 transactions").first.wait_for(timeout=20_000)
+    page.locator(".diu").get_by_text("2,000 transactions").wait_for(timeout=20_000)
+    page.get_by_label("Dataset for every report").select_option("official")
+    page.locator(".diu").get_by_text("50,000 transactions").wait_for(timeout=20_000)
 
 
-def test_data_management_rejects_a_file_without_the_columns(page, base):
-    page.goto(f"{base}/#data")
+def test_dashboard_upload_rejects_a_file_without_the_columns(page, base):
+    _open_upload(page, base)
     page.locator("input[type=file]").set_input_files({"name": "wrong.csv", "mimeType": "text/csv", "buffer": b"a,b\n1,2\n"})
     page.get_by_text("missing column(s)").wait_for()
 
 
-def test_ring_globe_journey_and_columns(page, base):
-    """Expected: the network opens as a globe; the journey panel lists where money came from; Go here moves along it;
-    the Columns view is one click away."""
+def test_ring_money_flow_journey_and_globe(page, base):
+    """Expected: the network opens as the money flow around the chosen account (no Columns view); pointing at an
+    account shows what it received and kept; the journey panel lists where money came from; Go here moves along it;
+    the Globe is one click away."""
     page.goto(f"{base}/#ring={L1}")
     page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
-    page.locator("[data-testid=ring-globe] canvas").wait_for(timeout=20_000)
+    page.locator(f".netflow .tbox.center[data-acct={L1}]").wait_for(timeout=20_000)
+    assert page.get_by_role("button", name="Columns").count() == 0
+    page.locator(".netflow .tbox[data-role=VICTIM]").first.wait_for()
+    page.locator(".netflow .tbox[data-role=L2]").first.hover()
+    tip = page.locator(".netflow .ttip")
+    tip.wait_for()
+    assert "Received in this network" in tip.inner_text() and "Kept" in tip.inner_text()
     page.get_by_role("heading", name="Money came from (4)").wait_for()
     page.get_by_role("button", name=f"Go to {VICTIM}").click()
     page.locator(".crumbs").get_by_text(VICTIM).wait_for()
-    page.get_by_role("button", name="Columns").click()
-    page.wait_for_function("document.querySelectorAll('.graph canvas').length > 0")
+    page.locator(f".netflow .tbox.center[data-acct={VICTIM}]").wait_for()
+    page.get_by_role("button", name="Globe").click()
+    page.locator("[data-testid=ring-globe] canvas").wait_for(timeout=20_000)
 
 
 def test_panel_size_persists_across_reload(page, base):

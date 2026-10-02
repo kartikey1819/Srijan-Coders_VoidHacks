@@ -1,5 +1,6 @@
 import { DownloadSimple, FileText, LockSimple, Printer, ShieldCheck, ShieldWarning, Sparkle, SpinnerGap, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../api'
 import { inr } from '../format'
 import type { CaseInfo, CaseOutput, LlmStatus } from '../types'
@@ -72,7 +73,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
   const g = out?.verification
   const set = (k: keyof CaseInfo, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
-  return (
+  return createPortal(
     <>
       <div className="scrim" onClick={onClose} />
       <div className="docs" role="dialog" aria-label="Case documents" aria-modal="true" tabIndex={-1} ref={box}>
@@ -130,6 +131,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

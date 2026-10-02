@@ -1,7 +1,6 @@
 import { ArrowCounterClockwise, DownloadSimple, FileText, Graph, MagnifyingGlass, Path as PathIcon, SpinnerGap } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
-import { HeldOverTime } from '../charts'
 import { accountHint, inr, toEpoch } from '../format'
 import { go } from '../route'
 import { deriveTrail } from '../trail'
@@ -102,8 +101,8 @@ export function TracePage({ account, seeds, reasons }: Props) {
   const collector = view?.collector?.account ?? null
   const actions = trace && view && (
     <>
-      <button className="btn" onClick={downloadCsv}><DownloadSimple size={16} /> Download trail (CSV)</button>
-      <button className="btn" disabled={!collector} onClick={() => collector && go({ name: 'ring', account: collector })}><Graph size={16} /> View fraud network</button>
+      <button className="btn sm" onClick={downloadCsv}><DownloadSimple size={15} /> Download trail (CSV)</button>
+      <button className="btn sm" disabled={!collector} onClick={() => collector && go({ name: 'ring', account: collector })}><Graph size={15} /> View fraud network</button>
       <button className="btn cta" onClick={() => setDocs(true)}><FileText size={16} /> Prepare case diary and freeze notices</button>
     </>
   )
@@ -111,9 +110,9 @@ export function TracePage({ account, seeds, reasons }: Props) {
   const autoSeeds = !seeds && !!trace?.warnings.some((w) => w.startsWith('Traced the '))
 
   return (
-    <Page title="Trace Victim Funds" hi="पीड़ित राशि का पता लगाएँ" actions={actions}
-          desc="Follow a victim's money through mule accounts, up to four transfers deep, and see where it can still be frozen.">
-      <Panel title="Select the victim account">
+    <Page title="Trace Victim Funds" hi="पीड़ित राशि का पता लगाएँ"
+          desc="Follow a victim's money through mule accounts and see where it can still be frozen.">
+      <Panel className="pick-panel">
         <form className="pick-row" onSubmit={(e) => { e.preventDefault(); submit(input) }}>
           <label className="gfield acct-field"><span>Victim account number</span>
             <div className="inbox"><MagnifyingGlass size={16} aria-hidden="true" />
@@ -154,7 +153,7 @@ export function TracePage({ account, seeds, reasons }: Props) {
 
       {trace && view && trail && (
         <div className="trace-body" key={trace.victim}>
-          <Panel title="Summary" note={`Victim ${view.victim.account} · ${view.victim.bank_name} · ${when(view.seeds[0]?.ts ?? trace.edges[0].ts)}`}>
+          <Panel title="Summary" note={`Victim ${view.victim.account} · ${view.victim.bank_name} · ${when(view.seeds[0]?.ts ?? trace.edges[0].ts)}`} actions={actions}>
             <p className="headline">
               <b>{inr(trace.loss_paise)}</b> taken from the victim passed through <b>{view.mules.length} mule account{view.mules.length === 1 ? '' : 's'}</b> at{' '}
               {view.banks.length} bank{view.banks.length === 1 ? '' : 's'} within <b>{duration(view.spanS)}</b>. Of this,{' '}
@@ -180,9 +179,6 @@ export function TracePage({ account, seeds, reasons }: Props) {
             </div>
           </Panel>
 
-          <Panel title="Where the money sat, minute by minute" note="Follows the same time as the trail above.">
-            <HeldOverTime trail={trail} cursor={cur} onCursor={(t) => { stopReplay(); setCursor(t) }} height={170} />
-          </Panel>
 
           <div className="two-col">
             <Panel title="What the collector did with the money" note={view.collector ? `${view.collector.account} · ${view.collector.bank_name}` : undefined}>

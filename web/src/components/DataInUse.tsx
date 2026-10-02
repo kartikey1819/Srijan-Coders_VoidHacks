@@ -1,10 +1,9 @@
-import { CheckCircle, FileArrowUp, Trash, Warning } from '@phosphor-icons/react'
+import { CheckCircle, Database, FileArrowUp, Trash, UploadSimple, Warning, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../api'
-import { inr } from '../format'
-import type { DatasetInfo, DatasetProgress, DQSummary, Overview } from '../types'
+import type { DatasetInfo, DatasetProgress, DQSummary } from '../types'
 import { Count } from './Count'
-import { Page, Panel } from './Page'
 
 const STAGES: [string, string][] = [
   ['hash', 'Fingerprint the file (SHA-256)'], ['load_csv', 'Read every row'], ['verify_order', 'Check nothing was skipped'],
@@ -13,63 +12,39 @@ const STAGES: [string, string][] = [
 ]
 const fmtN = (n: number) => Math.round(n).toLocaleString('en-IN')
 
-interface Live { victim: string | null; traceMs: number | null; l1: string | null; ringSize: number | null; loss: number | null }
-
-/** Data Management: how the system works (with live figures from the loaded file), analyse a new file, and saved cases. */
-export function DataPage({ stats }: { stats: DQSummary | null }) {
-  const [o, setO] = useState<Overview | null>(null)
-  const [live, setLive] = useState<Live>({ victim: null, traceMs: null, l1: null, ringSize: null, loss: null })
+/** Dashboard corner: the file every report on screen comes from, a switch between saved cases, and the upload dialog. */
+export function DataInUse({ stats }: { stats: DQSummary | null }) {
   const [sets, setSets] = useState<DatasetInfo[]>([])
-
+  const [open, setOpen] = useState(false)
   useEffect(() => {
-    api.overview().then(setO).catch(() => undefined)
-    api.datasets().then(setSets).catch(() => undefined)
-    api.victims(1).then(async ([v]) => {
-      if (!v) return
-      const t = await api.trace(v.account)
-      const l1 = t.nodes.find((n) => n.role === 'L1')?.account ?? null
-      setLive({ victim: v.account, traceMs: t.elapsed_ms, l1, ringSize: null, loss: t.loss_paise })
-      if (l1) api.ring(l1).then((r) => setLive((x) => ({ ...x, ringSize: r.nodes.length }))).catch(() => undefined)
-    }).catch(() => undefined)
+    const load = () => api.datasets().then(setSets).catch(() => undefined)
+    load()
+    window.addEventListener('abhedya:datasets', load)
+    return () => window.removeEventListener('abhedya:datasets', load)
   }, [])
-
-  const flagged = o?.bands.HIGH ?? null
-  const steps = [
-    { t: 'Load and check every row', p: 'The file is read as evidence: nothing edited or dropped, rule breaks flagged.', art: 'rows',
-      fig: stats ? <><Count value={stats.rows} format={fmtN} /><small>rows kept, none edited</small></> : null, to: '#overview' },
-    { t: 'Build the money graph', p: 'Every account becomes a point, every transfer a link, ordered in time.', art: 'net',
-      fig: stats ? <><Count value={stats.accounts} format={fmtN} /><small>accounts linked</small></> : null, to: '#overview' },
-    { t: 'Score every account 0-100', p: 'Speed of pass-through, fan-in / fan-out, repeated rings, cash-out channels.', art: 'score',
-      fig: flagged !== null ? <><Count value={flagged} format={fmtN} /><small>flagged as likely mules</small></> : null, to: '#flagged' },
-    { t: 'Trace a victim\'s money', p: 'Up to four hops, minute by minute, every paisa accounted for.', art: 'trace',
-      fig: live.traceMs !== null ? <><Count value={live.traceMs} format={(n) => `${Math.round(n)} ms`} /><small>to trace {live.victim}</small></> : null,
-      to: live.victim ? `#trace=${live.victim}` : '#investigate' },
-    { t: 'Isolate the whole ring', p: 'One click pulls out the full syndicate around any account, with export.', art: 'ring',
-      fig: live.ringSize !== null ? <><Count value={live.ringSize} format={fmtN} /><small>accounts in that victim's ring</small></> : null,
-      to: live.l1 ? `#ring=${live.l1}` : '#flagged' },
-    { t: 'Draft diary and freeze notices', p: 'A case diary and one notice per bank, every figure checked against the evidence.', art: 'doc',
-      fig: o ? <><Count value={o.flagged_by_bank.length} format={fmtN} /><small>banks receive notices</small></> : null,
-      to: live.victim ? `#trace=${live.victim}` : '#investigate' },
-  ]
-
+  const active = sets.find((d) => d.active)
+  const ready = sets.filter((d) => d.status === 'done')
+  const switchTo = (id: string) => api.activate(id).then(() => { window.location.hash = '#overview'; window.location.reload() })
   return (
-    <Page title="Data Management" hi="डेटा प्रबंधन"
-          desc="Load a bank transaction export, watch it being checked and analysed, and switch between saved cases.">
-      <Panel title="How this system works" note="Figures come from the file that is open now. Click a step to see its result.">
-        <ol className="steps6">
-          {steps.map((s, i) => (
-            <li key={s.t}><a href={s.to} className="step6">
-              <span className="n">{i + 1}</span>
-              <span className="st">{s.t}</span>
-              <span className="sp6">{s.p}</span>
-              <span className="fig6">{s.fig ?? <span className="muted">…</span>}</span>
-            </a></li>
-          ))}
-        </ol>
-        {live.loss !== null && <p className="small muted">The sample trace is victim {live.victim}, who lost {inr(live.loss)}.</p>}
-      </Panel>
-      <Analyse sets={sets} onSets={setSets} />
-    </Page>
+    <div className="diu" aria-label="Data in use">
+      <div className="diu-head"><Database size={16} weight="fill" /><span>Data in use for every report</span></div>
+      {ready.length > 1 ? (
+        <select value={active?.id ?? ''} onChange={(e) => switchTo(e.target.value)} aria-label="Dataset for every report" title={active?.name}>
+          {ready.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+      ) : <b className="diu-name" title={active?.name}>{active?.name ?? '…'}</b>}
+      <div className="diu-meta">{stats ? <>{fmtN(stats.rows)} transactions · {fmtN(stats.accounts)} accounts</> : 'Loading…'}</div>
+      <button className="btn primary" onClick={() => setOpen(true)}><UploadSimple size={16} /> Upload new file</button>
+      {open && createPortal(
+        <>
+          <div className="scrim" onClick={() => setOpen(false)} />
+          <div className="upload-dlg" role="dialog" aria-label="Upload a transaction file" aria-modal="true">
+            <div className="docs-title"><FileArrowUp size={20} /><b>Upload a transaction file</b>
+              <button className="btn ghost sm" onClick={() => setOpen(false)} aria-label="Close"><X size={16} /></button></div>
+            <Analyse sets={sets} onSets={setSets} />
+          </div>
+        </>, document.body)}
+    </div>
   )
 }
 
@@ -120,7 +95,7 @@ function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInf
     setRemoving(d.id); setSetErr(null)
     api.removeDataset(d.id).then((left) => {
       setAsking(null); setRemoving(null)
-      if (d.active) { window.location.hash = '#data'; window.location.reload(); return }   // another case was opened
+      if (d.active) { window.location.hash = '#overview'; window.location.reload(); return }   // another case was opened
       onSets(left)
       window.dispatchEvent(new Event('abhedya:datasets'))
     }).catch((e) => { setRemoving(null); setSetErr(String((e as Error).message)) })

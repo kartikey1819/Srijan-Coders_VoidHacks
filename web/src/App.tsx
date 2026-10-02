@@ -1,7 +1,6 @@
-import { ChartBar, Database, Graph, MagnifyingGlass, Moon, Path, ShieldStar, Sun, UserFocus } from '@phosphor-icons/react'
+import { ChartBar, Graph, MagnifyingGlass, Moon, Path, ShieldStar, Sun, UserFocus } from '@phosphor-icons/react'
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { api } from './api'
-import { DataPage } from './components/DataPage'
 import { FlaggedTable } from './components/FlaggedTable'
 import { NetworkStart } from './components/NetworkStart'
 import { Overview } from './components/Overview'
@@ -17,7 +16,6 @@ const NAV: { name: Route['name']; label: string; hi: string; icon: ComponentType
   { name: 'investigate', label: 'Trace Victim Funds', hi: 'पीड़ित राशि का पता लगाएँ', icon: Path },
   { name: 'flagged', label: 'Suspect Accounts', hi: 'संदिग्ध खाते', icon: UserFocus },
   { name: 'ring', label: 'Fraud Networks', hi: 'धोखाधड़ी नेटवर्क', icon: Graph },
-  { name: 'data', label: 'Data Management', hi: 'डेटा प्रबंधन', icon: Database },
 ]
 
 export default function App() {
@@ -110,7 +108,6 @@ export default function App() {
                 <RingView key={route.account} seed={route.account} reasons={reasons} />
               </Suspense>
             ) : <NetworkStart />)}
-            {route.name === 'data' && <DataPage stats={stats} />}
           </div>
         </main>
       </div>

@@ -30,6 +30,7 @@ export function TrailTree({ trace, cursor, onSelect }: { trace: TraceResult; cur
   return (
     <div className="tree-wrap" ref={ref}>
       {width > 0 && (
+      <div className="tree-canvas" style={{ width: W, height: L.height }}>
         <svg className={`tree${hl ? ' dim' : ''}`} width={W} height={L.height} role="img"
              data-visible-edges={L.lines.filter((e) => !e.to.startsWith('more:') && e.t <= cursor).length}
              aria-label={`Money trail: ${L.boxes.length - 1} accounts after the victim. Click a box to open the account.`}>
@@ -76,7 +77,34 @@ export function TrailTree({ trace, cursor, onSelect }: { trace: TraceResult; cur
             )
           })}
         </svg>
+        {hover && <AccountTip trace={trace} id={hover} box={L.pos.get(hover)} width={W} />}
+      </div>
       )}
+    </div>
+  )
+}
+
+/** On hover: what the account received from this victim, what it passed on, and what it still holds. */
+function AccountTip({ trace, id, box, width }: { trace: TraceResult; id: string; box?: { x: number; y: number }; width: number }) {
+  const n = trace.nodes.find((x) => x.account === id)
+  if (!n || !box) return null
+  const left = box.x + BW + 12 + 250 > width ? box.x - 262 : box.x + BW + 12
+  if (n.role === 'VICTIM') return (
+    <div className="ttip" style={{ left, top: box.y }} role="tooltip">
+      <b className="mono">{n.account}</b><span className="muted">{n.bank_name} · victim</span>
+      <dl><dt>Paid out (the loss)</dt><dd>{inr(trace.loss_paise)}</dd></dl>
+    </div>
+  )
+  const passed = n.sent_paise, kept = n.held_paise
+  return (
+    <div className="ttip" style={{ left, top: box.y }} role="tooltip">
+      <b className="mono">{n.account}</b><span className="muted">{n.bank_name}</span>
+      <dl>
+        <dt>Received from this victim</dt><dd>{inr(n.received_paise)}</dd>
+        <dt>Passed on</dt><dd>{inr(passed)}</dd>
+        <dt>Still holds</dt><dd className={kept > 0 ? 'ok' : ''}>{inr(kept)}</dd>
+      </dl>
+      {n.received_paise > 0 && <span className="tt-bar"><i style={{ width: `${(100 * kept) / n.received_paise}%` }} /></span>}
     </div>
   )
 }
@@ -149,7 +177,7 @@ function layout(t: TraceResult, open: Set<string>, W: number) {
     const dr = e.dst === victim ? 'VICTIM' : node.get(e.dst)?.role ?? 'UNKNOWN'
     const et = toEpoch(e.ts)
     lines.push({ key: `${e.src}>${e.dst}#${i}`, from: e.src, to: e.dst, t: et, slow: et - t0 > 3600, role: dr,
-                 label: e.src === victim ? e.ts.slice(11, 16) : null })
+                 label: null })
   })
   for (const b of boxes) if (b.more) {                  // a line into each "+N more" box from its parent
     lines.push({ key: `${b.more.parent}>${b.id}`, from: b.more.parent, to: b.id, t: b.at, slow: b.at - t0 > 3600, role: b.role, label: null })

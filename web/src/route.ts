@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 
 /** Hash routes are the single source of truth, so Back / Forward and pasted links always work.
  *  #overview (Dashboard, default) · #trace=ACCOUNT[&seeds=1,2] · #flagged[?role=L1&bank=SBIN&reason=CODE] ·
- *  #ring[=ACCOUNT] (Fraud Networks) · #data (Data Management; old #home goes there) */
+ *  #ring[=ACCOUNT] (Fraud Networks). Old #data / #home links open the Dashboard (upload and cases live there). */
 export type Route =
   | { name: 'overview' }
   | { name: 'investigate'; account: string | null; seeds: number[] | null }
   | { name: 'ring'; account: string | null }
   | { name: 'flagged'; role: string | null; bank: string | null; reason: string | null }
-  | { name: 'data' }
 
 export function parse(hash: string): Route {
   const h = decodeURIComponent(hash.replace(/^#/, ''))
@@ -24,7 +23,6 @@ export function parse(hash: string): Route {
   if (k === 'investigate') return { name: 'investigate', account: null, seeds: null }
   if (k === 'ring') return { name: 'ring', account: rest ? rest.toUpperCase() : null }
   if (k === 'flagged') return { name: 'flagged', role: q.get('role'), bank: q.get('bank'), reason: q.get('reason') }
-  if (k === 'data' || k === 'home') return { name: 'data' }
   return { name: 'overview' }
 }
 
@@ -41,7 +39,6 @@ export function href(r: Route): string {
       const s = q.toString()
       return `#flagged${s ? `?${s}` : ''}`
     }
-    case 'data': return '#data'
   }
 }
 

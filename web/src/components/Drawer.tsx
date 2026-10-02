@@ -1,5 +1,6 @@
 import { X } from '@phosphor-icons/react'
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 /** Side panel over the page: opens where the eye is (not below the fold), Esc closes, focus returns. */
 export function Drawer({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -11,11 +12,13 @@ export function Drawer({ title, onClose, children }: { title: string; onClose: (
     window.addEventListener('keydown', onKey)
     return () => { window.removeEventListener('keydown', onKey); back?.focus?.() }
   }, [onClose])
-  return (
+  // rendered on <body>: no animated ancestor can capture its fixed position
+  return createPortal(
     <aside className="drawer" role="dialog" aria-label={title} tabIndex={-1} ref={ref}>
       <header><span className="small muted">{title}</span>
         <button className="btn ghost sm" onClick={onClose} aria-label="Close panel"><X /> Close</button></header>
       <div className="body">{children}</div>
-    </aside>
+    </aside>,
+    document.body,
   )
 }

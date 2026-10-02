@@ -386,3 +386,77 @@ body { font-size: var(--fs); line-height: 1.5; }
 .j-flow { opacity: 0; }
 .mt-row b { white-space: nowrap; }
 .j-sub { font-family: var(--font); }
+
+/* ---------- trace page: key facts in the first screen ---------- */
+.pick-panel .gpanel-b { padding: 12px 16px; }
+.pick-panel .picker { margin-top: 10px; padding-top: 10px; }
+.pick-panel .gfield > span { font-size: 12.5px; }
+.trace-body { gap: 14px; }
+.trace-body > .gpanel > .gpanel-h { padding: 9px 16px; }
+.trace-body > .gpanel > .gpanel-b { padding: 12px 16px; }
+.headline { margin-bottom: 12px; font-size: 16px; line-height: 1.55; }
+.j-st { width: 142px; padding: 9px 8px 12px; gap: 2px; }
+.j-ic { width: 28px; height: 28px; }
+.j-ic svg { width: 16px; height: 16px; }
+.j-big { font-size: 20px; }
+.j-lbl { font-size: 13px; }
+.j-sub { font-size: 12px; }
+.j-wrap { min-width: 150px; }
+.j-wrap:first-child { flex: 0 1 146px; }
+.moneynow { margin-top: 12px; padding-top: 12px; gap: 6px; }
+.mn-bar { height: 12px; }
+.mn-legend { font-size: 13px; }
+.ig { padding: 12px 14px; gap: 10px; }
+.ig-main { gap: 8px; }
+.ig-big { font-size: 22px; }
+.ig-foot { padding-top: 8px; font-size: 12.5px; }
+.donut-ring { width: 82px; height: 82px; }
+.insights { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1440px) { .insights { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .insights { grid-template-columns: minmax(0, 1fr); } }
+.phead { padding-bottom: 12px; }
+.gpage { padding-top: 14px; }
+
+/* hover details on trail and flow boxes */
+.tree-canvas { position: relative; }
+.ttip { position: absolute; z-index: 6; width: 250px; pointer-events: none; background: var(--sheet); border: 1px solid var(--rule-2);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
+  animation: fade-in 120ms ease both; font-size: 13px; }
+.ttip > b { font-size: 13.5px; }
+.ttip dl { margin: 4px 0 0; display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; }
+.ttip dt { color: var(--muted); }
+.ttip dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ttip dd.ok { color: var(--ok); }
+.tt-bar { display: block; height: 5px; border-radius: 3px; background: var(--grid); overflow: hidden; margin-top: 4px; }
+.tt-bar i { display: block; height: 100%; background: var(--ok); }
+
+/* fraud network money flow */
+.netflow { overflow: auto; flex: 1; min-height: 0; padding: 4px 0; }
+.flowline { fill: none; stroke-opacity: 0.55; }
+.tbox.center rect { stroke-width: 2.6; }
+.net-work .pframe > .pbody { overflow: auto; }
+
+/* dashboard: data in use */
+.diu { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 10px 14px; min-width: 340px; max-width: 520px;
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--sheet); box-shadow: var(--elev); }
+.diu-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.diu-head svg { color: var(--accent); }
+.diu select, .diu-name { grid-column: 1; height: 36px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diu-name { display: flex; align-items: center; }
+.diu-meta { grid-column: 1; font-size: 13px; color: var(--muted); }
+.diu .btn { grid-column: 2; grid-row: 2 / span 2; }
+.upload-dlg { position: fixed; z-index: 50; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(980px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px); overflow: auto; background: var(--page); border: 1px solid var(--rule-2); border-radius: 8px;
+  box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.upload-dlg .bay { grid-template-columns: minmax(0, 1fr); }
+
+.trace-body > .gpanel > .gpanel-h { align-items: center; }
+.trace-body .gpanel-acts .btn.cta { min-height: 34px; padding: 5px 14px; }
+.pick-panel .picker-row { font-size: 14px; }
+.pick-panel .picker-row .btn { min-height: 32px; padding: 4px 12px; }
+.pick-panel .gfield input, .pick-panel .gfield select, .pick-panel .inbox, .pick-panel .pick-row select { height: 36px; }
+.pick-panel .btn.big { min-height: 36px; }
+/* the money keeps flowing along the arrows: continuous and slow (off with reduced motion) */
+@keyframes flow-on { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -32; } }
+.j-flow { opacity: 0.8; animation: flow-on 2.8s linear infinite; animation-delay: calc(var(--d, 0ms) + 480ms); }
+@media (prefers-reduced-motion: reduce) { .j-flow { animation: none !important; display: none; } }

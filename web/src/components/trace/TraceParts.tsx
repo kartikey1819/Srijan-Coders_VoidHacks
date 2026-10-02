@@ -9,6 +9,14 @@ import { after, plainWarning, when, type Signs, type TraceView } from './model'
 const roleVar = (r: string) => (r === 'L1' || r === 'L2' || r === 'L3' ? `var(--${r.toLowerCase()})` : 'var(--victim)')
 const ROLE_PLURAL: Record<string, [string, string]> = { L1: ['collector', 'collectors'], L2: ['distributor', 'distributors'], L3: ['cash-out account', 'cash-out accounts'] }
 
+/** 12 min · 3 h 20 min · 7 days 2 h */
+function minutesText(m: number): string {
+  if (m < 60) return `${m} min`
+  if (m < 48 * 60) return `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`
+  const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60)
+  return `${d} days${h ? ` ${h} h` : ''}`
+}
+
 /** A figure that counts up once when a trace opens (ease-out, 700 ms); the final text is always the exact value.
  *  Reduced motion shows the value at once. */
 export function CountUp({ value, format, ms = 700 }: { value: number; format: (n: number) => string; ms?: number }) {
@@ -164,7 +172,9 @@ function Meter({ label, n, of, color, i }: { label: string; n: number; of: numbe
 /** Four plain answers, each with a picture: how fast, how wide, how organised, how much can be recovered. */
 export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs: Signs | null }) {
   const pm = v.passMin
-  const scale = Math.max(20, Math.ceil(((pm ?? 0) + 2) / 5) * 5)
+  // The ruler only needs to read around the 3-15 minute mule pattern; anything past an hour sits at its far end.
+  const scale = Math.min(60, Math.max(20, Math.ceil(((pm ?? 0) + 2) / 5) * 5))
+  const off = pm !== null && pm > scale
   const at = (m: number) => `${(100 * Math.min(m, scale)) / scale}%`
   const byBank = new Map<string, number>()
   for (const n of v.freeze) byBank.set(n.bank_name, (byBank.get(n.bank_name) ?? 0) + n.held_paise)
@@ -176,14 +186,14 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
       <Card i={0} icon={Lightning} color="var(--l1)" title="How fast the money moved"
             foot={pm !== null && pm <= 15 ? 'Genuine accounts rarely pass money on this fast.' : pm !== null ? 'Slower than the usual 3 to 15 minute mule pattern.' : undefined}>
         {v.collector && pm !== null ? <>
-          <p className="ig-big" style={{ color: 'var(--l1)' }}><CountUp value={Math.round(pm)} format={(n) => `${Math.round(n)} min`} />
+          <p className="ig-big" style={{ color: 'var(--l1)' }}><CountUp value={Math.round(pm)} format={(n) => minutesText(Math.round(n))} />
             <small>for the collector to pass on {v.passPct}% of the victim's money</small></p>
-          <div className="ruler" role="img" aria-label={`${Math.round(pm)} minutes; the mule pattern is 3 to 15 minutes`}>
+          <div className="ruler" role="img" aria-label={`${minutesText(Math.round(pm))}; the mule pattern is 3 to 15 minutes`}>
             <span className="r-band" style={{ left: at(3), width: `calc(${at(15)} - ${at(3)})` }}><em>mule pattern 3-15 min</em></span>
             <span className="r-mark" style={{ left: at(pm) }}><i /></span>
             <span className="r-tick" style={{ left: '0%' }}>0</span>
             <span className="r-tick" style={{ left: at(15) }}>15</span>
-            <span className="r-tick end">{scale} min</span>
+            <span className="r-tick end">{off ? `${scale} min +` : `${scale} min`}</span>
           </div>
         </> : <p className="muted">No collector account passed money on.</p>}
       </Card>

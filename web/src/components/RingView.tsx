@@ -1,11 +1,8 @@
-import { DownloadSimple, Globe as GlobeIcon, Rows } from '@phosphor-icons/react'
-import cytoscape from 'cytoscape'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { DownloadSimple, FlowArrow, Globe as GlobeIcon } from '@phosphor-icons/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
 import { inr, ROLE_TEXT, spanText, toEpoch } from '../format'
-import { graphStyle, layeredPositions } from '../graph'
-import { cssVar, useThemeTick } from '../look'
 import { go } from '../route'
 import { journeyOf, ringIndex, type Hop } from '../ringJourney'
 import { safeStorage } from '../store'
@@ -13,18 +10,19 @@ import type { GraphEdge, RingResult } from '../types'
 import { AccountPanel } from './AccountPanel'
 import { EdgeFlow } from './EdgeFlow'
 import { Globe, type GlobeHandle } from './Globe'
+import { NetFlow } from './NetFlow'
 import { Page } from './Page'
 import { PanelFrame } from './PanelFrame'
 import { Timeline } from './Timeline'
 
 interface Props { seed: string; reasons: Record<string, string> }
-type View = 'globe' | 'columns'
+type View = 'flow' | 'globe'
 
 const ROLES = ['VICTIM', 'L1', 'L2', 'L3', 'UNKNOWN'] as const
 const WINDOW: [number, number] = [toEpoch('2026-09-15 00:00:00'), toEpoch('2026-09-29 23:59:00')]
 
-/** One-click syndicate isolation. Globe (default) to see the whole ring and follow one account's journey;
- *  Columns to read the exact Victim | L1 | L2 | L3 layers. */
+/** One-click syndicate isolation. Money flow (default): who paid into the chosen account and where its money went,
+ *  step by step. Globe: the whole network at once. */
 export function RingView({ seed, reasons }: Props) {
   const [ring, setRing] = useState<RingResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -33,10 +31,9 @@ export function RingView({ seed, reasons }: Props) {
   const [selected, setSelected] = useState<string | null>(seed)
   const [trail, setTrail] = useState<string[]>([seed])
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'columns' ? 'columns' : 'globe'))
+  const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'globe' ? 'globe' : 'flow'))
   const [edge, setEdge] = useState<GraphEdge | null>(null)
   const globe = useRef<GlobeHandle>(null)
-  const cols = useRef<{ snapshot: () => string | null }>(null)
   const layout = useDefaultLayout({ id: 'ring-h', storage: safeStorage })
 
   useEffect(() => {
@@ -69,11 +66,11 @@ export function RingView({ seed, reasons }: Props) {
 
   return (
     <Page title="Fraud Networks" hi="धोखाधड़ी नेटवर्क"
-          desc={<>Every suspect account linked by money to <b className="mono">{seed}</b>: its victims, collectors, distributors and cash-out accounts. Click a dot to follow its money.</>}
+          desc={<>The fraud network linked by money to <b className="mono">{seed}</b>: who paid in, and where the money went next. Click an account to follow its money.</>}
           actions={<>
             <div className="seg view-switch" role="group" aria-label="Network view">
+              <button aria-pressed={view === 'flow'} onClick={() => setView('flow')}><FlowArrow /> Money flow</button>
               <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}><GlobeIcon /> Globe</button>
-              <button aria-pressed={view === 'columns'} onClick={() => setView('columns')}><Rows /> Columns</button>
             </div>
             {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export network data (ZIP)</a>}
           </>}>
@@ -98,15 +95,14 @@ export function RingView({ seed, reasons }: Props) {
         <div className="net-work">
           <Group orientation="horizontal" id="ring-h" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
             <Panel id="ring-graph" defaultSize="64%" minSize="30%">
-              <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : 'Victims · Collectors · Distributors · Cash-out'}
-                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : 'Click an account · double-click a link'}</span>}>
-                <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-                  {view === 'globe'
-                    ? <Globe ref={globe} ring={ring} journey={journey} selected={selected} hotLink={edge ? `${edge.src}>${edge.dst}` : null}
+              <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : `Money flow around ${selected ?? seed}`}
+                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : 'Point at an account for its amounts · click one to put it in the centre'}</span>}>
+                {view === 'globe'
+                  ? <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                      <Globe ref={globe} ring={ring} journey={journey} selected={selected} hotLink={edge ? `${edge.src}>${edge.dst}` : null}
                              hidden={hidden} cutoff={cut} onPick={pick} onOpenLink={setEdge} />
-                    : <Columns ref={cols} ring={ring} selected={selected} hidden={hidden} cutoff={cut} onPick={pick} journey={journey?.nodes ?? null}
-                               onOpenLink={setEdge} />}
-                </div>
+                    </div>
+                  : <NetFlow ix={ix} center={selected ?? seed} hidden={hidden} cutoff={cut} onPick={pick} />}
               </PanelFrame>
             </Panel>
             <Separator className="sep-v" />
@@ -172,110 +168,3 @@ function HopList({ title, hops, onGo, onFlow }: { title: string; hops: Hop[]; on
     </>
   )
 }
-
-interface ColProps { ring: RingResult; selected: string | null; hidden: Set<string>; cutoff: number; onPick: (a: string | null) => void; journey: Set<string> | null; onOpenLink: (e: GraphEdge) => void }
-
-/** The strict layered view: victims | L1 | L2 | L3 columns. Scrubbing touches only elements whose state changes. */
-const Columns = forwardRef<{ snapshot: () => string | null }, ColProps>(function Columns({ ring, selected, hidden, cutoff, onPick, journey, onOpenLink }, ref) {
-  const box = useRef<HTMLDivElement>(null)
-  const cy = useRef<cytoscape.Core | null>(null)
-  const edgesByT = useRef<cytoscape.EdgeSingular[]>([])
-  const nodesByT = useRef<cytoscape.NodeSingular[]>([])
-  const shownUpTo = useRef(-1)
-  const nodesUpTo = useRef(-1)
-  const pickRef = useRef(onPick)
-  pickRef.current = onPick
-  const openRef = useRef(onOpenLink)
-  openRef.current = onOpenLink
-  const tick = useThemeTick()
-
-  useImperativeHandle(ref, () => ({ snapshot: () => cy.current?.png({ full: false, scale: 2, bg: cssVar('--sheet') }) ?? null }), [])
-
-  useEffect(() => {
-    if (!box.current) return
-    const pos = layeredPositions(ring.nodes.map((n) => ({ id: n.account, role: n.role, order: n.account })),
-      { colGap: 260, rowGap: 22, maxRows: 60, subGap: 70 })
-    const first = new Map<string, number>()
-    for (const e of ring.edges) {
-      const t = toEpoch(e.first_ts)
-      for (const a of [e.src, e.dst]) first.set(a, Math.min(first.get(a) ?? Infinity, t))
-    }
-    const c = cytoscape({
-      container: box.current, minZoom: 0.05, maxZoom: 3, boxSelectionEnabled: false,
-      textureOnViewport: true, hideEdgesOnViewport: ring.edges.length > 1500,
-      elements: [
-        ...ring.nodes.map((n) => ({ group: 'nodes' as const, position: pos[n.account],
-          data: { id: n.account, role: n.role, first: first.get(n.account) ?? 0, label: n.account === ring.seed ? `${n.account}\nstarting account` : n.account, size: n.account === ring.seed ? 40 : 11 } })),
-        ...ring.edges.map((e) => ({ group: 'edges' as const, data: { id: `${e.src}>${e.dst}`, source: e.src, target: e.dst, t: toEpoch(e.first_ts) } })),
-      ],
-      layout: { name: 'preset' },
-    })
-    c.on('tap', 'node', (e) => pickRef.current(e.target.id()))
-    c.on('tap', (e) => { if (e.target === c) pickRef.current(null) })
-    const byKey = new Map(ring.edges.map((e) => [`${e.src}>${e.dst}`, e]))
-    c.on('dbltap', 'edge', (e) => { const g = byKey.get(e.target.id()); if (g) openRef.current(g) })
-    edgesByT.current = c.edges().toArray().sort((a, b) => a.data('t') - b.data('t')) as cytoscape.EdgeSingular[]
-    nodesByT.current = c.nodes().toArray().sort((a, b) => a.data('first') - b.data('first')) as cytoscape.NodeSingular[]
-    shownUpTo.current = edgesByT.current.length - 1
-    nodesUpTo.current = nodesByT.current.length - 1
-    c.fit(undefined, 24)
-    cy.current = c
-    const ro = new ResizeObserver(() => { c.resize() })
-    ro.observe(box.current)
-    return () => { ro.disconnect(); c.destroy(); cy.current = null }
-  }, [ring])
-
-  useEffect(() => {
-    const c = cy.current
-    if (!c) return
-    c.style([
-      ...graphStyle({ animate: false }),
-      { selector: 'node', style: { label: 'data(label)', 'font-size': 7, 'min-zoomed-font-size': 9, 'border-width': 1, width: 'data(size)', height: 'data(size)' } },
-      { selector: `node[id = "${ring.seed}"]`, style: { 'font-size': 26, 'min-zoomed-font-size': 0, 'font-weight': 700, 'border-width': 3 } },
-      { selector: 'edge', style: { 'curve-style': 'haystack', width: 0.8, label: '', opacity: 0.45, 'target-arrow-shape': 'none' } },
-      { selector: '.off', style: { display: 'none' } },
-      { selector: '.faint', style: { opacity: 0.12 } },
-      { selector: 'node.sel', style: { 'border-width': 3, 'border-color': cssVar('--focus') } },
-      { selector: '.future', style: { opacity: 0, events: 'no' } },
-    ])
-  }, [ring, tick])
-
-  useEffect(() => {
-    const c = cy.current, es = edgesByT.current, ns = nodesByT.current
-    if (!c || !es.length) return
-    const upTo = <T extends cytoscape.SingularElementArgument>(arr: T[], key: string) => {
-      let k = -1, lo = 0, hi = arr.length - 1
-      while (lo <= hi) { const m = (lo + hi) >> 1; if (arr[m].data(key) <= cutoff) { k = m; lo = m + 1 } else hi = m - 1 }
-      return k
-    }
-    const k = upTo(es, 't'), kn = upTo(ns, 'first')
-    const prev = shownUpTo.current, prevN = nodesUpTo.current
-    c.batch(() => {
-      if (k > prev) for (let i = prev + 1; i <= k; i++) es[i].removeClass('future')
-      else for (let i = k + 1; i <= prev; i++) es[i].addClass('future')
-      if (kn > prevN) for (let i = prevN + 1; i <= kn; i++) ns[i].removeClass('future')
-      else for (let i = kn + 1; i <= prevN; i++) ns[i].addClass('future')
-    })
-    shownUpTo.current = k
-    nodesUpTo.current = kn
-  }, [cutoff, ring])
-
-  useEffect(() => {
-    const c = cy.current
-    if (!c) return
-    c.batch(() => c.nodes().forEach((n) => { n.toggleClass('off', hidden.has(n.data('role'))) }))
-  }, [hidden, ring])
-
-  useEffect(() => {
-    const c = cy.current
-    if (!c) return
-    c.batch(() => {
-      c.elements().removeClass('sel faint')
-      if (selected) c.getElementById(selected).addClass('sel')
-      if (journey) c.nodes().forEach((n) => { if (!journey.has(n.id())) n.addClass('faint') })
-    })
-  }, [selected, journey, ring])
-
-  return <div className="graph" ref={box} style={{ position: 'absolute', inset: 0 }} role="img"
-              aria-label={`Ring of ${ring.nodes.length} accounts in columns: victims, collectors, distributors, cash-out`} />
-})
