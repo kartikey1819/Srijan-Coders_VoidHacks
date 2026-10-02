@@ -67,10 +67,41 @@ class Engine:
             return {}
 
     # ---- trace ----
+    def _scores(self):
+        """Risk score per account id (0 where unscored), loaded once."""
+        if getattr(self, "_score_arr", None) is None:
+            import numpy as np
+            arr = np.zeros(len(self.g.accounts), dtype=np.int16)
+            try:
+                rows = self.cursor().execute("SELECT acct_id, score FROM risk").fetchnumpy()
+                arr[rows["acct_id"].astype(np.int64)] = rows["score"]
+            except duckdb.Error:          # no detection run: every transfer stays a candidate
+                pass
+            self._score_arr = arr
+        return self._score_arr
+
+    def default_seeds(self, v: int) -> tuple[set[int] | None, str | None]:
+        """The reported loss when no disputed transfer is chosen: the victim's transfers to accounts scored
+        SEED_MIN_SCORE or more. If none (or all) qualify: every outgoing transfer, as before."""
+        o, sc = self.g.out, self._scores()
+        ks = range(int(o["ptr"][v]), int(o["ptr"][v + 1]))
+        allx = [int(o["txn"][k]) for k in ks]
+        pick = {int(o["txn"][k]) for k in ks if sc[int(o["peer"][k])] >= config.SEED_MIN_SCORE}
+        if not pick or len(pick) == len(set(allx)):
+            return None, None
+        return pick, (f"Traced the {len(pick)} of {len(allx)} outgoing transfers that went to accounts scored "
+                      f"{config.SEED_MIN_SCORE} or more (possible or likely mules). Choose the disputed transfers "
+                      "to trace others.")
+
     def trace(self, victim: str, max_hops: int = config.MAX_HOPS, seed_txns: set[int] | None = None) -> TraceResult:
         t0 = time.perf_counter()
         v = self._require(victim)
+        note = None
+        if seed_txns is None:
+            seed_txns, note = self.default_seeds(v)
         core = trace_core(self.g, v, max_hops=max_hops, seed_txns=seed_txns)
+        if note:
+            core.warnings.insert(0, note)
         cur = self.cursor()
         idxs = [e.txn_idx for e in core.edges]
         info = {}

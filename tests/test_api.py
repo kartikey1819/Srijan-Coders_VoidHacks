@@ -141,6 +141,9 @@ def test_upload_analyse_switch_and_back(client, tmp_path, monkeypatch):
     try:
         info = client.post(f"/api/datasets/{ds_id}/activate").json()
         assert info["active"] and info["rows"] == 3000
+        engine_mod._engine, datasets._active = official, "official"      # a restart reopens the case left open
+        datasets.startup()
+        assert datasets.active_id() == ds_id and client.get("/api/stats").json()["rows"] == 3000
         assert client.get("/api/stats").json()["rows"] == 3000
         assert {d["id"] for d in client.get("/api/datasets").json()} >= {ds_id, "official"}
         again = client.post("/api/datasets?name=again.csv", content=body).json()

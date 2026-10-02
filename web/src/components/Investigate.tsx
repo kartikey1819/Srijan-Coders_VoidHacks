@@ -120,6 +120,7 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
   const holders = trace.nodes.filter((n) => n.role !== 'VICTIM' && n.held_paise > 0)
   const banks = new Set(trace.nodes.filter((n) => trace.freeze_candidates.includes(n.account)).map((n) => n.bank_prefix))
   const nSeeds = trace.edges.filter((e) => e.rule === 'seed').length
+  const autoSeeds = !seeds && trace.warnings.some((w) => w.startsWith('Traced the '))
   const victim = trace.nodes.find((n) => n.role === 'VICTIM')
   const sel = selected ? trace.edges.filter((e) => e.src === selected || e.dst === selected) : []
   const pct = trace.loss_paise ? Math.round((100 * trail.heldNow) / trace.loss_paise) : 0
@@ -156,7 +157,7 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
           <ul>{trace.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
         </details>
       )}
-      {(seeds || nSeeds > 1) && <DisputedPicker victim={trace.victim} seeds={seeds}
+      {(seeds || nSeeds > 1 || autoSeeds) && <DisputedPicker victim={trace.victim} seeds={seeds} auto={autoSeeds ? nSeeds : null}
         onApply={(s) => go({ name: 'investigate', account: trace.victim, seeds: s })} />}
 
       <div className="inv-main">

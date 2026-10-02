@@ -19,6 +19,10 @@ PT_WINDOW_S = (180, 900)                 # statement: dispersed "within 3 to 15 
 AMOUNT_MATCH_MIN = 0.90                  # statement: ">= 90% of incoming funds dispersed"
 ATTRIBUTION_ORDER = ("window", "amount_match", "oldest")  # chosen by measurement, see A6 in A_TASKLIST.md
 FREEZE_MIN_PAISE = 100                   # hold only accounts holding >= Rs 1 of victim money
+SEED_MIN_SCORE = 40                      # default loss = the victim's transfers to accounts scored >= this (MEDIUM+);
+                                         # none such: all of the victim's outgoing transfers
+TRACE_MAX_LEDGER = 60_000                # ledger entries a trace may replay; money reaching a busier account
+                                         # after that is shown as held there (deterministic, keeps a trace < 2 s)
 
 # ---- narration categories: first match wins (upper-cased text, regex) ----
 NARR_RULES = (

@@ -158,3 +158,76 @@ def test_two_victims_in_one_window_raise_ambiguity_warning(tmp_path):
         row(4, "HDFC10000009", "AXIS10000004", "500.00", "2026-09-20 10:07:00"),
     ])
     assert any("could be funded" in w for w in e.trace("KKBK10000002").warnings)
+
+
+# ---- the indexed trace must equal the plain ledger replay (tests/trace_reference.py) ----
+def _sig(core, g):
+    return ([(e.txn_idx, e.src, e.dst, e.ts, e.amount, e.attributed, e.hop, e.delay, e.rule, e.terminal)
+             for e in core.edges], core.received, core.sent, core.min_hop, sorted(core.terminal_in),
+            {u: core.held(u) for u in core.received}, core.returned, core.warnings, core.ambiguous, core.loss)
+
+
+def test_indexed_trace_equals_reference_on_the_sample(engine, truth):
+    from tests.trace_reference import trace_core as reference
+    g = engine.g
+    for victim in truth:
+        u = g.acct_id(victim)
+        assert _sig(trace_core(g, u, max_ledger=None), g) == _sig(reference(g, u), g), victim
+
+
+def test_indexed_trace_equals_reference_on_a_dense_random_world(tmp_path):
+    """Busy accounts, near-repeat amounts (amount_match), 3-15 min hops (window), cash-outs and pre-theft history:
+    every account traced as the victim gives exactly the reference result."""
+    import random
+    from tests.trace_reference import trace_core as reference
+    rnd = random.Random(7)
+    banks = ("SBIN", "HDFC", "ICIC", "AXIS", "PYTM")
+    accts = [f"{banks[i % 5]}{20000000 + i}" for i in range(28)]
+    rows, t, got = [], 0, {a: [] for a in accts}
+    for i in range(3500):
+        t += rnd.randint(5, 240)
+        s, d = rnd.sample(accts, 2)
+        if got[s] and rnd.random() < 0.45:
+            amt = round(rnd.choice(got[s]) * rnd.uniform(0.9, 1.0), 2)      # passes on most of an inflow
+        else:
+            amt = round(rnd.uniform(100, 5000), 2)
+        got[d].append(amt)
+        hh, mm, ss = 10 + t // 3600, t // 60 % 60, t % 60
+        cash = rnd.random() < 0.05
+        rows.append(row(i, s, d, f"{amt:.2f}", f"2026-09-2{1 + hh // 24} {hh % 24:02d}:{mm:02d}:{ss:02d}",
+                        "UPI/WALLET_LOAD/P2P_CRYPTO_1" if cash else "IMPS/FriendSplit#1"))
+    e = make_engine(tmp_path, rows)
+    g = e.g
+    for a in accts:
+        u = g.acct_id(a)
+        assert _sig(trace_core(g, u, max_ledger=None), g) == _sig(reference(g, u), g), a
+
+
+def test_busy_account_beyond_the_budget_holds_the_money(tmp_path):
+    rows = [row(i, f"KKBK{30000000 + i}", "AXIS10000009", "50.00", f"2026-09-20 09:{i:02d}:00") for i in range(40)]
+    rows += [row(100, "SBIN10000001", "AXIS10000009", "1000.00", "2026-09-20 10:00:00"),     # victim -> busy account
+             row(101, "AXIS10000009", "ICIC10000003", "990.00", "2026-09-20 10:05:00")]
+    e = make_engine(tmp_path, rows)
+    u = e.g.acct_id("SBIN10000001")
+    full = trace_core(e.g, u, max_ledger=None)
+    cut = trace_core(e.g, u, max_ledger=10)
+    busy = e.g.acct_id("AXIS10000009")
+    assert e.g.acct_id("ICIC10000003") in full.received and busy in full.received
+    assert busy in cut.not_followed and e.g.acct_id("ICIC10000003") not in cut.received
+    assert cut.held(busy) == 100000 and any("very busy" in w and "AXIS10000009" in w for w in cut.warnings)
+
+
+def test_default_loss_is_the_transfers_to_suspicious_accounts(tmp_path):
+    import numpy as np
+    from abhedya import config
+    e = make_engine(tmp_path, [
+        row(1, "SBIN10000001", "HDFC10000002", "1000.00", "2026-09-20 10:00:00"),     # to a scored mule
+        row(2, "SBIN10000001", "PUNB10000007", "250.00", "2026-09-20 10:30:00"),      # an ordinary bill
+        row(3, "HDFC10000002", "ICIC10000003", "990.00", "2026-09-20 10:05:00"),
+    ])
+    e._score_arr = np.zeros(len(e.g.accounts), dtype=np.int16)
+    e._score_arr[e.g.acct_id("HDFC10000002")] = config.SEED_MIN_SCORE
+    r = e.trace("SBIN10000001")
+    assert r.loss_paise == 100000 and [x.dst for x in r.edges if x.rule == "seed"] == ["HDFC10000002"]
+    assert r.warnings[0].startswith("Traced the 1 of 2 outgoing transfers")
+    assert e.trace("SBIN10000001", seed_txns={1}).loss_paise == 25000                 # a chosen transfer still wins

@@ -627,9 +627,12 @@ the inflow as a whole.
 
 ### 6.3 Seeding
 
-The victim's outgoing transactions are the reported loss. With `seed_txns` given, only those `txn_idx` values are used
-(section 6.10). Each seed edge's full amount is added to `loss` and delivered to the receiver as a tainted lot at hop 1.
-Seed edges are recorded with rule `seed`.
+With `seed_txns` given (the disputed transfers an officer picks), only those `txn_idx` values are the reported loss
+(section 6.10). Otherwise `Engine.default_seeds()` takes the victim's transfers to accounts scored
+`config.SEED_MIN_SCORE` (40, MEDIUM or HIGH) or more, and says so in the first warning; if none, or all, qualify, every
+outgoing transfer is the loss. This keeps a victim's ordinary spending (bills, shops) out of the trail. On the official
+file every victim pays only its L1, so nothing changes there. Each seed edge's full amount is added to `loss` and
+delivered to the receiver as a tainted lot at hop 1. Seed edges are recorded with rule `seed`.
 
 ### 6.4 Global time order and per-account ledger replay
 
@@ -650,12 +653,26 @@ that had already arrived.
 Only accounts that receive the victim's money are ever expanded. An account's ledger is replayed only up to the last
 moment it still holds spendable tainted money.
 
+**Speed without changing a result.** Each account's lots live in a `_Book` with three indexes: arrival times (binary
+search for the window rule), amount buckets (amount_match only looks at lots within 10 % of the outflow) and a
+pointer past spent clean lots (oldest). Inflows that no outflow of the account could ever pick by window or
+amount_match (`_inert_inflows()`, computed with NumPy from the account's own ledger) only ever count as its balance,
+so a run of them is one lot. Replay starts after the last moment the account's own balance was exactly zero
+(`_fresh_start()`). `tests/trace_reference.py` keeps the plain version; tests check that both give identical edges,
+amounts, holdings and warnings on all 300 sample victims and on a dense random world.
+
+**Busy-account budget.** A trace replays at most `config.TRACE_MAX_LEDGER` (60,000) ledger entries. Victim money that
+reaches a not-yet-opened account beyond that budget stays held there; the warning names those accounts. The budget
+counts entries, not seconds, so the same data always gives the same trail. It never triggers on the official file
+(mule accounts are small); on generated data with collectors of 50,000-110,000 transactions it keeps every trace
+under 2 s.
+
 ### 6.5 Which money an outflow spends: the attribution priority
 
 When account `u` sends `a` paise at time `t`, the **live** lots are those with money left, arrived at or before `t`,
 and either clean or tainted-and-spendable. The outflow spends them by the rules in `config.ATTRIBUTION_ORDER =
 ("window", "amount_match", "oldest")`, trying each rule's candidate bundles in turn until the amount is covered
-(`_bundles()`):
+(`window()`, `amount_match()` and `oldest()` in `process_out()`):
 
 | Priority | Rule | Candidates | Source in the statement |
 |---|---|---|---|

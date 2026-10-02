@@ -236,6 +236,11 @@ def activate(ds_id: str) -> DatasetInfo:
         if cur is None or Path(cur.db_path).resolve() != path.resolve():
             engine_mod._engine = engine_mod.Engine(path)
         _active = ds_id
+    try:                                   # remembered across restarts (startup reopens it)
+        DIR.mkdir(parents=True, exist_ok=True)
+        (DIR / "active.txt").write_text(ds_id, encoding="utf-8")
+    except OSError:
+        pass
     return next(d for d in list_datasets() if d.id == ds_id)
 
 
@@ -291,8 +296,20 @@ def remove(ds_id: str) -> list[DatasetInfo]:
 
 
 def startup() -> None:
-    """When the official case is removed (or was never built), open the most recent saved case instead."""
+    """Reopen the case that was open when the server stopped. Failing that: the official case, or, when it was
+    removed (or never built), the most recent saved case."""
     global _active
+    try:
+        last = (DIR / "active.txt").read_text(encoding="utf-8").strip()
+    except OSError:
+        last = ""
+    if last and last != "official" and (DIR / last / "case.duckdb").exists():
+        st = progress(last)
+        if st is not None and st.status == "done":
+            with engine_mod._lock:
+                engine_mod._engine = engine_mod.Engine(db_path(last))
+                _active = last
+            return
     if official_db().exists() and not _removed().exists():
         return
     ready = [d for d in list_datasets() if d.id != "official" and d.status == "done"]

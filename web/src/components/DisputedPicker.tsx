@@ -3,10 +3,11 @@ import { api } from '../api'
 import { inr } from '../format'
 import type { TxnRow } from '../types'
 
-interface Props { victim: string; seeds: number[] | null; onApply: (seeds: number[] | null) => void }
+interface Props { victim: string; seeds: number[] | null; auto?: number | null; onApply: (seeds: number[] | null) => void }
 
 /** When the victim also has ordinary spending, trace only the transfer(s) the complainant disputes. */
-export function DisputedPicker({ victim, seeds, onApply }: Props) {
+/** auto: how many transfers the engine chose by itself (the victim's transfers to suspicious accounts), if it did. */
+export function DisputedPicker({ victim, seeds, auto = null, onApply }: Props) {
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState<TxnRow[] | null>(null)
   const [pick, setPick] = useState<Set<number>>(new Set(seeds ?? []))
@@ -26,6 +27,7 @@ export function DisputedPicker({ victim, seeds, onApply }: Props) {
       <div className="row between">
         <span className="small">
           {seeds ? <>Tracing <b>{seeds.length}</b> disputed transfer(s) only.</>
+                 : auto ? <>Tracing the <b>{auto}</b> transfer(s) that went to suspicious accounts (score 40 or more).</>
                  : <>Tracing <b>all</b> of the victim's outgoing transfers.</>}
         </span>
         <button className="btn ghost" onClick={() => setOpen((o) => !o)}>{open ? 'Close' : 'Choose disputed transfer(s)'}</button>
