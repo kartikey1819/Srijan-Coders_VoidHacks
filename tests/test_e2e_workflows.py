@@ -304,25 +304,46 @@ def test_dashboard_upload_rejects_a_file_without_the_columns(page, base):
     page.get_by_text("missing column(s)").wait_for()
 
 
-def test_ring_money_flow_journey_and_globe(page, base):
-    """Expected: the network opens as the money flow around the chosen account (no Columns view); pointing at an
-    account shows what it received and kept; the journey panel lists where money came from; Go here moves along it;
-    the Globe is one click away."""
+def test_ring_isolates_one_trail_with_victim_switch_and_globe(page, base):
+    """Expected: the network opens on one victim's trail through the chosen account, laid out like the trace (victim,
+    collector, distributors, cash-out), not the whole network; the account is marked; every victim whose money reached
+    it can be chosen; pointing at an account shows what it received and still holds; Go here moves the journey; the
+    Globe is a toggle away and back."""
     page.goto(f"{base}/#ring={L1}")
     page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
-    page.locator(f".netflow .tbox.center[data-acct={L1}]").wait_for(timeout=20_000)
-    assert page.get_by_role("button", name="Columns").count() == 0
-    page.locator(".netflow .tbox[data-role=VICTIM]").first.wait_for()
-    page.locator(".netflow .tbox[data-role=L2]").first.hover()
-    tip = page.locator(".netflow .ttip")
+    page.locator(f".ring-trail .tbox.center[data-acct={L1}]").wait_for(timeout=20_000)
+    assert page.locator("[data-testid=ring-globe]").count() == 0 and page.get_by_role("button", name="Columns").count() == 0
+    pick = page.get_by_label("Victim whose trail is shown")
+    assert pick.locator("option").count() == 4
+    pick.select_option(VICTIM)
+    page.locator(f".ring-trail .tbox[data-role=VICTIM][data-acct={VICTIM}]").wait_for(timeout=20_000)
+    heads = page.locator(".ring-trail svg.tree").text_content()
+    assert all(h in heads for h in ("Victim", "Collector", "Distributors", "Cash-out")), heads
+    page.locator(".ring-trail .tbox[data-role=L2]").first.hover()
+    tip = page.locator(".ring-trail .ttip")
     tip.wait_for()
-    assert "Received in this network" in tip.inner_text() and "Kept" in tip.inner_text()
+    assert "Received from this victim" in tip.inner_text() and "Still holds" in tip.inner_text()
     page.get_by_role("heading", name="Money came from (4)").wait_for()
     page.get_by_role("button", name=f"Go to {VICTIM}").click()
     page.locator(".crumbs").get_by_text(VICTIM).wait_for()
-    page.locator(f".netflow .tbox.center[data-acct={VICTIM}]").wait_for()
+    page.locator(f".ring-trail .tbox.center[data-acct={VICTIM}]").wait_for()
     page.get_by_role("button", name="Globe").click()
     page.locator("[data-testid=ring-globe] canvas").wait_for(timeout=20_000)
+    page.get_by_role("button", name="Trail").click()
+    page.locator(".ring-trail .tbox").first.wait_for()
+
+
+def test_collector_panel_has_a_payment_by_payment_view(page, base):
+    """Expected: the collector panel switches from the chart to a waterfall of each payment out, ending with what is
+    still in the account."""
+    open_trace(page, base)
+    page.get_by_role("button", name="Payment by payment").click()
+    rows = page.locator(".wf li")
+    rows.first.wait_for()
+    assert rows.count() >= 3
+    assert "from the victim" in rows.first.inner_text() and "still in the account" in rows.last.inner_text()
+    page.get_by_role("button", name="Over time").click()
+    page.locator(".pw svg.win").wait_for()
 
 
 def test_panel_size_persists_across_reload(page, base):

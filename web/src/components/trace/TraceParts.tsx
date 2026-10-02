@@ -259,6 +259,7 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
 /** The collector's own ledger right after the victim's money arrived: the facts as four figures, then a plain chart
  *  (money in above the line, each payment out below it, the balance stepping down). */
 export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
+  const [mode, setMode] = useState<'chart' | 'payments'>('chart')
   const c = v.collector
   if (!c) return <p className="muted">There is no collector account on this trail.</p>
   const credit = t.edges.filter((e) => e.dst === c.account && e.rule === 'seed').sort((a, b) => toEpoch(a.ts) - toEpoch(b.ts))[0]
@@ -295,6 +296,11 @@ export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
           <span>{pct(outSum)}% · {inWin.length} payment{inWin.length === 1 ? '' : 's'} to {receivers} account{receivers === 1 ? '' : 's'}</span></div>
         <div><dt>Left in the account</dt><dd className="ok-fig">{inr(left)}</dd><span>{pct(left)}% of what arrived</span></div>
       </dl>
+      <div className="seg pw-mode" role="group" aria-label="Show the collector's money as">
+        <button aria-pressed={mode === 'chart'} onClick={() => setMode('chart')}>Over time</button>
+        <button aria-pressed={mode === 'payments'} onClick={() => setMode('payments')}>Payment by payment</button>
+      </div>
+      {mode === 'payments' ? <Waterfall amount={amount} at={credit.ts} pays={inWin} ct={ct} left={left} /> : <>
       <svg className="win" viewBox={`0 0 ${W} ${H}`} role="img"
            aria-label={`${inr(amount)} arrived; ${inWin.length} payments out to ${receivers} accounts within ${win} minutes; ${pct(outSum)}% passed on`}>
         {Array.from({ length: win / step + 1 }, (_, i) => (
@@ -318,7 +324,33 @@ export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
       <p className="pw-key"><span><b style={{ background: 'var(--victim)' }} />money in</span>
         <span><b style={{ background: 'var(--l1)' }} />money out</span>
         <span><i />balance</span>{later > 0 && <span className="muted">{later} later payment{later === 1 ? '' : 's'} not shown</span>}</p>
+      </>}
     </div>
+  )
+}
+
+/** The same window as a waterfall: each payment out is a bar that starts where the previous one ended, so the
+ *  victim's money visibly drains from the account; the last row is what is left to freeze. */
+function Waterfall({ amount, at, pays, ct, left }: { amount: number; at: string; pays: TraceResult['edges']; ct: number; left: number }) {
+  const w = (x: number) => `${(100 * x) / amount}%`
+  const mmss = (s: number) => `+${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
+  let run = 0
+  return (
+    <ol className="wf" aria-label="Money into and out of the collector account, payment by payment">
+      <li className="wf-in"><span className="wf-t">{at.slice(11, 16)}</span><span className="wf-who">from the victim</span>
+        <span className="wf-track"><i style={{ left: 0, width: '100%' }} /></span><b>{inr(amount)}</b></li>
+      {pays.map((e, i) => {
+        const x = run
+        run += e.attributed_paise
+        return (
+          <li key={e.txn_idx}><span className="wf-t">{mmss(toEpoch(e.ts) - ct)}</span><span className="wf-who mono">{e.dst}</span>
+            <span className="wf-track"><i style={{ left: w(x), width: w(e.attributed_paise), ...delay(i + 1, 70) }} /></span>
+            <b>{inr(e.attributed_paise)}<small>{inr(Math.max(0, amount - run))} left</small></b></li>
+        )
+      })}
+      <li className="wf-left"><span className="wf-t" /><span className="wf-who">still in the account</span>
+        <span className="wf-track"><i style={{ left: w(amount - left), width: w(left), ...delay(pays.length + 1, 70) }} /></span><b>{inr(left)}</b></li>
+    </ol>
   )
 }
 

@@ -1,4 +1,4 @@
-import { DownloadSimple, FlowArrow, Globe as GlobeIcon } from '@phosphor-icons/react'
+import { DownloadSimple, Globe as GlobeIcon, TreeStructure } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
@@ -10,19 +10,19 @@ import type { GraphEdge, RingResult } from '../types'
 import { AccountPanel } from './AccountPanel'
 import { EdgeFlow } from './EdgeFlow'
 import { Globe, type GlobeHandle } from './Globe'
-import { NetFlow } from './NetFlow'
 import { Page } from './Page'
 import { PanelFrame } from './PanelFrame'
+import { RingTrail } from './RingTrail'
 import { Timeline } from './Timeline'
 
 interface Props { seed: string; reasons: Record<string, string> }
-type View = 'flow' | 'globe'
+type View = 'trail' | 'globe'
 
 const ROLES = ['VICTIM', 'L1', 'L2', 'L3', 'UNKNOWN'] as const
 const WINDOW: [number, number] = [toEpoch('2026-09-15 00:00:00'), toEpoch('2026-09-29 23:59:00')]
 
-/** One-click syndicate isolation. Money flow (default): who paid into the chosen account and where its money went,
- *  step by step. Globe: the whole network at once. */
+/** One-click syndicate isolation. Trail (default): one victim's money through the isolated account, laid out like
+ *  the trace screen, with the network's other victims one choice away. Globe: the whole network at once. */
 export function RingView({ seed, reasons }: Props) {
   const [ring, setRing] = useState<RingResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -31,10 +31,10 @@ export function RingView({ seed, reasons }: Props) {
   const [selected, setSelected] = useState<string | null>(seed)
   const [trail, setTrail] = useState<string[]>([seed])
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'globe' ? 'globe' : 'flow'))
+  const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'globe' ? 'globe' : 'trail'))
   const [edge, setEdge] = useState<GraphEdge | null>(null)
   const globe = useRef<GlobeHandle>(null)
-  const layout = useDefaultLayout({ id: 'ring-h', storage: safeStorage })
+  const layout = useDefaultLayout({ id: 'ring-h2', storage: safeStorage })
 
   useEffect(() => {
     let live = true
@@ -69,7 +69,7 @@ export function RingView({ seed, reasons }: Props) {
           desc={<>The fraud network linked by money to <b className="mono">{seed}</b>: who paid in, and where the money went next. Click an account to follow its money.</>}
           actions={<>
             <div className="seg view-switch" role="group" aria-label="Network view">
-              <button aria-pressed={view === 'flow'} onClick={() => setView('flow')}><FlowArrow /> Money flow</button>
+              <button aria-pressed={view === 'trail'} onClick={() => setView('trail')}><TreeStructure /> Trail</button>
               <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}><GlobeIcon /> Globe</button>
             </div>
             {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export network data (ZIP)</a>}
@@ -93,16 +93,16 @@ export function RingView({ seed, reasons }: Props) {
       {!ring && !err && <p className="muted">Finding the network around {seed}…</p>}
       {ring && ix && (
         <div className="net-work">
-          <Group orientation="horizontal" id="ring-h" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
-            <Panel id="ring-graph" defaultSize="64%" minSize="30%">
-              <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : `Money flow around ${selected ?? seed}`}
-                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : 'Point at an account for its amounts · click one to put it in the centre'}</span>}>
+          <Group orientation="horizontal" id="ring-h2" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
+            <Panel id="ring-graph" defaultSize="76%" minSize="30%">
+              <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : `Money trail through ${seed}`}
+                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : 'Point at an account for its amounts · click one for its journey'}</span>}>
                 {view === 'globe'
                   ? <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
                       <Globe ref={globe} ring={ring} journey={journey} selected={selected} hotLink={edge ? `${edge.src}>${edge.dst}` : null}
                              hidden={hidden} cutoff={cut} onPick={pick} onOpenLink={setEdge} />
                     </div>
-                  : <NetFlow ix={ix} center={selected ?? seed} hidden={hidden} cutoff={cut} onPick={pick} />}
+                  : <div className="rt-scroll"><RingTrail ix={ix} seed={seed} mark={selected} cursor={cut} onSelect={pick} /></div>}
               </PanelFrame>
             </Panel>
             <Separator className="sep-v" />

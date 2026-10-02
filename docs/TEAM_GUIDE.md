@@ -469,9 +469,9 @@ masthead and sidebar stay put.
 | Screen | Address | What it shows |
 |---|---|---|
 | Dashboard (डैशबोर्ड) | `#overview` (default; old `#home` / `#data` go here) | data in use for every report, with Upload new file; **Where the victims' money went** (victims → collectors → distributors → cash-out with amounts and timings, can still be frozen by layer, accounts checked, banks / linked network / circular routing); why accounts were flagged; suspects by bank; daily activity; victims found |
-| Trace Victim Funds (पीड़ित राशि का पता लगाएँ) | `#trace=ACCOUNT` | one scrolling report: select the victim; summary sentence and journey strip (collector, distributors, cash-out, can still be frozen); four insight cards; **How the money moved** (money-trail tree; pointing at a box shows received / passed on / still holds; timeline whose steps fit the trail, with Transfer by transfer; Replay); collector's first minutes and the trace record; accounts to freeze; transactions in the trail |
+| Trace Victim Funds (पीड़ित राशि का पता लगाएँ) | `#trace=ACCOUNT` | one scrolling report: select the victim; summary sentence and journey strip (collector, distributors, cash-out, can still be frozen); four insight cards; **How the money moved** (money-trail tree; pointing at a box shows received / passed on / still holds; timeline whose steps fit the trail, with Transfer by transfer; Replay); collector's first minutes (over time, or payment by payment) and the trace record; accounts to freeze; transactions in the trail |
 | Suspect Accounts (संदिग्ध खाते) | `#flagged?role=&bank=&reason=` | the flagged list with role badges and reasons in words, filters, account panel, CSV downloads |
-| Fraud Networks (धोखाधड़ी नेटवर्क) | `#ring` / `#ring=ACCOUNT` | start list of collectors; then **Money flow** (default: who paid into the account and where its money went, step by step; point at an account for received / passed on / kept; click to re-centre) or the optional 3D globe; layer filters, time slider, ZIP export |
+| Fraud Networks (धोखाधड़ी नेटवर्क) | `#ring` / `#ring=ACCOUNT` | start list of collectors; then **Trail** (default: one victim's money through the account, drawn like the trace tree; a picker for every victim whose money reached it; point at a box for received / passed on / still holds) or the **Globe** toggle for the whole network; layer filters, time slider, ZIP export |
 
 Things worth knowing:
 
@@ -694,8 +694,8 @@ test set; traces on generated data used samples of 15-100 victims.
    - open the diary and one bank's notice; Print / PDF.
 
    Mention the AI can be off with no loss.
-4. **Fraud Networks:** View fraud network from the trace. Show the money flow, point at an account for what it kept,
-   click one to follow its money, switch to Globe for the whole network, and export the ZIP (original rows, byte-identical).
+4. **Fraud Networks:** View fraud network from the trace. Show the trail through the collector, switch victims in the picker,
+   point at a box for what it kept, switch to Globe for the whole network, and export the ZIP (original rows, byte-identical).
 5. **Suspect Accounts:** filter by role or bank; open an account to show the reasons in words.
 6. **Robustness (if asked):** on the Dashboard, click Upload new file, drop `sample.csv` and show it analysed live in about 3 seconds.
 7. **Night mode (if asked):** the Day / Night switch in the masthead.

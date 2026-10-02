@@ -19,11 +19,13 @@ interface Line { key: string; from: string; to: string; t: number; slow: boolean
  * one row each and parents are centred on their children. Columns are steps away from the victim (Layer 1, 2, 3).
  * `cursor` (epoch s) shows only what had happened by then: later boxes and lines are faded, so playback builds the tree.
  */
-export function TrailTree({ trace, cursor, onSelect }: { trace: TraceResult; cursor: number; onSelect: (a: string) => void }) {
+export function TrailTree({ trace, cursor, onSelect, mark }: { trace: TraceResult; cursor: number; onSelect: (a: string) => void; mark?: string | null }) {
   const [hover, setHover] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<string>>(new Set())
   const [ref, width] = useWidth<HTMLDivElement>()
-  const W = Math.max(960, width)
+  // wide enough for every column with room for the arrows between them; narrower panels scroll sideways
+  const cols = 1 + Math.max(1, ...trace.nodes.map((n) => n.hop))
+  const W = Math.max(2 * PAD + cols * BW + (cols - 1) * 40, width)
   const L = useMemo(() => layout(trace, open, W), [trace, open, W])
   const hl = useMemo(() => (hover ? lineage(hover, L.lines) : null), [hover, L])
 
@@ -64,7 +66,7 @@ export function TrailTree({ trace, cursor, onSelect }: { trace: TraceResult; cur
             const later = n.at > cursor
             const act = () => (n.more ? setOpen((s) => new Set(s).add(n.more!.parent)) : onSelect(n.id))
             return (
-              <g key={n.id} className={`tbox${later ? ' later' : ''}${on ? ' hl' : ''}${n.more ? ' more' : ''}`}
+              <g key={n.id} className={`tbox${later ? ' later' : ''}${on ? ' hl' : ''}${n.more ? ' more' : ''}${mark && n.id === mark ? ' center' : ''}`}
                  transform={`translate(${n.x},${n.y})`} role="button" tabIndex={0} data-acct={n.more ? undefined : n.id} data-role={n.role}
                  aria-label={n.more ? `Show ${n.more.n} more accounts` : `${n.title}: ${n.sub}. Open account`}
                  onMouseEnter={() => !n.more && setHover(n.id)} onMouseLeave={() => setHover(null)}

@@ -48,7 +48,7 @@ Team guide (what everything does, how to run, test and demo it, results): [`docs
 | Trace | `abhedya/graph/trace.py` | per-account ledger replay: 3–15 min window, then ≥90 % amount match, then own-money-first; conserves every paisa |
 | Ring | `abhedya/graph/ring.py` | the connected syndicate around an account, with time filter and CSV/ZIP export |
 | Documents | `abhedya/evidence/`, `abhedya/docs/` | evidence self-check, output firewall (every figure must come from the evidence), facts fingerprint |
-| UI | `web/` | React: dashboard with dataset in use and upload, trace tree with time slider, network money flow and globe, documents |
+| UI | `web/` | React: dashboard with dataset in use and upload, trace tree with time slider, network trail view and globe, documents |
 
 ## Results
 

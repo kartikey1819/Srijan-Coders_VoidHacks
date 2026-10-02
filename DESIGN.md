@@ -80,7 +80,9 @@ The first screen shows the selector, the summary and the insight cards together,
      transfer to the next (the default for trails longer than two hours).
    - Solid lines mean money moved within the hour, dashed means later. More than six accounts paid by one account
      fold into "+N more", which expands on a click.
-5. **Collector account: first minutes after the victim's payment** (credit up, debits down, balance draining), next to
+5. **Collector account: first minutes after the victim's payment**, as **Over time** (credit up, debits down, balance
+   draining) or **Payment by payment** (a waterfall: each payment out starts where the last one ended, ending with what
+   is still in the account), next to
    the **Trace record**:
    - victim and payments followed;
    - how far, and the method in plain words (3-15 minute window, at least 90 % amount match, own money first);
@@ -124,11 +126,13 @@ A large dialog:
   divider is resizable and remembered), and CSV downloads.
 - **Fraud Networks:**
   - Without an account: a start list of collector accounts.
-  - With one: **Money flow** (default) shows only that account's money, left to right: who paid in (two steps back),
-    the account, then where its money went (three time-respecting steps on). Line thickness is the amount; columns
-    over seven fold into "+N more". Pointing at an account shows what it received in the network, passed on and
-    kept; a click puts it in the centre. **Globe** is the optional whole-network view (click a dot to light its
-    journey; double-click a link for its flow). Layer filters, the time slider and ZIP export work in both.
+  - With one: **Trail** (default) isolates one victim's money through that account instead of the whole network,
+    drawn exactly like the trace tree (Victim, Layer 1 Collector, Layer 2 Distributors, Layer 3 Cash-out; amount and
+    time after the victim paid on every box; solid within the hour, dashed later). The account is outlined. A picker
+    lists every victim whose money reached it (largest first). Pointing at a box shows what it received from that
+    victim, passed on and still holds; a click opens its journey beside the tree. **Globe** is the toggle for the
+    whole network (click a dot to light its journey; double-click a link for its flow). Layer filters, the time
+    slider and ZIP export work in both.
 
 ## Motion (Emil Kowalski's design-engineering rules)
 - Ease-out `cubic-bezier(0.23, 1, 0.32, 1)`; UI motion 160-200 ms; only `transform` and `opacity` animate.

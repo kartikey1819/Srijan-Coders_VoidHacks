@@ -588,3 +588,29 @@ body { font-size: var(--fs); line-height: 1.5; }
   .cf-flow { display: none; }
 }
 @media (max-width: 600px) { .diu { min-width: 0; width: 100%; } }
+
+/* Collector panel: "Payment by payment" waterfall */
+.pw-mode { align-self: flex-start; margin: 2px 0 4px; }
+.wf { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.wf li { display: grid; grid-template-columns: 50px minmax(0, 132px) minmax(0, 1fr) 128px; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.wf-t { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.wf-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wf-track { position: relative; height: 14px; border-radius: 3px; background: var(--grid); overflow: hidden; display: block; }
+.wf-track i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--l1); transform-origin: 0 50%;
+  animation: grow-x-once 420ms var(--ease) both; animation-delay: var(--d, 0ms); }
+.wf-in .wf-track i { background: var(--victim); }
+.wf-left .wf-track i { background: var(--ok); }
+.wf li > b { text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; line-height: 1.25; }
+.wf li > b small { font-weight: 400; font-size: 11.5px; color: var(--muted); }
+.wf-left { padding-top: 6px; border-top: 1px solid var(--rule); }
+.wf-left > b { color: var(--ok) !important; }
+@media (prefers-reduced-motion: reduce) { .wf-track i { animation: none !important; } }
+
+/* Fraud Networks: one victim's trail through the isolated account */
+.rt-scroll { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; }
+.ring-trail { display: flex; flex-direction: column; gap: 10px; }
+.rt-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+.rt-pick { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.rt-pick select { height: 34px; font-family: var(--mono); font-size: 12.5px; max-width: 100%; }
+.rt-sum { margin-left: auto; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rt-empty { padding: 24px 16px; }
