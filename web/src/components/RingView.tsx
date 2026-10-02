@@ -17,6 +17,7 @@ import { RingTrail, victimsReaching } from './RingTrail'
 import { Timeline } from './Timeline'
 import { BankIcon } from './BankIcon'
 import { DocsModal } from './DocsModal'
+import { pageZoom } from '../look'
 
 interface Props { seed: string; reasons: Record<string, string> }
 type View = 'flow' | 'trail' | 'globe'
@@ -53,7 +54,8 @@ export function RingView({ seed, reasons }: Props) {
       for (let p = el.parentElement; p; p = p.parentElement) scrolled += p.scrollTop
       const r = el.getBoundingClientRect()
       const tail = tl ? tl.getBoundingClientRect().bottom - r.bottom : 0  // gap + slider under the panels
-      setWorkH(Math.max(300, Math.floor(window.innerHeight - 14 - (r.top + scrolled) - tail)))
+      const z = pageZoom()                                              // measurements are screen px; heights are CSS px
+      setWorkH(Math.max(300, Math.floor((window.innerHeight - 14 - (r.top + scrolled * z) - tail) / z)))
     }
     fit()
     const ro = new ResizeObserver(fit)                                 // the slider can wrap onto two rows

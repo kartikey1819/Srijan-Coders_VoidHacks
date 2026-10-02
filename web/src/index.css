@@ -1,3 +1,9 @@
+/* Default density: the app renders at 90% (the look it was designed at), like browser zoom 90%. Phones stay at 100%.
+   Viewport units go through --vh / --vw so 100vh still means the whole window under the zoom. */
+:root { --z: 0.9; --vh: calc(1vh / var(--z)); --vw: calc(1vw / var(--z)); }
+html { zoom: var(--z); }
+@media (max-width: 760px) { :root { --z: 1; } }
+
 /* Abhedya-Chakra: police workstation look. Government frame (navy sidebar, masthead, tricolour strip) with the quiet,
    ruled Official style for the work itself. One token set per theme: Day (light, default) and Night (dark).
    Layer colours are colour-blind checked with the dataviz validator on each theme's own surface. */
@@ -62,7 +68,7 @@ h1 { font-size: var(--fs-h1); } h2 { font-size: calc(var(--fs) * 1.15); } h3 { f
 a { color: var(--focus); text-underline-offset: 2px; }
 
 /* ---------- shell ---------- */
-.app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100vh; }
+.app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: calc(100 * var(--vh)); }
 main { overflow: auto; min-height: 0; }
 
 /* ---------- controls ---------- */
@@ -151,7 +157,7 @@ td.row-acts, .row-acts { text-align: right; white-space: nowrap; }
 .timeline .clock b { display: block; font-size: var(--fs); }
 
 /* ---------- drawer ---------- */
-.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(500px, 100vw); z-index: 40; background: var(--sheet);
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(500px, calc(100 * var(--vw))); z-index: 40; background: var(--sheet);
   border-left: 1px solid var(--rule-2); box-shadow: var(--shadow); display: flex; flex-direction: column;
   animation: slide var(--dur) var(--ease); }
 @keyframes slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -169,7 +175,7 @@ details > summary { cursor: pointer; font-weight: 650; padding: 6px 0; }
 
 /* ---------- dialog ---------- */
 .modal { position: fixed; inset: 0; z-index: 50; background: rgba(5, 8, 14, 0.55); display: flex; align-items: flex-start; justify-content: center;
-  padding: 5vh 16px; overflow-y: auto; }
+  padding: calc(5 * var(--vh)) 16px; overflow-y: auto; }
 .modal-body { background: var(--sheet); border-radius: var(--radius); width: 680px; max-width: 100%; box-shadow: var(--shadow); }
 .modal-body > header { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--rule); }
 .modal-body .content { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
@@ -209,7 +215,7 @@ details > summary { cursor: pointer; font-weight: 650; padding: 6px 0; }
 .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 14px; }
 .side { overflow: auto; min-height: 0; }
 
-@media (max-width: 1100px) {
+@media (max-width: 990px) {
   .investigate { grid-template-columns: minmax(0, 1fr); height: auto; }
   .annex { grid-template-rows: 420px 220px; }
   .ringview { grid-template-columns: minmax(0, 1fr); height: auto; }

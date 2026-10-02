@@ -56,3 +56,9 @@ export function useThemeTick(): number {
 export function prefersReducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
+
+/** The page's CSS zoom (the default density, 0.9 on laptops). Screen measurements (getBoundingClientRect, clientX,
+ *  innerHeight) are in screen pixels; divide by this before using them as CSS sizes or offsets. */
+export function pageZoom(): number {
+  return parseFloat(getComputedStyle(document.documentElement).zoom) || 1
+}

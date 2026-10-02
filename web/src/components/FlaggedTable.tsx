@@ -70,7 +70,7 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
         <select value={reason ?? ''} onChange={(e) => setFilter('reason', e.target.value)} aria-label="Reason">
           <option value="">Any reason</option>{codes.map((c) => <option key={c} value={c}>{REASON_SHORT[c] ?? c}</option>)}
         </select>
-        <input type="search" placeholder="Find an account number" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find an account number" />
+        <input type="search" placeholder="Find account" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find an account number" />
         <span className="small muted">{shown.length.toLocaleString('en-IN')} of {rows.length.toLocaleString('en-IN')} shown</span>
         {(role || bank || reason) && <button className="btn ghost sm" onClick={() => go({ name: 'flagged', role: null, bank: null, reason: null })}>Clear filters</button>}
       </div>

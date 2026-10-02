@@ -485,3 +485,21 @@ def test_freeze_notices_are_assigned_to_banks_and_export_in_a_batch(page, base):
     names = zipfile.ZipFile(dl.value.path()).namelist()
     assert "README.txt" in names and any(n.startswith("freeze_notice_ICIC_") for n in names)
     assert len([n for n in names if n.startswith("freeze_notice_")]) == picks.count() - 1
+
+
+def test_laptop_at_100_percent_first_views_fit(page, base):
+    """Expected, at a 1920x1080 laptop with 125% Windows scaling (1536 x 685 CSS px of page): the app renders at its 90%
+    default density; the Dashboard's money chain, freeze figures and recommended actions fit the first view; the
+    network's money flow fits its panel; no page scrolls sideways."""
+    page.set_viewport_size({"width": 1536, "height": 685})
+    page.goto(f"{base}/#overview")
+    acts = page.locator(".cf-acts")
+    acts.wait_for(timeout=30_000)
+    assert page.evaluate("getComputedStyle(document.documentElement).zoom") == "0.9"
+    box = acts.bounding_box()
+    assert box["y"] + box["height"] <= 685
+    assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")
+    page.goto(f"{base}/#ring={L1}")
+    page.locator(".netflow .tbox.center").wait_for(timeout=30_000)
+    assert page.evaluate("(() => { const e = document.querySelector('.netflow'); return e.scrollWidth <= e.clientWidth + 1 && e.scrollHeight <= e.clientHeight + 1 })()")
+    assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")

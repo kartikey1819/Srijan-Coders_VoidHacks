@@ -7,6 +7,7 @@ import { toEpoch } from '../format'
 import { cssVar, prefersReducedMotion, useThemeName } from '../look'
 import type { Journey } from '../ringJourney'
 import type { GraphEdge, RingResult } from '../types'
+import { pageZoom } from '../look'
 
 interface GNode { id: string; role: string; seed: boolean; first: number; x?: number; y?: number; z?: number }
 interface GLink { source: string | GNode; target: string | GNode; key: string; t: number; edge: GraphEdge }
@@ -253,7 +254,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
     tip.textContent = ''
     const b = document.createElement('b'); b.textContent = n.id; tip.appendChild(b)
     tip.appendChild(document.createTextNode(` · ${ROLE_NAME[n.role] ?? n.role} · ${k} link${k === 1 ? '' : 's'} · click to follow`))
-    tip.style.transform = `translate(${Math.min((ev?.clientX ?? 0) - r.left + 14, r.width - 260)}px, ${(ev?.clientY ?? 0) - r.top + 14}px)`
+    const z = pageZoom()                                                // screen px -> CSS px under the page zoom
+    tip.style.transform = `translate(${Math.min(((ev?.clientX ?? 0) - r.left) / z + 14, r.width / z - 260)}px, ${((ev?.clientY ?? 0) - r.top) / z + 14}px)`
     tip.style.opacity = '1'
     el.style.cursor = 'pointer'
   }, [data, cutoff])

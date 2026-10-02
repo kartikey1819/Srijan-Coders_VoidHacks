@@ -42,7 +42,13 @@ One token set per theme on `<html data-theme>` (`light` default, `dark`), rememb
   - Night: worst CVD ΔE 18.6, normal vision 25.6.
 - **Fonts:** Noto Sans and Noto Sans Devanagari for text, IBM Plex Mono for account numbers and IDs. They are
   self-hosted from npm (`@fontsource/*`), so no font request leaves the machine.
-- **Sizes:** body text 15 px; buttons and fields at least 38-40 px high; sidebar items 44 px.
+- **Sizes:** body text 15 px; buttons and fields at least 38-40 px high; sidebar items 44 px, all before the default
+  density below.
+- **Default density:** the whole app renders at 90% (`html { zoom: 0.9 }`, `--z` in `index.css`), the look it was
+  designed at; phones (760 px and below) stay at 100%. Viewport units go through `--vh` / `--vw`, breakpoints are
+  scaled by 0.9, and code that turns screen measurements into CSS sizes divides by `pageZoom()` (`look.ts`). Checked
+  at 1536 x 685 CSS px (a 1920 x 1080 laptop at 125% scaling, Chrome 100%): the Dashboard's first view and the
+  network's money flow fit, nothing scrolls sideways.
 
 ## Writing for officers
 - **Roles in words:** "Collector (Layer 1)", "Distributor (Layer 2)", "Cash-out (Layer 3)", "Victim".

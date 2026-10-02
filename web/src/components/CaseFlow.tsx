@@ -204,18 +204,17 @@ function Actions({ f, layers, banks, onOpen }: { f: FlowSummary; layers: FlowLay
       <ol className="cf-acts">
         {top && top.held_paise > 0 && (
           <li><b>Freeze {inrShort(top.held_paise)} in {n(top.accounts)} {NAME[top.role]} accounts first</b>
-            <span>the largest amount still in place</span>
-            <button className="btn ghost sm" onClick={() => onOpen(top.role)}>Open these accounts</button></li>
+            <span><button className="btn ghost sm" onClick={() => onOpen(top.role)}>Open these accounts</button> · largest amount in place</span></li>
         )}
         {banks.length > 0 && (
           <li><b>Send debit-hold notices to {banks.length} bank{banks.length === 1 ? '' : 's'}</b>
-            <span>{banks[0].label} holds the most suspect accounts ({n(banks[0].count)})</span>
-            <a className="btn ghost sm" href={`#flagged?bank=${banks[0].key}`}>Open {banks[0].key} accounts</a></li>
+            <span><a className="btn ghost sm" href={`#flagged?bank=${banks[0].key}`}>Open {banks[0].key} accounts</a> · most suspects ({n(banks[0].count)})</span></li>
         )}
         {f.club_victims > 0 && (
           <li><b>Club {n(f.club_victims)} complaints that share a collector</b>
-            <span>{n(f.club_collectors)} collectors were paid by two or more victims{group.length > 1 ? `; ${f.club_top_collector} by ${group.length}` : ''}</span>
-            {group.length > 1 && <a className="btn ghost sm" href={`#traceall=${group.join(',')}`}>Trace these {group.length} together</a>}</li>
+            <span>{group.length > 1
+              ? <><a className="btn ghost sm" href={`#traceall=${group.join(',')}`}>Trace these {group.length} together</a> · paid {f.club_top_collector}</>
+              : <>{n(f.club_collectors)} collectors paid by 2+ victims</>}</span></li>
         )}
       </ol>
     </>
