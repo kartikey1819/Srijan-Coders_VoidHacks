@@ -691,7 +691,7 @@ test set; traces on generated data used samples of 15-100 victims.
    - Walk the four insight cards, then **How the money moved**: press Replay, or Play on the timeline, to show the money
      moving transfer by transfer. Point at a box to follow its path, and click it for the account.
    - Show the collector's first 15 minutes and the trace record (the method in plain words).
-   - If the judges give several IDs: Trace Victim Funds, **Several victims**, paste them all, **Trace all**. Show the
+   - If the judges give several IDs: Trace Victim Funds, **Several victims**, paste them all (or **Paste 5 random victims** for a demo), **Trace all**. Show the
      columns side by side, the accounts they share ("these complaints may be clubbed") and the combined CSV.
 3. **Prepare FIR, case diary and freeze notices** (drafts for the officer's verification):
    - fill FIR / IO / rank;

@@ -113,7 +113,9 @@ A large dialog:
 
 ## Trace several victims (`#traceall=A,B,C`)
 For the blind test: paste the complainants' account numbers (any separator, up to 20) and Trace all. Reached from
-Trace Victim Funds ("Several victims") and the Dashboard's third recommended action.
+Trace Victim Funds ("Several victims") and the Dashboard's third recommended action. For a demonstration,
+**Paste 5 random victims** fills the box with five identified victims picked at random (a different five each
+click) and **Paste the 5 largest-loss victims** with the top five; Trace all stays a separate click.
 - **Totals:** victims traced (each in milliseconds), total taken, can still be frozen, mule accounts, accounts
   shared by two or more victims.
 - **These complaints may be clubbed:** groups of complainants joined by shared mule accounts, and each shared

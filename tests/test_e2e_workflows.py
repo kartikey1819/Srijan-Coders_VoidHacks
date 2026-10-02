@@ -420,6 +420,30 @@ def test_several_victims_traced_together_with_shared_accounts(page, base):
     page.get_by_role("dialog", name="Case documents").wait_for()
 
 
+def test_paste_five_random_victims_for_a_demo(page, base):
+    """Expected: one click puts five different identified victims in the box (as if pasted), without tracing; a second
+    click gives another five; Trace all then traces the five side by side."""
+    page.goto(f"{base}/#traceall")
+    box = page.get_by_label("Victim account numbers")
+    page.get_by_role("button", name="Paste 5 random victims").click()
+    page.get_by_text("5 account numbers found").wait_for()
+    first = box.input_value().split()
+    assert len(set(first)) == 5 and page.locator(".vcol").count() == 0          # pasted, not traced yet
+    import json
+    import urllib.request
+    known = {v["account"] for v in json.load(urllib.request.urlopen(f"{base}/api/victims?limit=1000"))}
+    assert set(first) <= known
+    for _ in range(5):                                                          # a different five (300 to pick from)
+        page.get_by_role("button", name="Paste 5 random victims").click()
+        page.wait_for_function("document.querySelector('textarea').value.trim().split(/\\s+/).length === 5")
+        if set(box.input_value().split()) != set(first):
+            break
+    assert set(box.input_value().split()) != set(first)
+    page.get_by_role("button", name="Trace all").click()
+    page.locator(".vcol").nth(4).wait_for(timeout=30_000)
+    assert page.locator(".vcol").count() == 5
+
+
 def test_fir_draft_and_complete_case_file(page, base):
     """Expected: the documents dialog adds an FIR draft (Section 173 BNSS) tab and a complete case file download."""
     _generate(page, base, use_llm=False)

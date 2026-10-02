@@ -1,4 +1,4 @@
-import { ArrowSquareOut, DownloadSimple, FileText, Path as PathIcon, SpinnerGap, UsersThree } from '@phosphor-icons/react'
+import { ArrowSquareOut, DownloadSimple, FileText, Path as PathIcon, Shuffle, SpinnerGap, UsersThree } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { inr, inrShort, toEpoch } from '../format'
@@ -18,6 +18,12 @@ interface Shared { account: string; bank: string; roles: Set<string>; victims: s
 
 /** Account numbers found in pasted text (any separator), upper-cased, without repeats, at most MAX. */
 export const parseAccounts = (text: string) => [...new Set(text.toUpperCase().match(ACCT) ?? [])].slice(0, MAX)
+/** n different items in random order (Fisher-Yates on a copy). */
+const pickRandom = <T,>(xs: T[], n: number) => {
+  const a = [...xs]
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] }
+  return a.slice(0, n)
+}
 const heldOf = (t: TraceResult) => t.nodes.filter((n) => t.freeze_candidates.includes(n.account)).reduce((s, n) => s + n.held_paise, 0)
 
 /** Several complainants at once: every victim traced in one go, their trails side by side (collectors, distributors,
@@ -28,6 +34,7 @@ export function MultiTrace({ accounts }: { accounts: string[] }) {
   const [busy, setBusy] = useState(false)
   const [wallMs, setWallMs] = useState(0)
   const [docsFor, setDocsFor] = useState<string | null>(null)
+  const [pool, setPool] = useState<string[]>([])           // every identified victim, loaded on first use
   const key = accounts.join(',')
 
   useEffect(() => {
@@ -45,7 +52,13 @@ export function MultiTrace({ accounts }: { accounts: string[] }) {
 
   const parsed = parseAccounts(text)
   const run = () => { if (parsed.length) go(`#traceall=${parsed.join(',')}`) }
-  const useTop = () => api.victims(5).then((v) => go(`#traceall=${v.map((x) => x.account).join(',')}`)).catch(() => {})
+  // demo helpers: put five account numbers in the box, as if pasted; Trace all stays the officer's click
+  const useTop = () => api.victims(5).then((v) => setText(v.map((x) => x.account).join('\n'))).catch(() => {})
+  const useRandom = async () => {
+    const all = pool.length ? pool : (await api.victims(1000).catch(() => [])).map((x) => x.account)
+    if (!pool.length) setPool(all)
+    setText(pickRandom(all, 5).join('\n'))
+  }
 
   const ok = useMemo(() => (results ?? []).filter((r): r is Result & { trace: TraceResult } => !!r.trace), [results])
   const { shared, groups, mules } = useMemo(() => clubbing(ok.map((r) => r.trace)), [ok])
@@ -78,13 +91,15 @@ export function MultiTrace({ accounts }: { accounts: string[] }) {
       <Panel className="pick-panel">
         <form className="multi-pick" onSubmit={(e) => { e.preventDefault(); run() }}>
           <label className="gfield"><span>Victim account numbers (one per line, or separated by commas or spaces)</span>
-            <textarea className="mono" rows={3} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false}
+            <textarea className="mono" rows={5} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false}
                       placeholder={'e.g.\nSBIN10000294\nKKBK10000131'} aria-label="Victim account numbers" /></label>
           <div className="multi-go">
             <span className="small muted">{parsed.length} account number{parsed.length === 1 ? '' : 's'} found{parsed.length === MAX ? ` (at most ${MAX})` : ''}</span>
             <button className="btn primary big" disabled={!parsed.length || busy}>
               {busy ? <SpinnerGap size={16} className="spin" /> : <UsersThree size={16} />} Trace all</button>
-            <button type="button" className="btn ghost sm" onClick={useTop}>Use the 5 largest-loss victims</button>
+            <button type="button" className="btn sm" onClick={useRandom} title="Five victims picked at random from the identified victims; a different five each click">
+              <Shuffle size={14} /> Paste 5 random victims</button>
+            <button type="button" className="btn ghost sm" onClick={useTop}>Paste the 5 largest-loss victims</button>
           </div>
         </form>
       </Panel>
