@@ -1,4 +1,4 @@
-import { Bank, Clock, Globe, Lightning, ShieldCheck, Snowflake, TreeStructure, User, Users, Wallet } from '@phosphor-icons/react'
+import { Bank, Clock, Globe, Lightning, Robot, ShieldCheck, Snowflake, TreeStructure, User, Users, Wallet } from '@phosphor-icons/react'
 import { useEffect, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { inr, inrShort, toEpoch } from '../../format'
 import { prefersReducedMotion } from '../../look'
@@ -128,22 +128,30 @@ export function Donut({ pct, color, center, sub, size = 96 }: { pct: number; col
   )
 }
 
-/** Victim, then 1 → n → m dots per layer. */
-function FanMini({ counts }: { counts: Record<'L1' | 'L2' | 'L3', number> }) {
+/** Victim, then 1 → n → m dots per layer across the card's width, each column labelled underneath with its count.
+ *  A column draws at most seven dots; the label carries the real number. */
+const FAN_LABEL: Record<string, [string, string]> = { VICTIM: ['victim', 'victims'], L1: ['collector', 'collectors'], L2: ['distributor', 'distributors'], L3: ['cash-out', 'cash-out'] }
+function SpreadFan({ counts }: { counts: Record<'L1' | 'L2' | 'L3', number> }) {
   const cols = ([['VICTIM', 1], ['L1', counts.L1], ['L2', counts.L2], ['L3', counts.L3]] as [string, number][]).filter(([, n]) => n > 0)
-  const W = 150, H = 92, show = (n: number) => Math.min(n, 8)
-  const pts = cols.map(([k, n], ci) => Array.from({ length: show(n) }, (_, i) => ({
-    k, x: 12 + (ci * (W - 24)) / Math.max(1, cols.length - 1), y: H / 2 + (i - (show(n) - 1) / 2) * 10,
-  })))
+  const W = 320, H = 84, step = 10, show = (n: number) => Math.min(n, 7)
+  const cx = (ci: number) => ((ci + 0.5) * W) / cols.length
+  const pts = cols.map(([k, n], ci) => Array.from({ length: show(n) }, (_, i) => ({ k, x: cx(ci), y: H / 2 + (i - (show(n) - 1) / 2) * step })))
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" className="fan">
-      {pts.slice(1).map((col, ci) => col.map((p, i) => {
-        const prev = pts[ci], q = prev[Math.min(prev.length - 1, Math.floor((i * prev.length) / col.length))]
-        return <path key={`${ci}-${i}`} className="fan-l" pathLength={1} style={{ stroke: roleVar(p.k), ...delay(ci, 160) }}
-                     d={`M${q.x},${q.y} C${(q.x + p.x) / 2},${q.y} ${(q.x + p.x) / 2},${p.y} ${p.x},${p.y}`} fill="none" strokeWidth="1.4" />
-      }))}
-      {pts.flat().map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" style={{ fill: roleVar(p.k) }} />)}
-    </svg>
+    <figure className="spread" aria-label={cols.map(([k, n]) => `${n} ${FAN_LABEL[k][n === 1 ? 0 : 1]}`).join(', ')}>
+      <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true" className="fan">
+        {pts.slice(1).map((col, ci) => col.map((p, i) => {
+          const prev = pts[ci], q = prev[Math.min(prev.length - 1, Math.floor((i * prev.length) / col.length))]
+          return <path key={`${ci}-${i}`} className="fan-l" pathLength={1} style={{ stroke: roleVar(p.k), ...delay(ci, 160) }}
+                       d={`M${q.x},${q.y} C${(q.x + p.x) / 2},${q.y} ${(q.x + p.x) / 2},${p.y} ${p.x},${p.y}`} fill="none" strokeWidth="1.4" />
+        }))}
+        {pts.flat().map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4.5" style={{ fill: roleVar(p.k), stroke: 'var(--sheet)', strokeWidth: 1.5 }} />)}
+      </svg>
+      <figcaption className="spread-cols" style={{ gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))` }}>
+        {cols.map(([k, n]) => (
+          <span key={k}><b><i style={{ background: roleVar(k) }} />{n.toLocaleString('en-IN')}</b><em>{FAN_LABEL[k][n === 1 ? 0 : 1]}</em></span>
+        ))}
+      </figcaption>
+    </figure>
   )
 }
 
@@ -160,12 +168,17 @@ function Card({ icon: Icon, color, title, children, foot, i }: {
   )
 }
 
-function Meter({ label, n, of, color, i }: { label: string; n: number; of: number; color: string; i: number }) {
+/** One warning sign: what it is, how many transfers show it and their share, and a bar in the warning colour.
+ *  A sign that never occurs says so in words instead of drawing an empty bar. */
+function Sign({ icon: Icon, label, n, of, i }: { icon: ComponentType<{ size?: number; weight?: 'regular' | 'fill' }>; label: string; n: number; of: number; i: number }) {
+  const pct = of ? (100 * n) / of : 0
   return (
-    <div className="mtr">
-      <div className="mt-row"><span>{label}</span><b style={{ color }}>{n}<small> of {of}</small></b></div>
-      <span className="mt-track"><i style={{ transform: `scaleX(${of ? n / of : 0})`, background: color, ...delay(i, 110) }} /></span>
-    </div>
+    <li className={`sign${n ? '' : ' none'}`}>
+      <span className="sg-ic"><Icon size={15} weight="fill" /></span>
+      <span className="sg-label">{label}</span>
+      <span className="sg-n">{n ? <><b>{n.toLocaleString('en-IN')}</b><small>{pct < 1 ? '<1' : Math.round(pct)}%</small></> : <small>none</small>}</span>
+      {n > 0 && <span className="sg-track"><i style={{ transform: `scaleX(${Math.max(0.015, pct / 100)})`, ...delay(i, 110) }} /></span>}
+    </li>
   )
 }
 
@@ -181,6 +194,8 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
   const banks = [...byBank.entries()].sort((a, b) => b[1] - a[1])
   const topBank = Math.max(1, banks[0]?.[1] ?? 1)
   const moved = Math.max(0, t.loss_paise - v.freezeTotal)
+  const mulesByBank = [...v.mules.reduce((m, n) => m.set(n.bank_prefix, (m.get(n.bank_prefix) ?? 0) + 1), new Map<string, number>())]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
   return (
     <div className="insights">
       <Card i={0} icon={Lightning} color="var(--l1)" title="How fast the money moved"
@@ -198,32 +213,26 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
         </> : <p className="muted">No collector account passed money on.</p>}
       </Card>
       <Card i={1} icon={TreeStructure} color="var(--l2)" title="How widely it was spread"
-            foot={<span className="bchips">{v.banks.map((b) => <span key={b}>{b}</span>)}</span>}>
-        <div className="ig-row">
-          <FanMini counts={v.counts} />
-          <div>
-            <p className="ig-big" style={{ color: 'var(--l2)' }}><CountUp value={v.mules.length} format={(n) => `${Math.round(n)}`} /> accounts
-              <small>in {v.banks.length} bank{v.banks.length === 1 ? '' : 's'}</small></p>
-            <ul className="ig-layers">
-              {(['L1', 'L2', 'L3'] as const).filter((k) => v.counts[k]).map((k) => (
-                <li key={k}><b style={{ background: roleVar(k) }} />{v.counts[k]} {ROLE_PLURAL[k][v.counts[k] === 1 ? 0 : 1]}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+            foot={<span className="bchips" aria-label="Mule accounts by bank">
+              {mulesByBank.slice(0, mulesByBank.length > 8 ? 7 : 8).map(([b, n]) => <span key={b}>{b} <b>{n}</b></span>)}
+              {mulesByBank.length > 8 && <span className="more" title={mulesByBank.slice(7).map(([b, n]) => `${b} ${n}`).join(', ')}>+{mulesByBank.length - 7} more</span>}
+            </span>}>
+        <p className="ig-big ig-inline" style={{ color: 'var(--l2)' }}><CountUp value={v.mules.length} format={(n) => `${Math.round(n)}`} />
+          <small>mule account{v.mules.length === 1 ? '' : 's'}<br />across {v.banks.length} bank{v.banks.length === 1 ? '' : 's'}</small></p>
+        <SpreadFan counts={v.counts} />
       </Card>
       <Card i={2} icon={Globe} color="var(--held)" title="Signs of an organised operation"
-            foot={signs?.ranges.length ? `Foreign proxy IP ranges seen: ${signs.ranges.join(', ')}` : undefined}>
-        {signs ? (
-          <div className="ig-row">
-            <Donut pct={signs.automatedPct} color="var(--held)" center={`${signs.automatedPct}%`} sub="automated" />
-            <div className="meters">
-              <Meter i={0} label="From foreign proxy IPs" n={signs.proxy} of={signs.total} color="var(--held)" />
-              <Meter i={1} label="By scripts or emulators" n={signs.script} of={signs.total} color="var(--l2)" />
-              <Meter i={2} label="Cashed out to wallets or crypto" n={signs.cashout} of={signs.total} color="var(--l3)" />
-            </div>
-          </div>
-        ) : <p className="muted">Reading the transfers…</p>}
+            foot={signs?.ranges.length ? <>Foreign proxy ranges: <span className="mono">{signs.ranges.join(', ')}</span></>
+              : signs ? `Counted over the ${signs.total.toLocaleString('en-IN')} transfers after the victim's payment.` : undefined}>
+        {signs ? <>
+          <p className="ig-big ig-inline" style={{ color: 'var(--held)' }}><CountUp value={signs.automatedPct} format={(n) => `${Math.round(n)}%`} />
+            <small>of {signs.total.toLocaleString('en-IN')} onward transfers<br />sent by a script or a foreign proxy</small></p>
+          <ul className="signs">
+            <Sign i={0} icon={Robot} label="Scripts or emulators" n={signs.script} of={signs.total} />
+            <Sign i={1} icon={Globe} label="Foreign proxy IPs" n={signs.proxy} of={signs.total} />
+            <Sign i={2} icon={Wallet} label="Cashed out to wallets or crypto" n={signs.cashout} of={signs.total} />
+          </ul>
+        </> : <p className="muted">Reading the transfers…</p>}
       </Card>
       <Card i={3} icon={ShieldCheck} color="var(--ok)" title="Amount that can be recovered"
             foot={<>Already withdrawn or moved on: <b>{inr(moved)}</b></>}>
