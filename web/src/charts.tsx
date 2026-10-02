@@ -183,26 +183,50 @@ export function LayerDonut({ rows, onPick, title, sub, source }: {
   )
 }
 
-/** Horizontal bars, one series: one colour. Each label is a link through to the filtered list. */
-export function BarList({ title, sub, source, rows, color = 'var(--ink-2)', colorOf, onPick, max = 10, format }: {
-  title: ReactNode; sub?: ReactNode; source?: string; rows: { key: string; label: string; count: number }[]
+/** Horizontal bars, one series: one colour. Each row is a single button (whole-row hit target, keyboard reachable):
+ *  hover or focus highlights it and dims the rest, the detail line explains it, a click opens the filtered list.
+ *  The value column carries the share of `total` when given, so no number is colour-only or tooltip-only. */
+export function BarList({ title, sub, source, rows, color = 'var(--ink-2)', colorOf, onPick, max = 10, format, total, unit = 'accounts', pickHint = 'View accounts' }: {
+  title: ReactNode; sub?: ReactNode; source?: string; rows: { key: string; label: string; count: number; detail?: string }[]
   color?: string; colorOf?: (key: string) => string; onPick?: (key: string) => void; max?: number; format?: (n: number) => string
+  total?: number; unit?: string; pickHint?: string
 }) {
-  const shown = rows.slice(0, max)
+  const [all, setAll] = useState(false)
+  const [hot, setHot] = useState<string | null>(null)
+  const shown = all ? rows : rows.slice(0, max)
   const top = Math.max(1, ...shown.map((r) => r.count))
+  const cur = rows.find((r) => r.key === hot)
+  const fmt = (n: number) => (format ? format(n) : n.toLocaleString('en-IN'))
+  const pct = (n: number) => (total ? `${((100 * n) / total).toFixed(n * 1000 >= total ? 0 : 1)}%` : '')
   return (
     <Chart title={title} sub={sub} source={source}>
-      <div className="barlist">
-        {shown.map((r, i) => (
-          <div key={r.key} style={{ display: 'contents' }}>
-            {onPick ? <button className="lbl" onClick={() => onPick(r.key)} title={r.label}>{r.label}</button>
-                    : <span title={r.label}>{r.label}</span>}
-            <div><div className="bar grow-x" style={{ width: `${(100 * r.count) / top}%`, background: colorOf?.(r.key) ?? color, animationDelay: `${Math.min(i, 10) * 30}ms` }} /></div>
-            <span className="val">{format ? format(r.count) : r.count.toLocaleString('en-IN')}</span>
-          </div>
-        ))}
+      <ul className={`bars${hot ? ' has-hot' : ''}`} onPointerLeave={() => setHot(null)}>
+        {shown.map((r, i) => {
+          const body = (
+            <>
+              <span className="b-label" title={r.detail ?? r.label}>{r.label}</span>
+              <span className="b-track"><span className="b-bar grow-x" style={{ width: `${(100 * r.count) / top}%`, background: colorOf?.(r.key) ?? color, animationDelay: `${Math.min(i, 10) * 30}ms` }} /></span>
+              <span className="b-val">{fmt(r.count)}</span>
+              {total ? <span className="b-pct">{pct(r.count)}</span> : null}
+            </>
+          )
+          return (
+            <li key={r.key} className={hot === r.key ? 'hot' : ''} onPointerEnter={() => setHot(r.key)}>
+              {onPick
+                ? <button className="b-row" onClick={() => onPick(r.key)} onFocus={() => setHot(r.key)} onBlur={() => setHot(null)}
+                          aria-label={`${r.detail ?? r.label}: ${fmt(r.count)} ${unit}${total ? `, ${pct(r.count)}` : ''}. ${pickHint}`}>{body}</button>
+                : <div className="b-row">{body}</div>}
+            </li>
+          )
+        })}
+      </ul>
+      <div className="b-foot">
+        <span className="b-detail" aria-live="polite">
+          {cur ? <><b>{fmt(cur.count)}</b> {unit}{total ? ` (${pct(cur.count)})` : ''}: {cur.detail ?? cur.label}{onPick ? <span className="muted"> · click to {pickHint.toLowerCase()}</span> : null}</>
+               : onPick ? <span className="muted">Hover a row for details; click to {pickHint.toLowerCase()}.</span> : null}
+        </span>
+        {rows.length > max && <button className="btn ghost sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${rows.length}`}</button>}
       </div>
-      {rows.length > max && <div className="src">{rows.length - max} more not shown</div>}
     </Chart>
   )
 }

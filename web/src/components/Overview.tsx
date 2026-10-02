@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { BarList, DailyColumns, LayerDonut, ScoreSpread } from '../charts'
 import { useCopy } from '../copy'
-import { inr } from '../format'
+import { inr, REASON_SHORT } from '../format'
 import { go } from '../route'
 import type { DQSummary, Overview as OverviewData, VictimCandidate } from '../types'
+
+/** Plain names for the reason codes on the Overview (the full sentence is the row's detail). */
+const REASON_NAME: Record<string, string> = {
+  LINKED_TO_FLAGGED: 'Linked to other suspects', FOREIGN_PROXY_IP_OUT: 'Foreign proxy IP', SCRIPT_DEVICE_OUT: 'Script / emulator device',
+  TERM_OUT: 'Sent to wallet or crypto', SINK: 'Keeps the money', TERM_IN: 'Received from wallet or crypto',
+  TERM_IN_FROM_SCRIPT_OR_FOREIGN: 'Cash-out from script or proxy', PT_STRICT: 'Passed on in 3-15 min', PT_LENIENT: 'Passed on within 15 min',
+  FANOUT_EPISODES: 'Split to 3-7 accounts', FANIN_BURST: 'Many senders at once', FANIN_DRAIN: 'Collected then drained', CYCLE: 'Repeated ring',
+}
 
 /** The case-load picture: what the engine found in this file, every chart a way into the evidence. */
 export function Overview({ stats }: { stats: DQSummary | null }) {
@@ -40,12 +48,16 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
                       onPick={(k) => go({ name: 'flagged', role: k === 'none' ? null : k, bank: null, reason: null })} />
         </section>
         <section className="sheet sheet-body w6">
-          <BarList title="Why accounts were flagged" sub="How many flagged accounts show each signal." source="risk reason codes"
-                   rows={o.flagged_reasons} max={8} onPick={(k) => go({ name: 'flagged', role: null, bank: null, reason: k })} />
+          <BarList title="Why accounts were flagged" sub="Signals behind the flags. One account usually shows several."
+                   source="risk reason codes" total={flagged} max={6}
+                   rows={o.flagged_reasons.map((r) => ({ key: r.key, label: REASON_NAME[r.key] ?? REASON_SHORT[r.key] ?? r.key, detail: r.label, count: r.count }))}
+                   onPick={(k) => go({ name: 'flagged', role: null, bank: null, reason: k })} />
         </section>
         <section className="sheet sheet-body w6">
           <BarList title="Flagged accounts by bank" sub="Each bank receives its own freeze notice." source="account prefix"
-                   rows={o.flagged_by_bank} onPick={(k) => go({ name: 'flagged', role: null, bank: k, reason: null })} />
+                   total={flagged} max={6} pickHint="View this bank's accounts"
+                   rows={o.flagged_by_bank.map((r) => ({ key: r.key, label: r.label, detail: `${r.label} (${r.key}), one freeze notice to its nodal officer`, count: r.count }))}
+                   onPick={(k) => go({ name: 'flagged', role: null, bank: k, reason: null })} />
         </section>
         <section className="sheet sheet-body w6">
           <DailyColumns title="Transfers touching flagged accounts, per day" sub="Across the 15-day window of the file (day of month)."

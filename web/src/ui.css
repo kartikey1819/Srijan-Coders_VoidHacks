@@ -221,3 +221,22 @@ h1, h2, h3 { font-family: var(--display); font-weight: var(--disp-weight); lette
 .reg-group .tbl td, .reg-group .tbl th { padding-left: 18px; }
 .home { gap: 32px; }
 @media (max-width: 1100px) { .page { padding: 16px; } .inv { padding: 12px; } }
+
+/* ---------- interactive bar lists ---------- */
+.bars { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.bars .b-row { width: 100%; display: grid; grid-template-columns: minmax(120px, 34%) 1fr 64px 44px; align-items: center; gap: 12px;
+  padding: 7px 10px; margin: 0 -10px; border: 0; border-radius: var(--radius); background: transparent; color: var(--ink);
+  font: inherit; font-size: var(--fs-sm); text-align: left; transition: background-color 160ms ease; box-sizing: content-box; }
+button.b-row { cursor: pointer; }
+.bars li.hot .b-row { background: var(--wash); }
+.bars .b-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bars .b-track { position: relative; height: 12px; }
+.bars .b-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; transition: opacity 160ms ease, filter 160ms ease; }
+.bars.has-hot li:not(.hot) .b-bar { opacity: 0.35; }
+.bars li.hot .b-bar { filter: saturate(1.2); }
+.bars .b-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.bars .b-pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.bars li.hot .b-label { font-weight: 600; }
+.b-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 30px; margin-top: 6px; }
+.b-detail { font-size: var(--fs-sm); color: var(--ink-2); }
+:root[data-look="genz"] .bars .b-bar { border-radius: 999px; }
