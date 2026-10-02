@@ -1,5 +1,5 @@
 import type {
-  AccountSummary, CaseInfo, CaseOutput, DatasetInfo, DatasetProgress, DQSummary, Overview, RingResult, RiskRow, TraceResult, TxnRow, VictimCandidate,
+  AccountSummary, CaseInfo, CaseOutput, DatasetInfo, DatasetProgress, DQSummary, EvidenceRecord, Overview, RingResult, RiskRow, TraceResult, TxnRow, VerifyResult, VictimCandidate,
 } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -21,6 +21,9 @@ export const api = {
   progress: (id: string) => req<DatasetProgress>(`/api/datasets/${enc(id)}/progress`),
   activate: (id: string) => req<DatasetInfo>(`/api/datasets/${enc(id)}/activate`, { method: 'POST' }),
   removeDataset: (id: string) => req<DatasetInfo[]>(`/api/datasets/${enc(id)}`, { method: 'DELETE' }),
+  evidence: () => req<EvidenceRecord>('/api/evidence'),
+  verify: () => req<VerifyResult>('/api/evidence/verify', { method: 'POST' }),
+  flaggedRows: (flag: string, offset = 0, limit = 50) => req<TxnRow[]>(`/api/evidence/rows?flag=${enc(flag)}&limit=${limit}&offset=${offset}`),
   search: (q: string) => req<string[]>(`/api/search?q=${enc(q)}&limit=12`),
   victims: (limit = 50) => req<VictimCandidate[]>(`/api/victims?limit=${limit}`),
   trace: (victim: string, seeds?: number[] | null) =>

@@ -34,6 +34,25 @@ DQ_RULES: dict[str, str] = {
 }
 
 
+# plain-language statement of each rule (UI, certificate)
+RULE_TEXT: dict[str, str] = {
+    "MISSING_FIELD": "A required value is empty",
+    "BAD_AMOUNT": "Amount is not a number",
+    "AMOUNT_PRECISION": "Amount has more than 2 decimal places (rounded to paise; raw value kept)",
+    "BAD_TIMESTAMP": "Timestamp cannot be read",
+    "BAD_ACCT_ID": "Account number not in the expected format",
+    "BAD_IFSC": "IFSC malformed or not matching the account's bank",
+    "DUP_TXN_ID": "Transaction ID shared with a different transaction",
+    "RTGS_BELOW_MIN": "RTGS below the RBI minimum of Rs 2,00,000",
+    "UPI_ABOVE_P2P_LIMIT": "UPI above the NPCI general P2P limit of Rs 1,00,000",
+    "IMPS_ABOVE_LIMIT": "IMPS above Rs 5,00,000",
+    "UNKNOWN_MODE": "Payment mode not UPI / IMPS / NEFT / RTGS",
+    "NONPOSITIVE_AMOUNT": "Amount zero or negative",
+    "TS_OUT_OF_RANGE": "Timestamp outside the 15-day window",
+    "SELF_LOOP": "Sender and receiver are the same account",
+}
+
+
 def dq_flags_sql() -> str:
     items = ", ".join(f"CASE WHEN coalesce({cond}, false) THEN '{name}' END" for name, cond in DQ_RULES.items())
     return f"list_filter([{items}], lambda x: x IS NOT NULL)"

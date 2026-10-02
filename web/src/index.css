@@ -6,7 +6,7 @@
   --page: #f3f5f7; --sheet: #ffffff; --sheet-2: #f7f8fa;
   --ink: #14213d; --ink-2: #33415a; --muted: #5c6773;
   --rule: #d9dee4; --rule-2: #aab3bd; --grid: #e3e7ec;
-  --wash: #f7f8fa; --sel: #e8eef7; --focus: #1f5fbf;
+  --wash: #f7f8fa; --sel: #e8eef7; --focus: #1f5fbf; --good: #1b7f4a;
   --accent: #14213d; --accent-ink: #ffffff; --accent-hover: #24345a;
   --held: #a4161a; --held-wash: #fbeceb;
   --warn: #8a5300; --warn-wash: #fff6e5; --warn-rule: #d9a441;
@@ -27,7 +27,7 @@
   --page: #0b0d12; --sheet: #141821; --sheet-2: #1b2030;
   --ink: #f2f4f8; --ink-2: #c9cfdb; --muted: #8e97a8;
   --rule: #262c3b; --rule-2: #3a4256; --grid: #222838;
-  --wash: #1b2030; --sel: #222a3d; --focus: #c6ff3d;
+  --wash: #1b2030; --sel: #222a3d; --focus: #c6ff3d; --good: #3ddc84;
   --accent: #c6ff3d; --accent-ink: #0b0d12; --accent-hover: #d6ff70;
   --held: #ff4d8d; --held-wash: rgba(255, 77, 141, 0.12);
   --warn: #ffc857; --warn-wash: rgba(255, 200, 87, 0.1); --warn-rule: #8a6a1f;
@@ -62,7 +62,7 @@ h1 { font-size: var(--fs-h1); } h2 { font-size: calc(var(--fs) * 1.15); } h3 { f
 a { color: var(--focus); text-underline-offset: 2px; }
 
 /* ---------- shell ---------- */
-.app { display: grid; grid-template-rows: auto auto 1fr; height: 100vh; }
+.app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100vh; }
 .top { display: flex; align-items: center; gap: 16px; padding: 0 16px; min-height: var(--head-h); background: var(--sheet); border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
 .brand { font-weight: 750; letter-spacing: -0.01em; white-space: nowrap; font-size: calc(var(--fs) * 1.1); }
 .brand small { font-weight: 400; color: var(--muted); margin-left: 8px; font-size: var(--fs-sm); }
@@ -95,7 +95,7 @@ input::placeholder { color: var(--muted); }
 .seg button { border: 0; background: var(--sheet); padding: 5px 10px; cursor: pointer; font-size: var(--fs-sm); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
-.search { position: relative; display: flex; gap: 8px; align-items: flex-start; flex: 1; min-width: 300px; max-width: 620px; }
+.search { position: relative; display: flex; gap: 8px; align-items: flex-start; flex: 1; min-width: min(300px, 100%); max-width: 620px; }
 .search .field { flex: 1; display: flex; flex-direction: column; }
 .search input { width: 100%; font-family: var(--mono); letter-spacing: 0.02em; }
 .hint { font-size: var(--fs-sm); color: var(--muted); margin-top: 2px; }

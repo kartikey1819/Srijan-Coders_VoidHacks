@@ -185,11 +185,17 @@ def test_link_pasted_into_an_open_tab_navigates(page, base):
     page.get_by_text("Flagged mule accounts:").wait_for(timeout=10_000)
 
 
-def test_data_quality_screen(page, base):
-    """Expected: the data-quality screen shows the row count and the flag table."""
+def test_evidence_screen_verifies_and_opens_flagged_rows(page, base):
+    """Expected: the Evidence screen (old #data links still work) re-verifies the file and lists a check's rows."""
     page.goto(f"{base}/#data")
-    page.get_by_text("Data quality").first.wait_for()
-    assert "50,000 rows" in page.content() and "DUP_TXN_ID" in page.content()
+    page.get_by_role("heading", name="Evidence", exact=True).wait_for()
+    assert "rows received" in page.content() and "DUP_TXN_ID" in page.content()
+    page.get_by_role("button", name="Re-verify the file now").click()
+    page.locator(".ev-status.ok").get_by_text("Unchanged").wait_for(timeout=15_000)
+    page.locator(".ev-check", has_text="DUP_TXN_ID").click()
+    page.locator(".ev-table tbody tr").first.wait_for()
+    assert page.locator(".ev-table tbody tr").count() >= 1
+    assert page.locator(".ev-log li", has_text="Re-verified").count() >= 1
 
 
 def test_look_toggle_switches_and_persists(page, base):

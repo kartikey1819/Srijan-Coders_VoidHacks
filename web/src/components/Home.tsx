@@ -38,7 +38,7 @@ export function Home({ stats }: { stats: DQSummary | null }) {
   const flagged = o?.bands.HIGH ?? null
   const steps = [
     { t: 'Load and check every row', p: 'The file is read as evidence: nothing edited or dropped, rule breaks flagged.', art: 'rows',
-      fig: stats ? <><Count value={stats.rows} format={fmtN} /><small>rows kept, none edited</small></> : null, to: '#data' },
+      fig: stats ? <><Count value={stats.rows} format={fmtN} /><small>rows kept, none edited</small></> : null, to: '#evidence' },
     { t: 'Build the money graph', p: 'Every account becomes a point, every transfer a link, ordered in time.', art: 'net',
       fig: stats ? <><Count value={stats.accounts} format={fmtN} /><small>accounts linked</small></> : null, to: '#overview' },
     { t: 'Score every account 0-100', p: 'Speed of pass-through, fan-in / fan-out, repeated rings, cash-out channels.', art: 'score',

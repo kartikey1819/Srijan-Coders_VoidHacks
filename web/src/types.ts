@@ -53,3 +53,12 @@ export interface DatasetProgress {
   id: string; status: string; stage: string | null; stages_done: Record<string, number>; rows: number; accounts: number
   flagged: number; error: string | null
 }
+
+export interface EvidenceCheck { flag: string; rule: string; rows: number; outside_graph: number; touching_flagged: number }
+export interface CustodyEvent { ts: string; action: string; detail: string }
+export interface EvidenceRecord {
+  file_name: string; file_path: string; file_present: boolean; size_bytes: number | null; sha256: string
+  rows: number; rows_in_graph: number; accounts: number; first_ts: string | null; last_ts: string | null; loaded_at: string | null
+  load_seconds: number; detect_seconds: number | null; checks: EvidenceCheck[]; custody: CustodyEvent[]
+}
+export interface VerifyResult { status: 'match' | 'mismatch' | 'missing'; sha256_now: string | null; expected: string; seconds: number; checked_at: string }

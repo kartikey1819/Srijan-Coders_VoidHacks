@@ -76,6 +76,39 @@ def test_overview_aggregates_agree_with_the_risk_table(client):
     assert client.get("/api/overview").json() == o        # cached, unchanged
 
 
+# ---- evidence: integrity, flagged rows, custody ----
+def test_evidence_summary_verify_rows_and_statement(client, tmp_path, monkeypatch):
+    from abhedya import config
+    monkeypatch.setattr(config, "AUDIT_LOG", tmp_path / "audit.jsonl")      # keep the real custody log clean
+    ev = client.get("/api/evidence").json()
+    stats = client.get("/api/dq/summary").json()
+    assert ev["sha256"] == stats["input_sha256"] and ev["rows"] == 50_000 and ev["file_present"]
+    assert {c["flag"]: c["rows"] for c in ev["checks"]} == stats["counts"]            # same counts as the summary
+    assert all(c["outside_graph"] <= c["rows"] and c["touching_flagged"] <= c["rows"] for c in ev["checks"])
+    assert ev["rows_in_graph"] <= ev["rows"] and ev["first_ts"] < ev["last_ts"]
+
+    v = client.post("/api/evidence/verify").json()
+    assert v["status"] == "match" and v["sha256_now"] == ev["sha256"]
+    assert client.get("/api/evidence").json()["custody"][0]["detail"] == "file unchanged"
+
+    changed = tmp_path / "changed.csv"
+    changed.write_bytes(SAMPLE.read_bytes() + b"x")
+    monkeypatch.setitem(engine_mod._engine.meta, "input_path", str(changed))
+    assert client.post("/api/evidence/verify").json()["status"] == "mismatch"
+    monkeypatch.setitem(engine_mod._engine.meta, "input_path", str(tmp_path / "gone.csv"))
+    assert client.post("/api/evidence/verify").json()["status"] == "missing"
+
+    flag = next(c for c in ev["checks"] if c["rows"])
+    rows = client.get("/api/evidence/rows", params={"flag": flag["flag"], "limit": 20}).json()
+    assert len(rows) == min(20, flag["rows"]) and all(flag["flag"] in r["dq_flags"] for r in rows)
+    assert [r["txn_idx"] for r in rows] == sorted(r["txn_idx"] for r in rows)
+    assert client.get("/api/evidence/rows", params={"flag": "NOPE"}).status_code == 404
+
+    t = client.get("/api/evidence/statement.txt")
+    assert t.status_code == 200 and ev["sha256"] in t.text and "Section 63" in t.text
+    assert "FILE CHANGED" in t.text or "original file not found" in t.text            # the latest check is reported
+
+
 # ---- saved datasets: upload, live analysis, switch ----
 def _wait_done(client, ds_id, timeout=120):
     import time

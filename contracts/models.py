@@ -237,3 +237,40 @@ class CaseOutput(BaseModel):
     llm_fallback_reason: Optional[str] = None
     manifest_sha256: str
     facts_sha256: str = ""
+
+# ---- evidence (chain of custody of the loaded file) ----
+class EvidenceCheck(BaseModel):     # one data-quality rule and what it found
+    flag: str
+    rule: str
+    rows: int                        # rows carrying the flag (rows are never edited or dropped)
+    outside_graph: int               # of those, rows that cannot move money and are left out of the graph
+    touching_flagged: int            # of those, rows where the sender or receiver is a flagged (HIGH) account
+
+class CustodyEvent(BaseModel):
+    ts: str                          # UTC, ISO 8601
+    action: str                      # ingest | verify | certificate | export | ...
+    detail: str
+
+class EvidenceRecord(BaseModel):  # the loaded file and its custody (Evidence tab)
+    file_name: str
+    file_path: str
+    file_present: bool
+    size_bytes: Optional[int] = None
+    sha256: str
+    rows: int
+    rows_in_graph: int
+    accounts: int
+    first_ts: Optional[str] = None
+    last_ts: Optional[str] = None
+    loaded_at: Optional[str] = None
+    load_seconds: float
+    detect_seconds: Optional[float] = None
+    checks: list[EvidenceCheck]
+    custody: list[CustodyEvent]      # newest first
+
+class VerifyResult(BaseModel):
+    status: str                      # match | mismatch | missing
+    sha256_now: Optional[str] = None
+    expected: str
+    seconds: float
+    checked_at: str

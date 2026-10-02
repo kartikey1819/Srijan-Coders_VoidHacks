@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 /** Hash routes are the single source of truth, so Back / Forward and pasted links always work.
- *  #home · #overview · #trace=ACCOUNT[&seeds=1,2] · #ring=ACCOUNT · #flagged[?role=L1&bank=SBIN&reason=CODE] · #data */
+ *  #home · #overview · #trace=ACCOUNT[&seeds=1,2] · #ring=ACCOUNT · #flagged[?role=L1&bank=SBIN&reason=CODE] · #evidence (old #data still works) */
 export type Route =
   | { name: 'home' }
   | { name: 'overview' }
@@ -24,7 +24,7 @@ export function parse(hash: string): Route {
   if (k === 'investigate') return { name: 'investigate', account: null, seeds: null }
   if (k === 'ring' && rest) return { name: 'ring', account: rest.toUpperCase() }
   if (k === 'flagged') return { name: 'flagged', role: q.get('role'), bank: q.get('bank'), reason: q.get('reason') }
-  if (k === 'data') return { name: 'data' }
+  if (k === 'evidence' || k === 'data') return { name: 'data' }      // #data kept for old links
   if (k === 'overview') return { name: 'overview' }
   return { name: 'home' }
 }
@@ -43,7 +43,7 @@ export function href(r: Route): string {
       const s = q.toString()
       return `#flagged${s ? `?${s}` : ''}`
     }
-    case 'data': return '#data'
+    case 'data': return '#evidence'
   }
 }
 

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { api } from './api'
-import { DQView } from './components/DQView'
+import { EvidenceView } from './components/EvidenceView'
 import { FlaggedTable } from './components/FlaggedTable'
 import { Home } from './components/Home'
 import { Investigate } from './components/Investigate'
@@ -45,7 +45,7 @@ export default function App() {
     ['investigate', 'Investigate', lastTrace.current ? `#trace=${lastTrace.current}` : '#investigate', false],
     ['ring', 'Syndicate ring', lastRing.current ? `#ring=${lastRing.current}` : '#ring', !lastRing.current],
     ['flagged', 'Flagged accounts', '#flagged', false],
-    ['data', 'Data quality', '#data', false],
+    ['data', 'Evidence', '#evidence', false],
   ]
   return (
     <div className="app">
@@ -87,7 +87,7 @@ export default function App() {
             </Suspense>
           )}
           {route.name === 'flagged' && <FlaggedTable reasons={reasons} role={route.role} bank={route.bank} reason={route.reason} />}
-          {route.name === 'data' && <DQView stats={stats} />}
+          {route.name === 'data' && <EvidenceView />}
         </div>
       </main>
     </div>

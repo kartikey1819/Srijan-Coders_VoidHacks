@@ -18,7 +18,7 @@ const OFFICIAL = {
   graph: 'How the money moved',
   progress: 'Case progress',
   overviewTitle: 'What this file contains',
-  dqTitle: 'Data quality',
+  dqTitle: 'Evidence',
   ringTitle: 'Syndicate around',
 }
 
@@ -39,7 +39,7 @@ const GENZ: typeof OFFICIAL = {
   graph: 'The money trail',
   progress: 'Case cracked',
   overviewTitle: 'The whole file at a glance',
-  dqTitle: 'Data quality',
+  dqTitle: 'Evidence',
   ringTitle: 'The ring around',
 }
 
