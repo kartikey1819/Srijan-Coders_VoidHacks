@@ -126,7 +126,12 @@ A large dialog:
   divider is resizable and remembered), and CSV downloads.
 - **Fraud Networks:**
   - Without an account: a start list of collector accounts.
-  - With one: **Trail** (default) isolates one victim's money through that account instead of the whole network,
+  - With one: **Money flow** (default) shows that account's money left to right: who paid in (two steps back), the
+    account, then where its money went (three time-respecting steps on); line thickness is the amount. It is sized to
+    the window: the panels and time slider fill the space under the header, each column shows as many accounts as
+    fit (largest first) with the rest in "+N more", and boxes narrow to the panel width. A click re-centres on that
+    account; pointing shows what it received in the network, passed on and kept.
+  - **Trail** isolates one victim's money through that account instead of the whole network,
     drawn exactly like the trace tree (Victim, Layer 1 Collector, Layer 2 Distributors, Layer 3 Cash-out; amount and
     time after the victim paid on every box; solid within the hour, dashed later). The account is outlined. A picker
     lists every victim whose money reached it (largest first). Pointing at a box shows what it received from that

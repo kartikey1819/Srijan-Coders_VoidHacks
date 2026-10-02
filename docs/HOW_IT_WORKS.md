@@ -1122,7 +1122,7 @@ clock) and a left sidebar with four screens, in English and Hindi:
   tree driven by the timeline, the collector's first minutes, the trace record, accounts to freeze,
   and the transactions;
 - Suspect Accounts (`#flagged`);
-- Fraud Networks (`#ring=ACCOUNT`, one victim's trail through the account by default, 3D globe as a toggle).
+- Fraud Networks (`#ring=ACCOUNT`: money flow around the account by default; one victim's trail and the 3D globe as toggles).
 
 The Dashboard names the dataset in use and uploads new files (there is no separate data page).
 

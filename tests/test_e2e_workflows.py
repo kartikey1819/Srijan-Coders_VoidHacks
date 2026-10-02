@@ -305,14 +305,20 @@ def test_dashboard_upload_rejects_a_file_without_the_columns(page, base):
 
 
 def test_ring_isolates_one_trail_with_victim_switch_and_globe(page, base):
-    """Expected: the network opens on one victim's trail through the chosen account, laid out like the trace (victim,
-    collector, distributors, cash-out), not the whole network; the account is marked; every victim whose money reached
+    """Expected: the network opens on the money flow around the chosen account, fitted to its panel; Trail shows one
+    victim's trail through it, laid out like the trace (victim, collector, distributors, cash-out), not the whole network; the account is marked; every victim whose money reached
     it can be chosen; pointing at an account shows what it received and still holds; Go here moves the journey; the
     Globe is a toggle away and back."""
     page.goto(f"{base}/#ring={L1}")
     page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
-    page.locator(f".ring-trail .tbox.center[data-acct={L1}]").wait_for(timeout=20_000)
+    page.locator(f".netflow .tbox.center[data-acct={L1}]").wait_for(timeout=20_000)        # Money flow is the default
     assert page.locator("[data-testid=ring-globe]").count() == 0 and page.get_by_role("button", name="Columns").count() == 0
+    fit = page.evaluate("(() => { const e = document.querySelector('.netflow'); return e.scrollWidth <= e.clientWidth + 1 && e.scrollHeight <= e.clientHeight + 1 })()")
+    assert fit, "the money flow must fit its panel without scrolling"
+    page.locator(".netflow .tbox[data-role=L2]").first.hover()
+    assert "Received in this network" in page.locator(".netflow .ttip").inner_text()
+    page.get_by_role("button", name="Trail").click()
+    page.locator(f".ring-trail .tbox.center[data-acct={L1}]").wait_for(timeout=20_000)
     pick = page.get_by_label("Victim whose trail is shown")
     assert pick.locator("option").count() == 4
     pick.select_option(VICTIM)

@@ -431,7 +431,8 @@ body { font-size: var(--fs); line-height: 1.5; }
 .tt-bar i { display: block; height: 100%; background: var(--ok); }
 
 /* fraud network money flow */
-.netflow { overflow: auto; flex: 1; min-height: 0; padding: 4px 0; }
+.netflow { overflow: auto; flex: 1; min-height: 0; display: flex; }
+.netflow > .tree-canvas { flex: none; margin: auto; }   /* centred when it fits; scrolls only after a column is expanded */
 .flowline { fill: none; stroke-opacity: 0.55; }
 .tbox.center rect { stroke-width: 2.6; }
 .net-work .pframe > .pbody { overflow: auto; }

@@ -1,5 +1,5 @@
-import { DownloadSimple, Globe as GlobeIcon, TreeStructure } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DownloadSimple, FlowArrow, Globe as GlobeIcon, TreeStructure } from '@phosphor-icons/react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
 import { inr, ROLE_TEXT, spanText, toEpoch } from '../format'
@@ -10,19 +10,21 @@ import type { GraphEdge, RingResult } from '../types'
 import { AccountPanel } from './AccountPanel'
 import { EdgeFlow } from './EdgeFlow'
 import { Globe, type GlobeHandle } from './Globe'
+import { NetFlow } from './NetFlow'
 import { Page } from './Page'
 import { PanelFrame } from './PanelFrame'
 import { RingTrail } from './RingTrail'
 import { Timeline } from './Timeline'
 
 interface Props { seed: string; reasons: Record<string, string> }
-type View = 'trail' | 'globe'
+type View = 'flow' | 'trail' | 'globe'
 
 const ROLES = ['VICTIM', 'L1', 'L2', 'L3', 'UNKNOWN'] as const
 const WINDOW: [number, number] = [toEpoch('2026-09-15 00:00:00'), toEpoch('2026-09-29 23:59:00')]
 
-/** One-click syndicate isolation. Trail (default): one victim's money through the isolated account, laid out like
- *  the trace screen, with the network's other victims one choice away. Globe: the whole network at once. */
+/** One-click syndicate isolation. Money flow (default): who paid into the chosen account and where its money went,
+ *  step by step, sized to the panel. Trail: one victim's money through it, laid out like the trace screen. Globe: the
+ *  whole network at once. */
 export function RingView({ seed, reasons }: Props) {
   const [ring, setRing] = useState<RingResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -31,10 +33,31 @@ export function RingView({ seed, reasons }: Props) {
   const [selected, setSelected] = useState<string | null>(seed)
   const [trail, setTrail] = useState<string[]>([seed])
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'globe' ? 'globe' : 'trail'))
+  const [view, setView] = useState<View>(() => { const v = safeStorage.getItem('abhedya.ringView2'); return v === 'trail' || v === 'globe' ? v : 'flow' })
   const [edge, setEdge] = useState<GraphEdge | null>(null)
   const globe = useRef<GlobeHandle>(null)
   const layout = useDefaultLayout({ id: 'ring-h2', storage: safeStorage })
+  // the network panels and the time slider under them fill the window from where they start, so the whole picture
+  // is on screen without scrolling (never shorter than 300 px)
+  const work = useRef<HTMLDivElement>(null)
+  const [workH, setWorkH] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    const el = work.current
+    if (!el) return
+    const tl = el.nextElementSibling as HTMLElement | null           // the time slider
+    const fit = () => {
+      let scrolled = 0                                                 // the page may scroll inside an ancestor
+      for (let p = el.parentElement; p; p = p.parentElement) scrolled += p.scrollTop
+      const r = el.getBoundingClientRect()
+      const tail = tl ? tl.getBoundingClientRect().bottom - r.bottom : 0  // gap + slider under the panels
+      setWorkH(Math.max(300, Math.floor(window.innerHeight - 14 - (r.top + scrolled) - tail)))
+    }
+    fit()
+    const ro = new ResizeObserver(fit)                                 // the slider can wrap onto two rows
+    if (tl) ro.observe(tl)
+    window.addEventListener('resize', fit)
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit) }
+  }, [ring])
 
   useEffect(() => {
     let live = true
@@ -44,7 +67,7 @@ export function RingView({ seed, reasons }: Props) {
       .catch((e) => live && setErr(String(e.message ?? e)))
     return () => { live = false }
   }, [seed])
-  useEffect(() => { safeStorage.setItem('abhedya.ringView', view) }, [view])
+  useEffect(() => { safeStorage.setItem('abhedya.ringView2', view) }, [view])
 
   const ix = useMemo(() => (ring ? ringIndex(ring) : null), [ring])
   const journey = useMemo(() => (ix && selected ? journeyOf(ix, selected) : null), [ix, selected])
@@ -69,6 +92,7 @@ export function RingView({ seed, reasons }: Props) {
           desc={<>The fraud network linked by money to <b className="mono">{seed}</b>: who paid in, and where the money went next. Click an account to follow its money.</>}
           actions={<>
             <div className="seg view-switch" role="group" aria-label="Network view">
+              <button aria-pressed={view === 'flow'} onClick={() => setView('flow')}><FlowArrow /> Money flow</button>
               <button aria-pressed={view === 'trail'} onClick={() => setView('trail')}><TreeStructure /> Trail</button>
               <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}><GlobeIcon /> Globe</button>
             </div>
@@ -92,16 +116,17 @@ export function RingView({ seed, reasons }: Props) {
       {err && <div className="banner bad" role="alert"><b>{err}</b></div>}
       {!ring && !err && <p className="muted">Finding the network around {seed}…</p>}
       {ring && ix && (
-        <div className="net-work">
+        <div className="net-work" ref={work} style={workH ? { height: workH } : undefined}>
           <Group orientation="horizontal" id="ring-h2" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
             <Panel id="ring-graph" defaultSize="76%" minSize="30%">
-              <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : `Money trail through ${seed}`}
-                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : 'Point at an account for its amounts · click one for its journey'}</span>}>
+              <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : view === 'flow' ? `Money flow around ${selected ?? seed}` : `Money trail through ${seed}`}
+                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : view === 'flow' ? 'Point at an account for its amounts · click one to put it in the centre' : 'Point at an account for its amounts · click one for its journey'}</span>}>
                 {view === 'globe'
                   ? <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
                       <Globe ref={globe} ring={ring} journey={journey} selected={selected} hotLink={edge ? `${edge.src}>${edge.dst}` : null}
                              hidden={hidden} cutoff={cut} onPick={pick} onOpenLink={setEdge} />
                     </div>
+                  : view === 'flow' ? <NetFlow ix={ix} center={selected ?? seed} hidden={hidden} cutoff={cut} onPick={pick} />
                   : <div className="rt-scroll"><RingTrail ix={ix} seed={seed} mark={selected} cursor={cut} onSelect={pick} /></div>}
               </PanelFrame>
             </Panel>
