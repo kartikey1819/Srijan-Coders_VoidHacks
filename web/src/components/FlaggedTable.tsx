@@ -7,6 +7,7 @@ import { go } from '../route'
 import { safeStorage } from '../store'
 import type { RiskRow } from '../types'
 import { AccountPanel } from './AccountPanel'
+import { Page, RoleBadge } from './Page'
 import { PanelFrame } from './PanelFrame'
 
 interface Props { reasons: Record<string, string>; role: string | null; bank: string | null; reason: string | null }
@@ -46,24 +47,21 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
         {label}{sort.k === k ? (sort.desc ? ' ▾' : ' ▴') : ''}</button></th>
   )
 
-  if (err) return <div className="page"><div className="banner bad"><b>{err}</b></div></div>
-  if (!rows) return <div className="page"><p className="muted">Loading flagged accounts…</p></div>
+  const desc = 'Accounts that behave like money mules: a Mule Risk Index of 70 or more out of 100. Click an account to see why.'
+  const acts = <>
+    <a className="btn" href="/api/export/flagged.csv"><DownloadSimple size={16} /> Download suspect list (CSV)</a>
+    <a className="btn" href="/api/export/ranked.csv"><DownloadSimple size={16} /> All accounts ranked (CSV)</a>
+  </>
+  if (err) return <Page title="Suspect Accounts" hi="संदिग्ध खाते" desc={desc}><div className="banner bad"><b>{err}</b></div></Page>
+  if (!rows) return <Page title="Suspect Accounts" hi="संदिग्ध खाते" desc={desc}><p className="muted">Loading suspect accounts…</p></Page>
   return (
-    <div className="page">
-      <div className="row between wrap gap">
-        <h1>Flagged mule accounts: {rows.length.toLocaleString('en-IN')}</h1>
-        <div className="row gap">
-          <a className="btn" href="/api/export/flagged.csv"><DownloadSimple /> flagged.csv</a>
-          <a className="btn ghost" href="/api/export/ranked.csv"><DownloadSimple /> All accounts ranked</a>
-        </div>
-      </div>
-      <p className="lede small">Accounts scoring 70 or more on the 0-100 Mule Risk Index. The reasons are the signals that raised each score.</p>
-      <div className="row gap wrap">
+    <Page title="Suspect Accounts" hi="संदिग्ध खाते" desc={desc} actions={acts}>
+      <div className="filters">
         <select value={role ?? ''} onChange={(e) => setFilter('role', e.target.value)} aria-label="Layer">
-          <option value="">All layers</option>
-          <option value="L1">L1 collectors ({by('L1')})</option>
-          <option value="L2">L2 distributors ({by('L2')})</option>
-          <option value="L3">L3 cash-out ({by('L3')})</option>
+          <option value="">All roles</option>
+          <option value="L1">Collectors, Layer 1 ({by('L1')})</option>
+          <option value="L2">Distributors, Layer 2 ({by('L2')})</option>
+          <option value="L3">Cash-out, Layer 3 ({by('L3')})</option>
         </select>
         <select value={bank ?? ''} onChange={(e) => setFilter('bank', e.target.value)} aria-label="Bank">
           <option value="">All banks</option>{banks.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -71,28 +69,28 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
         <select value={reason ?? ''} onChange={(e) => setFilter('reason', e.target.value)} aria-label="Reason">
           <option value="">Any reason</option>{codes.map((c) => <option key={c} value={c}>{REASON_SHORT[c] ?? c}</option>)}
         </select>
-        <input type="search" placeholder="Filter by account" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Filter by account" />
-        <span className="small muted">{shown.length.toLocaleString('en-IN')} shown</span>
+        <input type="search" placeholder="Find an account number" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find an account number" />
+        <span className="small muted">{shown.length.toLocaleString('en-IN')} of {rows.length.toLocaleString('en-IN')} shown</span>
         {(role || bank || reason) && <button className="btn ghost sm" onClick={() => go({ name: 'flagged', role: null, bank: null, reason: null })}>Clear filters</button>}
       </div>
-      <div style={{ height: 'max(460px, calc(100vh - 300px))' }}>
+      <div className="split-work">
         <Group orientation="horizontal" id="flagged-h" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
           <Panel id="flagged-list" defaultSize="62%" minSize="35%">
-            <PanelFrame label="Flagged list" title={`${shown.length.toLocaleString('en-IN')} accounts`}>
+            <PanelFrame label="Suspect list" title={`${shown.length.toLocaleString('en-IN')} suspect accounts`}>
               <table className="tbl">
-                <thead><tr>{th('account', 'Account')}{th('score', 'Score', 'num')}{th('role', 'Layer')}<th>Why</th><th><span className="sr-only">Actions</span></th></tr></thead>
+                <thead><tr>{th('account', 'Account')}{th('score', 'Risk score', 'num')}{th('role', 'Role')}<th>Why it was flagged</th><th><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody className="stagger">
                   {shown.slice(0, limit).map((r, i) => (
                     <tr key={r.account} aria-selected={open === r.account} style={{ ['--i' as string]: i }}>
                       <td className="acct"><a href={`#account-${r.account}`} onClick={(e) => { e.preventDefault(); setOpen(r.account) }}>{r.account}</a></td>
                       <td className="num"><span className={`badge ${r.band}`}>{r.score}</span></td>
-                      <td>{r.role_hint ?? '-'}</td>
+                      <td>{r.role_hint ? <RoleBadge role={r.role_hint} /> : <span className="muted">-</span>}</td>
                       <td>{r.reasons.slice(0, 4).map((x) => {
                         const [code, value] = x.split(':')
-                        return <span key={x} className="chip" title={`${reasons[code] ?? code}${value ? `: ${value}` : ''}`}>{REASON_SHORT[code] ?? code}{value ? ` ${value}` : ''}</span>
+                        return <span key={x} className="chip" title={`${reasons[code] ?? code}${value ? `: ${value}` : ''}`}>{REASON_SHORT[code] ?? code}</span>
                       })}</td>
                       <td className="row-acts"><button className="btn ghost sm" aria-label={`Isolate ring around ${r.account}`}
-                        onClick={() => go({ name: 'ring', account: r.account })}><Graph /> Ring</button></td>
+                        onClick={() => go({ name: 'ring', account: r.account })}><Graph /> Network</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -106,12 +104,12 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
               <div className="sheet-body">
                 {open ? <AccountPanel account={open} reasons={reasons} onSelect={setOpen}
                           onTrace={(a) => go({ name: 'investigate', account: a, seeds: null })} onRing={(a) => go({ name: 'ring', account: a })} />
-                      : <p className="muted">Click an account on the left to see why it is flagged, its transfers and counterparties.</p>}
+                      : <p className="muted">Click an account on the left to see why it was flagged, its transfers and who it dealt with.</p>}
               </div>
             </PanelFrame>
           </Panel>
         </Group>
       </div>
-    </div>
+    </Page>
   )
 }

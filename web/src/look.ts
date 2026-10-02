@@ -1,37 +1,35 @@
 import { useEffect, useState } from 'react'
 
-export type Look = 'official' | 'genz'
-const KEY = 'abhedya.look'
+/** Day / Night: one set of colour tokens per theme on <html data-theme>. Remembered per browser; ?theme= overrides. */
+export type Theme = 'light' | 'dark'
+const KEY = 'abhedya.theme'
 
-function normalise(v: string | null): Look | null {
-  if (v === 'official') return 'official'
-  if (v === 'genz' || v === 'briefing') return 'genz'      // 'briefing' was the previous name of the second look
-  return null
+function normalise(v: string | null): Theme | null {
+  return v === 'light' || v === 'dark' ? v : null
 }
 
-function initial(): Look {
-  const q = normalise(new URLSearchParams(window.location.search).get('look'))
+function initial(): Theme {
+  const q = normalise(new URLSearchParams(window.location.search).get('theme'))
   if (q) return q
   try {
     const s = normalise(window.localStorage.getItem(KEY))
     if (s) return s
   } catch { /* storage blocked: default */ }
-  return 'official'
+  return 'light'
 }
 
-/** Official / Gen-Z: one component kit, two token sets, fonts and copy voices on <html data-look>. */
-export function useLook(): [Look, (l: Look) => void] {
-  const [look, setLook] = useState<Look>(initial)
+export function useTheme(): [Theme, (t: Theme) => void] {
+  const [theme, setTheme] = useState<Theme>(initial)
   useEffect(() => {
-    document.documentElement.dataset.look = look
-    try { window.localStorage.setItem(KEY, look) } catch { /* ignore */ }
-    window.dispatchEvent(new Event('lookchange'))
-  }, [look])
-  return [look, setLook]
+    document.documentElement.dataset.theme = theme
+    try { window.localStorage.setItem(KEY, theme) } catch { /* ignore */ }
+    window.dispatchEvent(new Event('themechange'))
+  }, [theme])
+  return [theme, setTheme]
 }
 
-export function currentLook(): Look {
-  return document.documentElement.dataset.look === 'genz' ? 'genz' : 'official'
+export function currentTheme(): Theme {
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
 }
 
 /** Current value of a CSS custom property (Cytoscape and WebGL cannot read var()). */
@@ -39,21 +37,20 @@ export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
-/** Re-render when the look changes; returns the look. */
-export function useLookName(): Look {
-  const [l, setL] = useState<Look>(currentLook)
+/** Re-render when the theme changes; returns the theme. */
+export function useThemeName(): Theme {
+  const [t, setT] = useState<Theme>(currentTheme)
   useEffect(() => {
-    const on = () => setL(currentLook())
-    window.addEventListener('lookchange', on)
-    return () => window.removeEventListener('lookchange', on)
+    const on = () => setT(currentTheme())
+    window.addEventListener('themechange', on)
+    return () => window.removeEventListener('themechange', on)
   }, [])
-  return l
+  return t
 }
 
-/** Kept for canvas components that only need a tick. */
-export function useLookTick(): number {
-  const l = useLookName()
-  return l === 'genz' ? 1 : 0
+/** A number that changes with the theme, for canvas components that re-read colours. */
+export function useThemeTick(): number {
+  return useThemeName() === 'dark' ? 1 : 0
 }
 
 export function prefersReducedMotion(): boolean {

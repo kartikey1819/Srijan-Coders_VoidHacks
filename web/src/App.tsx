@@ -1,20 +1,28 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { ChartBar, Database, Graph, MagnifyingGlass, Moon, Path, ShieldStar, Sun, UserFocus } from '@phosphor-icons/react'
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { api } from './api'
-import { EvidenceView } from './components/EvidenceView'
+import { DataPage } from './components/DataPage'
 import { FlaggedTable } from './components/FlaggedTable'
-import { Home } from './components/Home'
-import { Investigate } from './components/Investigate'
+import { NetworkStart } from './components/NetworkStart'
 import { Overview } from './components/Overview'
-import { SearchBar } from './components/SearchBar'
-import { useLook } from './look'
-import { useRoute } from './route'
+import { TracePage } from './components/TracePage'
+import { useTheme } from './look'
+import { useRoute, type Route } from './route'
 import type { DatasetInfo, DQSummary } from './types'
 
 const RingView = lazy(() => import('./components/RingView').then((m) => ({ default: m.RingView })))
 
+const NAV: { name: Route['name']; label: string; hi: string; icon: ComponentType<{ size?: number }> }[] = [
+  { name: 'overview', label: 'Dashboard', hi: 'डैशबोर्ड', icon: ChartBar },
+  { name: 'investigate', label: 'Trace Victim Funds', hi: 'पीड़ित राशि का पता लगाएँ', icon: Path },
+  { name: 'flagged', label: 'Suspect Accounts', hi: 'संदिग्ध खाते', icon: UserFocus },
+  { name: 'ring', label: 'Fraud Networks', hi: 'धोखाधड़ी नेटवर्क', icon: Graph },
+  { name: 'data', label: 'Data Management', hi: 'डेटा प्रबंधन', icon: Database },
+]
+
 export default function App() {
   const route = useRoute()
-  const [look, setLook] = useLook()
+  const [theme, setTheme] = useTheme()
   const [stats, setStats] = useState<DQSummary | null>(null)
   const [down, setDown] = useState(false)
   const [reasons, setReasons] = useState<Record<string, string>>({})
@@ -22,7 +30,7 @@ export default function App() {
   const lastTrace = useRef<string | null>(null)
   const lastRing = useRef<string | null>(null)
   if (route.name === 'investigate' && route.account) lastTrace.current = route.account
-  if (route.name === 'ring') lastRing.current = route.account
+  if (route.name === 'ring' && route.account) lastRing.current = route.account
 
   useEffect(() => {
     api.stats().then(setStats).catch(() => setDown(true))
@@ -33,63 +41,115 @@ export default function App() {
     return () => window.removeEventListener('abhedya:datasets', refresh)
   }, [])
   useEffect(() => {
-    const t = route.name === 'investigate' && route.account ? `${route.account} · trace` : route.name === 'ring' ? `${route.account} · ring` : null
-    document.title = t ? `${t} · Abhedya-Chakra` : 'Abhedya-Chakra'
+    const t = route.name === 'investigate' && route.account ? `${route.account} · trace`
+      : route.name === 'ring' && route.account ? `${route.account} · network` : null
+    document.title = t ? `${t} · Abhedya-Chakra` : 'Abhedya-Chakra · Cyber Crime Cell'
   }, [route])
+  useEffect(() => { document.getElementById('main')?.scrollTo({ top: 0 }) }, [route.name])
 
   const switchTo = (id: string) => api.activate(id).then(() => { window.location.hash = '#overview'; window.location.reload() })
   const active = sets.find((d) => d.active)
-  const tabs: [string, string, string, boolean][] = [
-    ['home', 'Home', '#home', false],
-    ['overview', 'Overview', '#overview', false],
-    ['investigate', 'Investigate', lastTrace.current ? `#trace=${lastTrace.current}` : '#investigate', false],
-    ['ring', 'Syndicate ring', lastRing.current ? `#ring=${lastRing.current}` : '#ring', !lastRing.current],
-    ['flagged', 'Flagged accounts', '#flagged', false],
-    ['data', 'Evidence', '#evidence', false],
-  ]
+  const hrefOf = (n: Route['name']) => n === 'investigate' ? (lastTrace.current ? `#trace=${lastTrace.current}` : '#investigate')
+    : n === 'ring' ? (lastRing.current ? `#ring=${lastRing.current}` : '#ring') : `#${n}`
+
   return (
-    <div className="app">
-      <header className="top">
-        <div className="brand">Abhedya-Chakra<small>money-trail workstation</small></div>
-        <SearchBar current={route.name === 'investigate' ? route.account : null} />
-        <div className="seg" role="group" aria-label="Look">
-          <button aria-pressed={look === 'official'} onClick={() => setLook('official')}>Official</button>
-          <button aria-pressed={look === 'genz'} onClick={() => setLook('genz')}>Gen-Z</button>
-        </div>
-        <div className="dataset" title={stats?.input_sha256}>
-          {sets.length > 1 ? (
-            <label className="dsw">Case
-              <select value={active?.id ?? ''} onChange={(e) => switchTo(e.target.value)} aria-label="Active dataset">
-                {sets.filter((d) => d.status === 'done').map((d) => (
-                  <option key={d.id} value={d.id}>{d.id === 'official' ? 'Official dataset' : d.name} · {d.rows.toLocaleString('en-IN')} rows</option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {stats ? <>{stats.rows.toLocaleString('en-IN')} transactions · {stats.accounts.toLocaleString('en-IN')} accounts · file {stats.input_sha256.slice(0, 8)} · offline</>
-                 : down ? <span className="error">Engine not reachable</span> : 'Loading…'}
+    <div className="gov">
+      <header className="mast">
+        <div className="tricolour" aria-hidden="true" />
+        <div className="mast-row">
+          <div className="crest" aria-hidden="true"><ShieldStar size={24} weight="fill" /></div>
+          <div className="org">
+            <div className="org-name">Indore Police Commissionerate · Cyber Crime Cell</div>
+            <div className="org-hi" lang="hi">इंदौर पुलिस कमिश्नरेट · साइबर अपराध प्रकोष्ठ</div>
+            <div className="org-sys">Abhedya-Chakra · Financial fraud and mule account analysis system</div>
+          </div>
+          <div className="mast-right">
+            <MastSearch />
+            <div className="daynight" role="group" aria-label="Display">
+              <button aria-pressed={theme === 'light'} onClick={() => setTheme('light')}><Sun size={15} /> Day</button>
+              <button aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}><Moon size={15} /> Night</button>
+            </div>
+            <Clock />
+            <span className="official">For official use only</span>
+          </div>
         </div>
       </header>
-      <nav className="tabs" aria-label="Screens">
-        {tabs.map(([k, label, h, disabled]) => (
-          <a key={k} href={h} aria-current={route.name === k ? 'page' : undefined} aria-disabled={disabled || undefined}
-             title={disabled ? 'Isolate a ring from any account first (the Ring button on a row)' : undefined}>{label}</a>
-        ))}
-      </nav>
-      <main id="main">
-        <div className="screen" key={route.name} style={{ minHeight: "100%" }}>
-          {route.name === 'home' && <Home stats={stats} />}
-          {route.name === 'overview' && <Overview stats={stats} />}
-          {route.name === 'investigate' && <Investigate account={route.account} seeds={route.seeds} reasons={reasons} look={look} />}
-          {route.name === 'ring' && (
-            <Suspense fallback={<div className="page"><p className="muted">Loading the ring view…</p></div>}>
-              <RingView key={route.account} seed={route.account} reasons={reasons} />
-            </Suspense>
-          )}
-          {route.name === 'flagged' && <FlaggedTable reasons={reasons} role={route.role} bank={route.bank} reason={route.reason} />}
-          {route.name === 'data' && <EvidenceView />}
-        </div>
-      </main>
+      <div className="shell">
+        <nav className="side" aria-label="Main menu">
+          <div className="side-sec">MENU</div>
+          {NAV.map((n) => (
+            <a key={n.name} href={hrefOf(n.name)} className="side-btn" aria-current={route.name === n.name ? 'page' : undefined}>
+              <n.icon size={20} /><span>{n.label}<small lang="hi">{n.hi}</small></span>
+            </a>
+          ))}
+          <div className="side-foot">
+            <div className="sf-title">Loaded data</div>
+            {sets.length > 1 ? (
+              <select value={active?.id ?? ''} onChange={(e) => switchTo(e.target.value)} aria-label="Open case">
+                {sets.filter((d) => d.status === 'done').map((d) => (
+                  <option key={d.id} value={d.id}>{d.name} · {d.rows.toLocaleString('en-IN')} rows</option>
+                ))}
+              </select>
+            ) : <div className="sf-file">{active?.name ?? ''}</div>}
+            {stats ? <>
+              <div><b>{stats.rows.toLocaleString('en-IN')}</b> transactions</div>
+              <div><b>{stats.accounts.toLocaleString('en-IN')}</b> accounts</div>
+              <div className="sf-hash" title={stats.input_sha256}>File fingerprint {stats.input_sha256.slice(0, 12)}</div>
+            </> : down ? <div className="sf-bad">The analysis engine is not reachable.</div> : <div>Loading…</div>}
+            <div className="sf-note">Processed on this computer. No data is sent outside.</div>
+          </div>
+        </nav>
+        <main id="main">
+          <div className="screen" key={route.name}>
+            {route.name === 'overview' && <Overview stats={stats} />}
+            {route.name === 'investigate' && <TracePage account={route.account} seeds={route.seeds} reasons={reasons} />}
+            {route.name === 'flagged' && <FlaggedTable reasons={reasons} role={route.role} bank={route.bank} reason={route.reason} />}
+            {route.name === 'ring' && (route.account ? (
+              <Suspense fallback={<div className="gpage"><p className="muted">Loading the network view…</p></div>}>
+                <RingView key={route.account} seed={route.account} reasons={reasons} />
+              </Suspense>
+            ) : <NetworkStart />)}
+            {route.name === 'data' && <DataPage stats={stats} />}
+          </div>
+        </main>
+      </div>
     </div>
+  )
+}
+
+function Clock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 30000); return () => window.clearInterval(id) }, [])
+  return (
+    <div className="mclock" aria-label="Date and time">
+      <b>{now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })}</b>
+      <span>{now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST</span>
+    </div>
+  )
+}
+
+/** Search any account number from anywhere: Enter (or a suggestion) traces it. */
+function MastSearch() {
+  const [q, setQ] = useState('')
+  const [hits, setHits] = useState<string[]>([])
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const s = q.trim().toUpperCase()
+    if (s.length < 3) { setHits([]); return }
+    const id = window.setTimeout(() => api.search(s).then((h) => setHits(h.slice(0, 8))).catch(() => setHits([])), 150)
+    return () => window.clearTimeout(id)
+  }, [q])
+  const goTrace = (a: string) => { setQ(''); setHits([]); window.location.hash = `#trace=${a.trim().toUpperCase()}` }
+  return (
+    <form className="msearch" role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim()) goTrace(q) }}>
+      <MagnifyingGlass size={16} aria-hidden="true" />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search account number" aria-label="Search account number"
+             onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 150)} spellCheck={false} autoComplete="off" />
+      {open && hits.length > 0 && (
+        <ul className="suggest" aria-label="Matching accounts">
+          {hits.map((h) => <li key={h}><button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => goTrace(h)}>{h}</button></li>)}
+        </ul>
+      )}
+    </form>
   )
 }

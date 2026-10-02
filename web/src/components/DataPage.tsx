@@ -1,11 +1,10 @@
 import { CheckCircle, FileArrowUp, Trash, Warning } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { api } from '../api'
-import { useCopy } from '../copy'
 import { inr } from '../format'
-import { go } from '../route'
 import type { DatasetInfo, DatasetProgress, DQSummary, Overview } from '../types'
 import { Count } from './Count'
+import { Page, Panel } from './Page'
 
 const STAGES: [string, string][] = [
   ['hash', 'Fingerprint the file (SHA-256)'], ['load_csv', 'Read every row'], ['verify_order', 'Check nothing was skipped'],
@@ -16,9 +15,8 @@ const fmtN = (n: number) => Math.round(n).toLocaleString('en-IN')
 
 interface Live { victim: string | null; traceMs: number | null; l1: string | null; ringSize: number | null; loss: number | null }
 
-/** First page: how the work flows (with live figures from the loaded data), and a bay to analyse any file live. */
-export function Home({ stats }: { stats: DQSummary | null }) {
-  const c = useCopy()
+/** Data Management: how the system works (with live figures from the loaded file), analyse a new file, and saved cases. */
+export function DataPage({ stats }: { stats: DQSummary | null }) {
   const [o, setO] = useState<Overview | null>(null)
   const [live, setLive] = useState<Live>({ victim: null, traceMs: null, l1: null, ringSize: null, loss: null })
   const [sets, setSets] = useState<DatasetInfo[]>([])
@@ -38,7 +36,7 @@ export function Home({ stats }: { stats: DQSummary | null }) {
   const flagged = o?.bands.HIGH ?? null
   const steps = [
     { t: 'Load and check every row', p: 'The file is read as evidence: nothing edited or dropped, rule breaks flagged.', art: 'rows',
-      fig: stats ? <><Count value={stats.rows} format={fmtN} /><small>rows kept, none edited</small></> : null, to: '#evidence' },
+      fig: stats ? <><Count value={stats.rows} format={fmtN} /><small>rows kept, none edited</small></> : null, to: '#overview' },
     { t: 'Build the money graph', p: 'Every account becomes a point, every transfer a link, ordered in time.', art: 'net',
       fig: stats ? <><Count value={stats.accounts} format={fmtN} /><small>accounts linked</small></> : null, to: '#overview' },
     { t: 'Score every account 0-100', p: 'Speed of pass-through, fan-in / fan-out, repeated rings, cash-out channels.', art: 'score',
@@ -55,41 +53,27 @@ export function Home({ stats }: { stats: DQSummary | null }) {
   ]
 
   return (
-    <div className="home">
-      <section className="hero">
-        <h1>{c.homeTitle}</h1>
-        <p>{c.homeLede}</p>
-      </section>
-      <section aria-label="How it works">
-        <ol className="flow stagger" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+    <Page title="Data Management" hi="डेटा प्रबंधन"
+          desc="Load a bank transaction export, watch it being checked and analysed, and switch between saved cases.">
+      <Panel title="How this system works" note="Figures come from the file that is open now. Click a step to see its result.">
+        <ol className="steps6">
           {steps.map((s, i) => (
-            <li key={s.t} style={{ ['--i' as string]: i, display: 'flex' }}>
-              <button className="step" onClick={() => go(s.to)} style={{ width: '100%' }}>
-                <span className="n">{String(i + 1).padStart(2, '0')}</span>
-                <div className={`art art-${s.art === 'trace' ? 'net' : s.art}`} aria-hidden="true">
-                  {s.art === 'rows' && <><i /><i /><i /><i /></>}
-                  {(s.art === 'net' || s.art === 'trace') && <><b /><b /><b /><b />{s.art === 'trace' && <span className="runner" />}</>}
-                  {s.art === 'score' && [22, 30, 18, 40, 26, 84, 92].map((h, k) => <i key={k} className={h > 70 ? 'hot' : ''} style={{ height: `${h}%`, animationDelay: `${k * 0.08}s` }} />)}
-                  {s.art === 'ring' && Array.from({ length: 21 }, (_, k) => <i key={k} />)}
-                  {s.art === 'doc' && <><i /><i /><i /></>}
-                </div>
-                <h3>{s.t}</h3>
-                <p>{s.p}</p>
-                <div className="fig">{s.fig ?? <span className="muted small">…</span>}</div>
-              </button>
-            </li>
+            <li key={s.t}><a href={s.to} className="step6">
+              <span className="n">{i + 1}</span>
+              <span className="st">{s.t}</span>
+              <span className="sp6">{s.p}</span>
+              <span className="fig6">{s.fig ?? <span className="muted">…</span>}</span>
+            </a></li>
           ))}
         </ol>
-        {live.loss !== null && <p className="small muted" style={{ marginTop: 10 }}>Figures above come from the loaded file
-          {stats ? ` (${stats.input_sha256.slice(0, 8)})` : ''}; the sample trace is victim {live.victim}, who lost {inr(live.loss)}.</p>}
-      </section>
+        {live.loss !== null && <p className="small muted">The sample trace is victim {live.victim}, who lost {inr(live.loss)}.</p>}
+      </Panel>
       <Analyse sets={sets} onSets={setSets} />
-    </div>
+    </Page>
   )
 }
 
 function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInfo[]) => void }) {
-  const c = useCopy()
   const [over, setOver] = useState(false)
   const [sent, setSent] = useState(0)          // upload fraction 0..1
   const [file, setFile] = useState<File | null>(null)
@@ -136,7 +120,7 @@ function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInf
     setRemoving(d.id); setSetErr(null)
     api.removeDataset(d.id).then((left) => {
       setAsking(null); setRemoving(null)
-      if (d.active) { window.location.hash = '#home'; window.location.reload(); return }   // another case was opened
+      if (d.active) { window.location.hash = '#data'; window.location.reload(); return }   // another case was opened
       onSets(left)
       window.dispatchEvent(new Event('abhedya:datasets'))
     }).catch((e) => { setRemoving(null); setSetErr(String((e as Error).message)) })
@@ -144,13 +128,13 @@ function Analyse({ sets, onSets }: { sets: DatasetInfo[]; onSets: (s: DatasetInf
   const total = prog ? Object.values(prog.stages_done).reduce((a, b) => a + b, 0) : 0
 
   return (
-    <section className="bay" aria-label="Analyse a file">
+    <section className="bay" aria-label="Analyse a file and saved cases">
       <div className="sheet sheet-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className={`drop${over ? ' over' : ''}`} onDragOver={(e) => { e.preventDefault(); setOver(true) }}
              onDragLeave={() => setOver(false)} onDrop={drop}>
           <FileArrowUp size={40} weight="duotone" aria-hidden="true" />
-          <h2>{c.dropTitle}</h2>
-          <p className="small muted" style={{ maxWidth: '52ch', margin: 0 }}>{c.dropHint}</p>
+          <h2>Analyse a new transaction file</h2>
+          <p className="small muted" style={{ maxWidth: '52ch', margin: 0 }}>Drop a bank transaction CSV here, or choose a file. It is stored exactly as received and analysed on this computer.</p>
           <input ref={input} type="file" accept=".csv,text/csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) send(f); e.target.value = '' }} />
           <button className="btn primary" onClick={() => input.current?.click()}>Choose a CSV file</button>
           <span className="small muted">Needs the 11 standard columns (Transaction_ID … Device_Type). Up to 1 GB.</span>

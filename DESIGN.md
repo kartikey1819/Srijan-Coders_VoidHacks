@@ -1,98 +1,123 @@
-# Design: Case Register
+# Design: police workstation
 
-The investigator UI (`web/src`) is laid out like an official case register: numbered entries, ruled fields and
-typed values, with one place for every fact. The answer comes first (which accounts hold the victim's money, and how
-much); the graph and timeline are the evidence annex. Product facts live in `PRODUCT.md`.
+The investigator UI (`web/src`) is built for Indian police officers, not analysts. Every screen has to be understood at
+a glance, in plain words, while still giving exact details. It uses a government frame (tricolour strip, police
+masthead, navy sidebar) around quiet, ruled report pages. Product facts live in `PRODUCT.md`.
 
-## Two looks, one kit: Official | Gen-Z
-A header switch sets `<html data-look>` (`official` default, `genz`). The choice is remembered per browser and can
-be overridden with `?look=`; the old `briefing` value maps to `genz`. Both looks share the markup, data, behaviour and
-tests. Tokens (`web/src/index.css`), fonts, motion and copy voice (`web/src/copy.ts`) differ, and facts never do.
+## Frame
+- **Masthead:**
+  - a thin tricolour strip;
+  - a crest, "Indore Police Commissionerate · Cyber Crime Cell" with its Hindi line, and the system name;
+  - account search (Enter traces it);
+  - the Day / Night switch, the IST date and time, and "For official use only".
+- **Left sidebar (navy):** five screens, each in English with the Hindi name beneath:
+  - Dashboard (डैशबोर्ड);
+  - Trace Victim Funds (पीड़ित राशि का पता लगाएँ);
+  - Suspect Accounts (संदिग्ध खाते);
+  - Fraud Networks (धोखाधड़ी नेटवर्क);
+  - Data Management (डेटा प्रबंधन).
 
-| | Official (default) | Gen-Z |
+  The footer shows the loaded data (case switcher, rows, accounts, file fingerprint) and that nothing leaves the computer.
+- **Pages scroll naturally;** only the masthead and the sidebar stay put. Every page starts with a breadcrumb, the
+  English title with the Hindi title beside it, one line on what the page is for, and its actions. It ends with a
+  footer saying results are investigative aids to verify against bank records.
+
+## Themes: Day and Night
+One token set per theme on `<html data-theme>` (`light` default, `dark`), remembered per browser, `?theme=` overrides.
+
+| | Day | Night |
 |---|---|---|
-| Ground / panel | light `#f3f5f7` / `#ffffff` | dark `#0b0d12` / `#141821` |
-| Ink / muted | `#14213d` / `#5c6773` | `#f2f4f8` / `#8e97a8` |
-| Accent | navy ink | electric lime `#c6ff3d` (on `#0b0d12` ink) |
-| L1 / L2 / L3 | `#c46a12` / `#6b4fb5` / `#00897b` | `#d97520` / `#8466ec` / `#109e8a` |
-| Money at risk (reserved) | `#a4161a` | `#ff4d8d` |
-| Text / display / IDs | IBM Plex Sans / IBM Plex Sans / IBM Plex Mono | Inter / Space Grotesk / JetBrains Mono |
-| Case figures | 22 px | 40 px, counted up on arrival |
-| Radius | 2 px panels and buttons | 14 px panels, pill buttons |
-| Motion | 120 ms fades, no movement | 280 ms ease-out rises, staggers, graph build-up, globe particles |
-| Copy | "Still held in 11 accounts" | "still catchable in 11 accounts 👀" |
+| Ground / panel | `#eef1f5` / `#ffffff` | `#0e1520` / `#172031` |
+| Ink / muted | `#1a2233` / `#4f5b6d` | `#e4e9f1` / `#a5b0c2` |
+| Accent | navy blue `#1d4f91` | `#7fb0ff` |
+| Sidebar | navy `#0d2d5e` | `#0a1426` |
+| Victim / L1 / L2 / L3 | `#1d4f91` / `#c46a12` / `#6b4fb5` / `#00897b` | `#4f8fe8` / `#d97520` / `#8466ec` / `#109e8a` |
+| Can still be frozen | green `#157f3b` | `#4ac26b` |
+| Money at risk, warnings | red `#b42318` | `#f47067` |
+| Main action | burnt orange `#b4530a` | `#f39a4a` |
 
-**Colour checks** (dataviz validator, all pairs):
-- Official on white: worst CVD ΔE 11.5, normal-vision 22.0.
-- Gen-Z on `#141821`: inside the dark band, worst CVD ΔE 12.4, normal-vision 23.9. The at-risk pink clears every layer
-  colour (normal-vision 17.3).
+- **Colour checks** (dataviz validator, categorical, against each theme's own panel colour). Both themes pass every
+  check:
+  - Day: worst CVD ΔE 15.1, normal vision 22.0.
+  - Night: worst CVD ΔE 18.6, normal vision 25.6.
+- **Fonts:** Noto Sans and Noto Sans Devanagari for text, IBM Plex Mono for account numbers and IDs. They are
+  self-hosted from npm (`@fontsource/*`), so no font request leaves the machine.
+- **Sizes:** body text 15 px; buttons and fields at least 38-40 px high; sidebar items 44 px.
 
-**Contrast:** all text at least 4.5:1 in both looks (Gen-Z muted on panel: 6.0:1).
+## Writing for officers
+- **Roles in words:** "Collector (Layer 1)", "Distributor (Layer 2)", "Cash-out (Layer 3)", "Victim".
+- **Money in words:** "can still be frozen", "already withdrawn or moved on".
+- **Time from the victim's payment:** "+4 min". Rupees use Indian grouping (₹4,55,541.61), and ₹4.55 L for compact
+  figures.
+- **No internal codes on screen.** Reason codes become sentences ("Passes money on within 3-15 minutes"), and engine
+  warnings are rewritten plainly (`components/trace/model.ts`, `plainWarning`).
+- **Titles and notes:** every panel title says what it shows, and a one-line note says how to use it.
 
-**Fonts:** self-hosted from npm (`@fontsource/*`); no font request leaves the machine.
+## Trace Victim Funds (the page the jury tests)
+One scrolling report, top to bottom:
+1. **Select the victim account:** account number, "Follow money up to N transfers away", Trace, or choose an
+   identified victim (largest loss first). It also asks "Which payments did the victim report?" (the disputed-transfer
+   picker).
+2. **Summary:** one plain sentence, then the journey strip: taken from victim, then N collectors, N distributors,
+   N cash-out accounts, then can still be frozen. Each station shows its count and amount, with the time on each
+   arrow.
+3. **Four insight cards:**
+   - how fast the money moved (the collector's pass-on time);
+   - how widely it was spread (mini fan and bank chips);
+   - signs of an organised operation (foreign proxy IPs, scripts, wallet / crypto cash-outs);
+   - amount that can be recovered.
+4. **How the money moved:** the money-trail tree.
+   - Columns run Victim, Layer 1 Collector, Layer 2 Distributors, Layer 3 Cash-out. Each account sits under the account
+     that first paid it.
+   - Pointing at a box follows its path; a click opens the account; Replay builds the tree transfer by transfer.
+   - The minute-by-minute timeline (play, step size, 1x-2x, previous / next, 15-day switch) drives it, and later boxes
+     are faded.
+   - Solid lines mean money moved within the hour, dashed means later. More than six accounts paid by one account
+     fold into "+N more", which expands on a click.
+5. **Where the money sat, minute by minute:** a stacked chart that shares the time cursor.
+6. **Collector account: first minutes after the victim's payment** (credit up, debits down, balance draining), next to
+   the **Trace record**:
+   - victim and payments followed;
+   - how far, and the method in plain words (3-15 minute window, at least 90 % amount match, own money first);
+   - accounts per layer, warning signs, points to check, and time taken.
+7. **Accounts to freeze** next to **Transactions in the trail** (mode and device, with foreign proxies in red).
 
-## Motion rules (Emil Kowalski's design-engineering principles)
-- Ease-out curve `cubic-bezier(0.23, 1, 0.32, 1)`; UI motion stays under 300 ms; nothing enters from `scale(0)`.
-- Buttons press to `scale(0.97)`; hover effects only on devices with a fine pointer.
-- Only `transform` and `opacity` animate. Bars grow with `scaleX/scaleY`, lines draw with `stroke-dashoffset`; the
-  detector confirms no layout-property animation.
-- Staggers are 30 ms per item, capped at 10 items. Keyboard-repeated actions are never animated.
-- `prefers-reduced-motion`: movement, staggers, counters, globe rotation, camera flights and particles switch off;
-  short fades remain.
+Header actions: Download trail (CSV), View fraud network, and **Prepare case diary and freeze notices**.
 
-## Components
-- **Shell:** product name, ID search (format check as you type, near matches from `/api/search`), look switch, and a
-  dataset line (rows, accounts, file hash, offline). Tabs are links with `aria-current`. Hash routes
-  (`route.ts`) are the single source of truth, so Back and Forward work and pasted links work.
-- **Case header:** victim, amount taken, still held (red), the L1 · L2 · L3 spread with time since the theft, and freeze
-  requests by bank. The primary action is "Case diary & notices".
-- **Register:** layer groups with numbered rows: account, bank, arrival as T+ time, received, still held, and Ring.
-  Rows are ordered freeze-first. They are keyboard-reachable (Tab, then Enter to open).
-- **Annex:**
-  - Cytoscape graph: Victim | L1 | L2 | L3 columns, edge width = victim money, dashed edges = more than 15 minutes.
-  - "Victim money still in mule accounts" chart: stacked by layer, sharing the time cursor.
-- **Timeline:** play / pause, speed, previous / next transfer, and a range input with a readable `aria-valuetext`.
-  It shows transfer ticks, or an activity histogram when there are more than 150 transfers, plus a 15-day switch. It
-  stays pinned to the bottom of the screen. `data-visible-edges` on the graph is kept for tests.
-- **Drawer:** the account panel opens beside the work, not below the fold. Esc closes it and focus returns.
-- **Home (first screen):** six pipeline steps with live figures and small looping illustrations; a drop zone that
-  uploads a CSV, shows each analysis stage with its real timing, and opens the result as a new saved case. Saved cases
-  switch from the header.
-- **Ring:** a 3D globe (react-force-graph-3d, lazy-loaded) with every account pulled onto one sphere.
-  - Clicking a dot lights its money journey (up to 4 hops each way, in time order) and flies the camera there.
-  - The journey panel lists where the money came from and went, each with "Go here", plus a breadcrumb.
-  - A **Columns** toggle keeps the strict Victim | L1 | L2 | L3 view.
-  - Both views share layer filters, the time slider, ZIP export and a PNG snapshot.
-- **Resizable workspace:** Investigate, Ring and Flagged use draggable dividers (keyboard-operable, double-click
-  resets), remembered per browser. Every panel can be maximized (Esc restores).
-- **Charts** (`charts.tsx`, d3-scale and d3-shape rendered as SVG): titles state the finding. Each has a source line,
-  hover / focus tooltips, hit areas larger than the marks, bars ≤ 24 px with 4 px rounded data ends, hairline grids,
-  and no dual axes. Every bar links through to the filtered list.
+## Case documents
+A large dialog:
+- **Left side:** the case particulars:
+  - FIR / Case No., NCRP / 1930 Complaint No., Investigating Officer, Rank, Police Station, Sections of law;
+  - the local AI switch, which says whether the model is installed;
+  - Prepare documents;
+  - a **Verification passed / failed** box. It says how many accounts, IFSCs, transaction IDs and amounts the output
+    firewall checked against the data, how many failed, and shows the evidence fingerprint.
+- **Right side:** tabs for Case diary, All freeze notices (N), and one per bank with its hold amount; Save HTML;
+  Print / PDF; the document on paper.
+- **The documents:**
+  - the case diary follows Section 192 BNSS with six numbered sections;
+  - each bank's notice cites Sections 94 and 106 BNSS (91 and 102 CrPC) and asks for a debit hold limited to the
+    amount shown.
 
-## Do / don't
-- Do: put the answer before the evidence; give every figure its source; use plain words ("money arrived T+7 min").
-- Don't use:
-  - badges, points, celebratory motion or alarm colours;
-  - gradient text, glow, or cards inside cards;
-  - eyebrow labels;
-  - em dashes in visible copy;
-  - `dangerouslySetInnerHTML`.
+## Other screens
+- **Dashboard:**
+  - a headline sentence;
+  - the score distribution with the 70 line;
+  - suspect accounts by role (donut);
+  - why accounts were flagged; suspects by bank; daily activity; victims found.
 
-## Measured, round 1 (full 2M-row file, 1366×768, headless Edge)
-| Measure | Result |
-|---|---|
-| Trace screen ready | about 0.33 s |
-| Trace slider | 7 ms per step |
-| Ring (1,373 accounts) ready | about 1.0 s |
-| Ring slider | 31.5 ms median (Cytoscape redraw of 2,954 edges dominates) |
-| `/api/overview` | 122 ms first call, then cached |
-| Design detector (`impeccable detect`) | 0 findings after the fix |
+  Every chart opens the filtered list.
+- **Suspect Accounts:** the list with role badges and reasons in words, filters, the account panel beside it (the
+  divider is resizable and remembered), and CSV downloads.
+- **Fraud Networks:**
+  - Without an account: a start list of collector accounts.
+  - With one: the 3D globe (click a dot to light its money journey; double-click a link for its flow) or the strict
+    Columns view, with layer filters, the time slider, PNG picture and ZIP export.
+- **Data Management:** the six steps of how the system works, each with a live figure; upload with live stage
+  timings; saved cases (open, remove).
 
-## Measured, round 2 (full 2M-row file, headless Edge)
-| Measure | Result |
-|---|---|
-| Trace screen ready (Official) | 427-444 ms |
-| Ring globe, 1,373 accounts and 2,954 links | 63-74 fps (headless, software rendering) |
-| Ring Columns slider | 33 ms per step |
-| Upload 50,000-row `data/sample.csv`, to analysed | 3.3 s (0.5 s upload, 1.9 s stages) |
-| Design detector (`impeccable detect`) | 0 findings |
+## Motion (Emil Kowalski's design-engineering rules)
+- Ease-out `cubic-bezier(0.23, 1, 0.32, 1)`; UI motion 160-200 ms; only `transform` and `opacity` animate.
+- Buttons press to `scale(0.97)`; hover effects only with a fine pointer.
+- `prefers-reduced-motion` switches movement off.
+- The impeccable design detector reports 0 findings on `web/src`.

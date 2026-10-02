@@ -41,7 +41,7 @@ Every figure is traceable to a transaction row in the original, never-modified f
   including IFSC, payment mode, narration, IP and device.
 - Outputs:
   - a police case diary (HTML, printable);
-  - Section 94 BNSS (old Section 91 CrPC) freeze notices addressed to bank nodal officers;
+  - Sections 94 & 106 BNSS (91 & 102 CrPC) freeze notices addressed to bank nodal officers;
   - CSV / ZIP exports of flagged accounts and isolated rings.
 - Jury weights: blind victim trace 40 %, detection precision / recall 30 %, court-ready output and usability 20 %,
   engineering 10 %.

@@ -176,6 +176,8 @@ class CaseInfo(BaseModel):
     ncrp_ack: Optional[str] = None
     police_station: Optional[str] = None
     io_name: Optional[str] = None
+    io_rank: Optional[str] = None    # e.g. "Sub-Inspector" (the documents default to that when empty)
+    sections: Optional[str] = None   # sections of law; the documents print a BNS / IT Act default when empty
     use_llm: bool = True
     seed_txns: list[int] = []        # txn_idx of the disputed transaction(s); empty = all victim outflows
 
@@ -230,6 +232,23 @@ class NarrSection(BaseModel):
 class Narrative(BaseModel):
     sections: list[NarrSection]
 
+class NoticeInfo(BaseModel):         # one bank's Section 94 & 106 BNSS notice
+    bank_prefix: str                 # "ICIC"
+    bank_name: str                   # "ICICI Bank"
+    accounts: int                    # accounts to hold at that bank
+    hold_paise: int                  # total to hold at that bank
+    url: str                         # relative URL of the notice HTML, same style as CaseOutput.files values
+
+class Verification(BaseModel):       # what the output firewall checked across every rendered document of the case
+    ok: bool
+    accounts: int                    # distinct account numbers checked against the evidence
+    ifscs: int                       # distinct IFSCs checked
+    txn_ids: int                     # distinct transaction IDs checked
+    amounts: int                     # distinct rupee figures checked
+    total: int                       # accounts + ifscs + txn_ids + amounts
+    unverified: int                  # tokens not found in the evidence (0 whenever documents are written)
+    fingerprint: str                 # the facts_sha256 the documents were checked against
+
 class CaseOutput(BaseModel):
     case_id: str
     files: dict[str, str]            # logical name -> relative URL, e.g. {"diary": "...", "notice_ICIC": "..."}
@@ -237,40 +256,11 @@ class CaseOutput(BaseModel):
     llm_fallback_reason: Optional[str] = None
     manifest_sha256: str
     facts_sha256: str = ""
+    diary_url: str                   # relative URL of the case diary HTML (same as files["diary"])
+    notices: list[NoticeInfo] = []   # one per bank, sorted by bank prefix
+    verification: Verification
+    narrative_source: str            # the sentence printed under the diary's narrative (AI-drafted or fixed templates)
 
-# ---- evidence (chain of custody of the loaded file) ----
-class EvidenceCheck(BaseModel):     # one data-quality rule and what it found
-    flag: str
-    rule: str
-    rows: int                        # rows carrying the flag (rows are never edited or dropped)
-    outside_graph: int               # of those, rows that cannot move money and are left out of the graph
-    touching_flagged: int            # of those, rows where the sender or receiver is a flagged (HIGH) account
-
-class CustodyEvent(BaseModel):
-    ts: str                          # UTC, ISO 8601
-    action: str                      # ingest | verify | certificate | export | ...
-    detail: str
-
-class EvidenceRecord(BaseModel):  # the loaded file and its custody (Evidence tab)
-    file_name: str
-    file_path: str
-    file_present: bool
-    size_bytes: Optional[int] = None
-    sha256: str
-    rows: int
-    rows_in_graph: int
-    accounts: int
-    first_ts: Optional[str] = None
-    last_ts: Optional[str] = None
-    loaded_at: Optional[str] = None
-    load_seconds: float
-    detect_seconds: Optional[float] = None
-    checks: list[EvidenceCheck]
-    custody: list[CustodyEvent]      # newest first
-
-class VerifyResult(BaseModel):
-    status: str                      # match | mismatch | missing
-    sha256_now: Optional[str] = None
-    expected: str
-    seconds: float
-    checked_at: str
+class LlmStatus(BaseModel):          # GET /api/docs/llm
+    available: bool                  # the local model answered within about a second and is installed
+    model: str

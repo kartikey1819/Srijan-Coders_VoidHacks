@@ -1,6 +1,7 @@
 """Document routes (plan/00_OVERVIEW.md section 5.4). Owner: C."""
 import re
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
@@ -10,11 +11,26 @@ from abhedya.ai.fallback import fallback_narrative, with_template_sections
 from abhedya.docs.render import FirewallError, render_case
 from abhedya.engine import get_engine
 from abhedya.evidence.build import build_evidence
-from contracts.models import CaseInfo, CaseOutput
+from contracts.models import CaseInfo, CaseOutput, LlmStatus
 
 router = APIRouter(prefix="/api")
 CASE_ID = re.compile(r"^[A-Z0-9]{4,20}-\d{14}$")
 FILE = re.compile(r"^[a-z_A-Z0-9]+\.(html|json)$")
+LLM_CHECK_TIMEOUT_S = 1.0
+
+
+@router.get("/docs/llm", response_model=LlmStatus)
+def llm_status() -> LlmStatus:
+    """Is the local model installed and answering? About a second at most; never raises."""
+    model = narrator.MODEL
+    try:
+        r = httpx.get(f"{narrator.OLLAMA_URL}/api/tags", timeout=LLM_CHECK_TIMEOUT_S)
+        r.raise_for_status()
+        names = {m.get("name") for m in r.json().get("models", []) if isinstance(m, dict)}
+        available = model in names or f"{model}:latest" in names
+    except Exception:  # noqa: BLE001  (model down, slow, or answering nonsense: all mean "not available")
+        available = False
+    return LlmStatus(available=available, model=model)
 
 
 @router.post("/docs/{victim}", response_model=CaseOutput)

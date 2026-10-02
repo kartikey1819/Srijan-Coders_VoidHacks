@@ -38,7 +38,7 @@ transaction export into a local DuckDB database without changing the file, parse
 compressed adjacency arrays of the money graph, and scores every account for mule risk (0-100, with reason codes).
 It then serves a local web app on 127.0.0.1. From a victim account ID, the engine follows the victim's money forward
 in time through at most 4 hops. It attributes every paisa to the transfer that moved it, isolates the surrounding
-syndicate, and renders a police case diary plus one Section 94 BNSS (old Section 91 CrPC) notice per bank. Every
+syndicate, and renders a police case diary plus one Sections 94 & 106 BNSS (91 & 102 CrPC) notice per bank. Every
 account number, IFSC, transaction ID and rupee figure in those documents is inserted from a checked evidence package.
 An optional local language model may write three prose paragraphs, but it never sees or produces a fact.
 
@@ -823,8 +823,12 @@ The export is logged to `data/audit.jsonl` with the SHA-256 of the ZIP.
 ## 8. Evidence and documents
 
 Route: `POST /api/docs/{victim}` (`abhedya/api/routes_docs.py`), body `CaseInfo` (FIR number, NCRP acknowledgement,
-police station, IO name, `use_llm`, `seed_txns`). It runs: trace, then `build_evidence()`, then narrative (model or
-template), then `render_case()`. If the trace has no edges it returns 422.
+police station, IO name, IO rank, sections of law, `use_llm`, `seed_txns`). It runs: trace, then `build_evidence()`,
+then narrative (model or template), then `render_case()`. If the trace has no edges it returns 422. The answer,
+`CaseOutput`, carries the file URLs, the diary URL, one `NoticeInfo` per bank (bank, accounts, amount to hold, URL),
+the firewall's `Verification` counts (section 8.5), the narrative source line and the fingerprints.
+`GET /api/docs/llm` answers `{"available": bool, "model": str}`: whether the local model is installed and answering
+(Ollama `/api/tags`, 1 s timeout, never raises), so the UI can show it before the officer asks for an AI draft.
 
 ### 8.1 Evidence package and evidence IDs
 
@@ -879,24 +883,35 @@ fields cannot inject HTML) and `StrictUndefined`. Two filters are registered:
 
 Templates are in `abhedya/docs/templates/`:
 
-- `base.html.j2`: A4 print layout, "DRAFT" watermark, print button, and a footer with case ID, data SHA-256 and facts
-  fingerprint. The footer states that the document is a draft for the Investigating Officer to verify and sign.
-- `case_diary.html.j2`: the police case diary:
-  1. total funds siphoned (victim account, bank, IFSC, disputed transfers, total, layer counts, money still held);
-  2. narrative (model or template), with its source stated;
-  3. chronology table of every trail transfer (evidence ID, time, transaction ID, from, to, step, mode, amount, victim
-     money, the rule that linked it);
-  4. layer-wise accounts (L1, L2, L3) with bank, IFSC, first time received, money received and money still held;
-  5. holding accounts recommended for a debit hold, limited to the amount held, with a total;
-  6. points for the IO to verify (trace warnings, data-quality notes, and a statement of the method);
-  7. remarks and signature block.
-- `notice_s94.html.j2`: one notice **per bank**. The freeze accounts are grouped by bank prefix and each group gets
-  its own file, `notice_<PREFIX>.html`. It is addressed to "The Nodal Officer, <bank>, Cyber Fraud / Grievance Cell".
-  The subject is a notice under **Section 94 of the Bharatiya Nagarik Suraksha Sanhita, 2023 (corresponding to Section
-  91 of the Code of Criminal Procedure, 1973) read with Section 168 BNSS**. It requests a debit hold limited to the
-  amount shown (not a full account freeze) and lists, per account: account number, IFSC, each disputed credit
-  (transaction ID, time, amount, victim money) and the amount to hold, with a bank total. It also requests KYC,
-  statements for the dataset period, linked accounts, device / IP / login logs and onward-transfer details.
+- `base.html.j2`: A4 print layout in a serif government-document style, "DRAFT" watermark, print button, the
+  letterhead ("MADHYA PRADESH POLICE · INDORE (M.P.)", the police station, default "Cyber Crime Police Station,
+  Indore", and "Police Commissionerate, Indore · National Cyber Crime Helpline 1930"), and a footer with case ID, data
+  SHA-256 and facts fingerprint. The footer states that the document is a draft for the Investigating Officer to verify
+  and sign.
+- `case_diary.html.j2`: "CASE DIARY (Section 192 BNSS, 2023)". A particulars table (FIR / case no., NCRP / 1930
+  complaint no., sections of law, default "Sections 318(4), 319(2), 61(2) BNS, 2023 r/w Sections 66C, 66D Information
+  Technology Act, 2000", IO with rank, default "Sub-Inspector", and the time prepared in IST; empty fields print an
+  underline to fill by hand), then:
+  1. Complainant (Victim) Account & Loss: victim account, bank, IFSC, total siphoned, fraud window (first to last
+     transfer, with its duration), disputed transfers;
+  2. Investigation Narrative (model or template), with its source stated;
+  3. Chronological Money Trail: every trail transfer (evidence ID, time, transaction ID, from, to, layer step with the
+     rule that linked it, mode, amount, victim money);
+  4. Layer-wise Accounts Identified: Layer 1 Collector, Layer 2 Distributor, Layer 3 Cash-out, with bank, IFSC, first
+     time received, money received and money still held;
+  5. Accounts Recommended for Immediate Debit Freeze, limited to the amount held, with a total;
+  6. Further Action Proposed: notices to the listed banks, KYC / statements / device-IP logs, verification against bank
+     records, and the trace warnings and data-quality notes (in plain words) as points to verify; then the method,
+     the full fingerprints, and the IO signature block.
+- `notice.html.j2`: one notice **per bank**. The freeze accounts are grouped by bank prefix and each group gets its
+  own file, `notice_<PREFIX>.html`. It is addressed to "The Nodal Officer, <bank>, Cyber Fraud / Grievance Cell" and
+  titled **NOTICE UNDER SECTIONS 94 & 106 OF THE BHARATIYA NAGARIK SURAKSHA SANHITA, 2023 (corresponding to Sections
+  91 & 102 of the Code of Criminal Procedure, 1973)**, with a subject line citing the FIR, NCRP number and sections of
+  law. It requests a DEBIT HOLD limited to the amount shown (not a full account freeze) and lists, per account:
+  account number, IFSC, each disputed credit (transaction ID, time, amount, victim money) and the amount to hold, with
+  a bank total. It also requests KYC, statements for the dataset period, linked accounts, device / IP / login logs and
+  onward-transfer details, gives a reply-within line, and ends with the IO signature block (name, rank, police
+  station).
 
 ### 8.5 The output firewall
 
@@ -913,6 +928,10 @@ After rendering and before writing anything, `firewall()` scans each HTML docume
 Any token that is not in its allowed set stops the whole case: no file is written, and the error names the offending
 values. This is the last guard behind the validator (section 9). Even if a prose paragraph or a template change
 introduced an account number or amount, it could not reach a written document.
+
+When every document passes, `firewall()` returns the tokens it checked, and `CaseOutput.verification` reports how many
+distinct account numbers, IFSCs, transaction IDs and rupee figures were checked across the diary and all notices, their
+total, `unverified: 0`, and the facts fingerprint they were checked against.
 
 ### 8.6 Files written
 
@@ -1056,7 +1075,8 @@ All routes are under `/api` (`abhedya/api/routes_trace.py`, `routes_risk.py`, `r
 | GET | `/api/victims?limit=` | Candidate victims (section 5.10) |
 | GET | `/api/export/flagged.csv` | HIGH accounts as CSV |
 | GET | `/api/export/ranked.csv` | All accounts ranked, as CSV |
-| POST | `/api/docs/{victim}` | Body `CaseInfo`; runs trace, evidence, narrative, rendering; returns `CaseOutput` with file URLs and hashes |
+| POST | `/api/docs/{victim}` | Body `CaseInfo`; runs trace, evidence, narrative, rendering; returns `CaseOutput` with file URLs, per-bank notices, verification counts and hashes |
+| GET | `/api/docs/llm` | `LlmStatus`: `{"available": bool, "model": str}` for the local AI model (1 s check, never raises) |
 | GET | `/api/docs/{case_id}/{file}` | A written diary, notice or JSON file |
 
 Errors: an unknown account gives 404 with `{"detail": ...}` (`UnknownAccount`), a missing database gives 503, and
@@ -1095,23 +1115,18 @@ with the database present (`bench/results.md`).
 
 ### 10.5 UI screens (`web/src`)
 
-The UI is a single page in React with four tabs. Every view is also reachable by a shareable address
-(`#trace=ACCOUNT`, `#ring=ACCOUNT`, `#flagged`, `#data`).
+The UI is a React single-page app in a police workstation frame: a masthead (crest, account search, Day / Night, IST
+clock) and a left sidebar with five screens, in English and Hindi:
+- Dashboard (`#overview`);
+- Trace Victim Funds (`#trace=ACCOUNT`), one scrolling report: summary and journey strip, insight cards, the money-trail
+  tree driven by the minute-by-minute timeline, the collector's first minutes, the trace record, accounts to freeze,
+  and the transactions;
+- Suspect Accounts (`#flagged`);
+- Fraud Networks (`#ring=ACCOUNT`, 3D globe or columns);
+- Data Management (`#data`, upload and saved cases).
 
-- **Investigate**: search box with prefix search; a summary strip (victim, siphoned, L1 / L2 / L3 counts, still held,
-  trace time); the trace warnings; the disputed-transfer picker; and the trace graph. The graph uses Cytoscape with a
-  preset layered layout, one column per role (Victim, L1, L2, L3). Each column is ordered by the average position of
-  its senders to reduce crossings. Red edges are wallet / crypto cash-outs, dashed edges are slower than 15 minutes,
-  and a thick border marks a HIGH account. A **time slider** moves in whole minutes and can play at 1, 5 or 30
-  minutes per tick, over the trail's span or the full 15 days. The side panel has the layer table and the account panel
-  (risk score with reason labels, totals, devices and IP classes of outgoing transfers, data flags, top
-  counterparties). The **Case diary & notices** dialog takes FIR number, NCRP number, police station and IO name, plus
-  an AI on / off switch, and links to the written files.
-- **Syndicate ring**: the whole ring around an account with no node cap, the same layered layout, its own time
-  slider, and the ZIP export.
-- **Flagged accounts**: the HIGH list with reasons, and downloads of `flagged.csv` and `ranked.csv`.
-- **Data quality**: rows, accounts, source SHA-256, each flag with its rule and row count, and the stored stage
-  timings.
+Case documents open in a dialog with the case particulars, the firewall's verification counts and one tab per document.
+`DESIGN.md` and `docs/TEAM_GUIDE.md` (section 13) describe every screen.
 
 `web/src/types.ts` mirrors the pydantic models by hand. `tests/test_contract.py` checks that they agree, field by field.
 

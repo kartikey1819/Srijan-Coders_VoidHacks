@@ -3,10 +3,9 @@ import cytoscape from 'cytoscape'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
-import { useCopy } from '../copy'
 import { inr, ROLE_TEXT, spanText, toEpoch } from '../format'
 import { graphStyle, layeredPositions } from '../graph'
-import { cssVar, useLookTick } from '../look'
+import { cssVar, useThemeTick } from '../look'
 import { go } from '../route'
 import { journeyOf, ringIndex, type Hop } from '../ringJourney'
 import { safeStorage } from '../store'
@@ -14,6 +13,7 @@ import type { GraphEdge, RingResult } from '../types'
 import { AccountPanel } from './AccountPanel'
 import { EdgeFlow } from './EdgeFlow'
 import { Globe, type GlobeHandle } from './Globe'
+import { Page } from './Page'
 import { PanelFrame } from './PanelFrame'
 import { Timeline } from './Timeline'
 
@@ -26,7 +26,6 @@ const WINDOW: [number, number] = [toEpoch('2026-09-15 00:00:00'), toEpoch('2026-
 /** One-click syndicate isolation. Globe (default) to see the whole ring and follow one account's journey;
  *  Columns to read the exact Victim | L1 | L2 | L3 layers. */
 export function RingView({ seed, reasons }: Props) {
-  const c = useCopy()
   const [ring, setRing] = useState<RingResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [ms, setMs] = useState(0)
@@ -79,24 +78,22 @@ export function RingView({ seed, reasons }: Props) {
   const cut = Math.min(cutoff, times[times.length - 1] ?? Infinity)
 
   return (
-    <div className="inv">
-      <section className="sheet">
-        <div className="sheet-head">
-          <h1>{c.ringTitle} <span className="acct">{seed}</span></h1>
-          <div className="row gap wrap">
-            <div className="seg view-switch" role="group" aria-label="Ring view">
+    <Page title="Fraud Networks" hi="धोखाधड़ी नेटवर्क"
+          desc={<>Every suspect account linked by money to <b className="mono">{seed}</b>: its victims, collectors, distributors and cash-out accounts. Click a dot to follow its money.</>}
+          actions={<>
+            <div className="seg view-switch" role="group" aria-label="Network view">
               <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}><GlobeIcon /> Globe</button>
               <button aria-pressed={view === 'columns'} onClick={() => setView('columns')}><Rows /> Columns</button>
             </div>
-            {ring && <button className="btn" onClick={snapshot}><Camera /> Snapshot (PNG)</button>}
-            {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export ring (ZIP)</a>}
-          </div>
-        </div>
+            {ring && <button className="btn" onClick={snapshot}><Camera /> Picture (PNG)</button>}
+            {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export network data (ZIP)</a>}
+          </>}>
+      <section className="gpanel">
         {ring && (
           <div className="toolbar">
             <span><b>{ring.nodes.length.toLocaleString('en-IN')} accounts</b> · {ring.n_txn.toLocaleString('en-IN')} transfers ·
               {' '}{inr(ring.total_paise)}{span > 0 && <> · active over {spanText(span)}</>}</span>
-            <span className="muted small">isolated in {ms.toFixed(0)} ms</span>
+            <span className="muted small">found in {ms.toFixed(0)} ms</span>
             <span style={{ marginLeft: 'auto' }} className="row gap wrap" role="group" aria-label="Show layers">
               {ROLES.filter((r) => counts[r]).map((r) => (
                 <label key={r} className="check small"><input type="checkbox" checked={!hidden.has(r)} onChange={() => toggle(r)} />
@@ -107,12 +104,12 @@ export function RingView({ seed, reasons }: Props) {
         )}
       </section>
       {err && <div className="banner bad" role="alert"><b>{err}</b></div>}
-      {!ring && !err && <p className="muted">Isolating the ring around {seed}…</p>}
+      {!ring && !err && <p className="muted">Finding the network around {seed}…</p>}
       {ring && ix && (
-        <div className="inv-main">
+        <div className="net-work">
           <Group orientation="horizontal" id="ring-h" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
             <Panel id="ring-graph" defaultSize="64%" minSize="30%">
-              <PanelFrame label="Ring graph" title={view === 'globe' ? 'Every account in the ring' : 'Victims · L1 · L2 · L3'}
+              <PanelFrame label="Network graph" title={view === 'globe' ? 'Every account in the network' : 'Victims · Collectors · Distributors · Cash-out'}
                 actions={<span className="small muted">{view === 'globe' ? 'Drag to turn · scroll to zoom · click a dot · double-click a link' : 'Click an account · double-click a link'}</span>}>
                 <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
                   {view === 'globe'
@@ -159,8 +156,8 @@ export function RingView({ seed, reasons }: Props) {
         </div>
       )}
       {ring && times.length > 0 && <Timeline times={times} value={cut} onChange={setCutoff} fullRange={WINDOW}
-                                             label="Show the ring's transfers up to this minute" />}
-    </div>
+                                             label="Show the network's transfers up to this minute" />}
+    </Page>
   )
 }
 
@@ -201,7 +198,7 @@ const Columns = forwardRef<{ snapshot: () => string | null }, ColProps>(function
   pickRef.current = onPick
   const openRef = useRef(onOpenLink)
   openRef.current = onOpenLink
-  const tick = useLookTick()
+  const tick = useThemeTick()
 
   useImperativeHandle(ref, () => ({ snapshot: () => cy.current?.png({ full: false, scale: 2, bg: cssVar('--sheet') }) ?? null }), [])
 

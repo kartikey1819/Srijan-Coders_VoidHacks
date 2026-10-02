@@ -72,14 +72,15 @@ export function accountHint(raw: string): string | null {
   return 'Account IDs are 4 letters (bank) followed by 8 digits.'
 }
 
-/** Short names for risk reason codes (full sentences come from /api/risk/reasons). */
+/** Plain words for risk reason codes (full sentences come from /api/risk/reasons). */
 export const REASON_SHORT: Record<string, string> = {
-  PT_STRICT: '3-15 min pass-through', PT_LENIENT: '<15 min pass-through', FANOUT_EPISODES: 'split to 3-7',
-  FANIN_BURST: 'fan-in burst', FANIN_DRAIN: 'drained collector', CYCLE: 'repeated ring', TERM_OUT: 'cash-out sent', TERM_IN: 'cash-out received',
-  TERM_IN_FROM_SCRIPT_OR_FOREIGN: 'cash-out from script/proxy', SCRIPT_DEVICE_OUT: 'script device',
-  FOREIGN_PROXY_IP_OUT: 'foreign proxy IP', SINK: 'keeps the money', LINKED_TO_FLAGGED: 'linked to suspects',
+  PT_STRICT: 'Passes money on within 3-15 minutes', PT_LENIENT: 'Passes money on within 15 minutes',
+  FANOUT_EPISODES: 'Splits money into 3-7 accounts', FANIN_BURST: 'Many senders at the same time', FANIN_DRAIN: 'Collects, then empties quickly',
+  CYCLE: 'Money goes round in a ring', TERM_OUT: 'Sends money to wallets or crypto', TERM_IN: 'Receives money as a cash-out point',
+  TERM_IN_FROM_SCRIPT_OR_FOREIGN: 'Cash-out from a script or foreign IP', SCRIPT_DEVICE_OUT: 'Uses a script or emulator',
+  FOREIGN_PROXY_IP_OUT: 'Uses a foreign proxy IP', SINK: 'Keeps the money', LINKED_TO_FLAGGED: 'Linked to other suspects',
 }
 
 export const ROLE_TEXT: Record<string, string> = {
-  VICTIM: 'Victim', L1: 'L1 collector', L2: 'L2 distributor', L3: 'L3 cash-out', UNKNOWN: 'Unknown',
+  VICTIM: 'Victim', L1: 'Collector (Layer 1)', L2: 'Distributor (Layer 2)', L3: 'Cash-out (Layer 3)', UNKNOWN: 'Not on a layer',
 }

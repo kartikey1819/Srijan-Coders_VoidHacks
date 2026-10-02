@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 
 /** Hash routes are the single source of truth, so Back / Forward and pasted links always work.
- *  #home · #overview · #trace=ACCOUNT[&seeds=1,2] · #ring=ACCOUNT · #flagged[?role=L1&bank=SBIN&reason=CODE] · #evidence (old #data still works) */
+ *  #overview (Dashboard, default) · #trace=ACCOUNT[&seeds=1,2] · #flagged[?role=L1&bank=SBIN&reason=CODE] ·
+ *  #ring[=ACCOUNT] (Fraud Networks) · #data (Data Management; old #home goes there) */
 export type Route =
-  | { name: 'home' }
   | { name: 'overview' }
   | { name: 'investigate'; account: string | null; seeds: number[] | null }
-  | { name: 'ring'; account: string }
+  | { name: 'ring'; account: string | null }
   | { name: 'flagged'; role: string | null; bank: string | null; reason: string | null }
   | { name: 'data' }
 
@@ -22,19 +22,17 @@ export function parse(hash: string): Route {
     return { name: 'investigate', account: acct ? acct.toUpperCase() : null, seeds: seeds?.length ? seeds : null }
   }
   if (k === 'investigate') return { name: 'investigate', account: null, seeds: null }
-  if (k === 'ring' && rest) return { name: 'ring', account: rest.toUpperCase() }
+  if (k === 'ring') return { name: 'ring', account: rest ? rest.toUpperCase() : null }
   if (k === 'flagged') return { name: 'flagged', role: q.get('role'), bank: q.get('bank'), reason: q.get('reason') }
-  if (k === 'evidence' || k === 'data') return { name: 'data' }      // #data kept for old links
-  if (k === 'overview') return { name: 'overview' }
-  return { name: 'home' }
+  if (k === 'data' || k === 'home') return { name: 'data' }
+  return { name: 'overview' }
 }
 
 export function href(r: Route): string {
   switch (r.name) {
-    case 'home': return '#home'
     case 'overview': return '#overview'
     case 'investigate': return r.account ? `#trace=${r.account}${r.seeds?.length ? `&seeds=${r.seeds.join(',')}` : ''}` : '#investigate'
-    case 'ring': return `#ring=${r.account}`
+    case 'ring': return r.account ? `#ring=${r.account}` : '#ring'
     case 'flagged': {
       const q = new URLSearchParams()
       if (r.role) q.set('role', r.role)
@@ -43,7 +41,7 @@ export function href(r: Route): string {
       const s = q.toString()
       return `#flagged${s ? `?${s}` : ''}`
     }
-    case 'data': return '#evidence'
+    case 'data': return '#data'
   }
 }
 

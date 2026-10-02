@@ -23,38 +23,38 @@ export function DisputedPicker({ victim, seeds, auto = null, onApply }: Props) {
   const toggle = (i: number) => setPick((p) => { const n = new Set(p); if (n.has(i)) n.delete(i); else n.add(i); return n })
 
   return (
-    <div className="sheet sheet-body picker">
-      <div className="row between">
-        <span className="small">
-          {seeds ? <>Tracing <b>{seeds.length}</b> disputed transfer(s) only.</>
-                 : auto ? <>Tracing the <b>{auto}</b> transfer(s) that went to suspicious accounts (score 40 or more).</>
-                 : <>Tracing <b>all</b> of the victim's outgoing transfers.</>}
+    <div className="picker">
+      <div className="picker-row">
+        <span><b>Which payments did the victim report?</b>{' '}
+          {seeds ? <>Following the <b>{seeds.length}</b> payment(s) you chose.</>
+                 : auto ? <>Following the <b>{auto}</b> payment(s) that went to suspicious accounts.</>
+                 : <>Following <b>all</b> of the victim's payments.</>}
         </span>
-        <button className="btn ghost" onClick={() => setOpen((o) => !o)}>{open ? 'Close' : 'Choose disputed transfer(s)'}</button>
+        <button className="btn" onClick={() => setOpen((o) => !o)}>{open ? 'Close' : 'Choose the reported payments'}</button>
       </div>
       {open && (
         <>
           {err && <p className="error">{err}</p>}
           {!rows && !err && <p className="muted small">Loading the victim's outgoing transfers…</p>}
           {rows && (
-            <table className="tbl small">
-              <thead><tr><th></th><th>Time</th><th>To</th><th className="num">Amount</th><th>Narration</th></tr></thead>
+            <table className="gtbl">
+              <thead><tr><th>Reported</th><th>Time</th><th>Paid to</th><th className="num">Amount</th><th>Bank remark</th></tr></thead>
               <tbody>
                 {rows.map((t) => (
                   <tr key={t.txn_idx} className="click" onClick={() => toggle(t.txn_idx)}>
                     <td><input type="checkbox" checked={pick.has(t.txn_idx)} onChange={() => toggle(t.txn_idx)}
                                aria-label={`Disputed: ${t.transaction_id}`} /></td>
-                    <td className="mono nw">{t.ts}</td><td className="acct">{t.receiver}</td>
+                    <td className="mono nw">{t.ts}</td><td className="mono">{t.receiver}</td>
                     <td className="num">{inr(t.amount_paise)}</td><td className="narr">{t.narration}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-          <div className="row gap">
+          <div className="picker-row">
             <button className="btn primary" disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b))}>
-              Trace selected ({pick.size})</button>
-            <button className="btn" onClick={() => onApply(null)}>Use all outgoing transfers</button>
+              Follow the selected payments ({pick.size})</button>
+            <button className="btn" onClick={() => onApply(null)}>Let the system choose</button>
           </div>
         </>
       )}

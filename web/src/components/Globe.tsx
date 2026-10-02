@@ -4,7 +4,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import ForceGraph3D from 'react-force-graph-3d'
 import * as THREE from 'three'
 import { toEpoch } from '../format'
-import { cssVar, prefersReducedMotion, useLookName } from '../look'
+import { cssVar, prefersReducedMotion, useThemeName } from '../look'
 import type { Journey } from '../ringJourney'
 import type { GraphEdge, RingResult } from '../types'
 
@@ -24,7 +24,7 @@ interface Props {
   onOpenLink: (e: GraphEdge) => void
 }
 
-const ROLE_NAME: Record<string, string> = { VICTIM: 'victim', L1: 'L1 collector', L2: 'L2 distributor', L3: 'L3 cash-out', UNKNOWN: 'account' }
+const ROLE_NAME: Record<string, string> = { VICTIM: 'victim', L1: 'collector (Layer 1)', L2: 'distributor (Layer 2)', L3: 'cash-out (Layer 3)', UNKNOWN: 'account' }
 const FAR = 1e7                                             // hidden points/segments are parked out of view
 
 function hexRgb(h: string): [number, number, number] {
@@ -59,7 +59,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
   const [recent, setRecent] = useState<Set<string>>(new Set())
   const touched = useRef(false)
   const prevCut = useRef(cutoff)
-  const look = useLookName()
+  const look = useThemeName()
   const reduced = prefersReducedMotion()
   const objs = useRef<{ points: THREE.Points; lines: THREE.LineSegments; hover: THREE.LineSegments } | null>(null)
   const pickRef = useRef(onPick); pickRef.current = onPick
@@ -88,11 +88,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
   }, [ring])
 
   const colors = useMemo(() => {
-    const bg = cssVar('--sheet'), genz = look === 'genz'
+    const bg = cssVar('--sheet'), dark = look === 'dark'
     const role: Record<string, string> = {
-      VICTIM: genz ? '#e8ecf4' : '#1d3a8a', L1: cssVar('--l1'), L2: cssVar('--l2'), L3: cssVar('--l3'), UNKNOWN: cssVar('--unknown'),
+      VICTIM: cssVar('--victim'), L1: cssVar('--l1'), L2: cssVar('--l2'), L3: cssVar('--l3'), UNKNOWN: cssVar('--unknown'),
     }
-    return { role, bg, genz, hot: genz ? cssVar('--accent') : '#e0a100', ink: cssVar('--ink'), rule: cssVar('--rule-2') }
+    return { role, bg, dark, hot: dark ? cssVar('--accent') : '#e0a100', ink: cssVar('--ink'), rule: cssVar('--rule-2') }
   }, [look])
 
   // ---- the batched ring: one point cloud + one line set, added to the scene once ----
@@ -137,7 +137,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
       const show = visibleNode(n) && !(lit && lit.has(n.id)) && n.id !== selected
       pp.setXYZ(i, show ? n.x ?? 0 : FAR, show ? n.y ?? 0 : FAR, show ? n.z ?? 0 : FAR)
       if (withColors) {
-        const c = mix(hexRgb(colors.role[n.role] ?? colors.role.UNKNOWN), bg, lit ? (colors.genz ? 0.42 : 0.32) : 0)
+        const c = mix(hexRgb(colors.role[n.role] ?? colors.role.UNKNOWN), bg, lit ? (colors.dark ? 0.42 : 0.32) : 0)
         pc.setXYZ(i, c[0], c[1], c[2])
       }
     })
@@ -153,7 +153,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
     })
     lp.needsUpdate = true
     o.lines.geometry.computeBoundingSphere()
-    ;(o.lines.material as THREE.LineBasicMaterial).color.set(colors.genz ? '#9aa6c6' : '#7d8aa3')
+    ;(o.lines.material as THREE.LineBasicMaterial).color.set(colors.dark ? '#9aa6c6' : '#7d8aa3')
     ;(o.hover.material as THREE.LineBasicMaterial).color.set(colors.hot)
   }, [data, colors, visibleNode, lit, selected, cutoff, hidden])
 
@@ -308,7 +308,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
         linkColor={linkColor}
         linkWidth={linkWidth}
         linkOpacity={0.85}
-        linkDirectionalParticles={(l: GLink) => (reduced ? 0 : recent.has(l.key) ? 2 : colors.genz ? 3 : 2)}
+        linkDirectionalParticles={(l: GLink) => (reduced ? 0 : recent.has(l.key) ? 2 : colors.dark ? 3 : 2)}
         linkDirectionalParticleWidth={2.6}
         linkDirectionalParticleSpeed={0.009}
         linkDirectionalParticleColor={linkColor}

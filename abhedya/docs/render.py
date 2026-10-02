@@ -1,4 +1,4 @@
-"""Case documents: police case diary + one Section 94 BNSS notice per bank. Owner: C.
+"""Case documents: police case diary (Section 192 BNSS) + one Sections 94 & 106 BNSS notice per bank. Owner: C.
 
 Every account number, IFSC, transaction ID and amount is inserted here, from the Evidence, by the
 renderer. The LLM (if used) only supplies narrative paragraphs that the validator has checked.
@@ -15,7 +15,8 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from abhedya import config
 from abhedya.audit import log as audit
 from abhedya.docs.banks import nodal_officer_address
-from contracts.models import CaseOutput, Evidence, EvidenceTxn, Narrative
+from abhedya.ingest.validate import RULE_TEXT as DQ_TEXT
+from contracts.models import CaseOutput, Evidence, EvidenceTxn, Narrative, NoticeInfo, Verification
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 SECTION_TITLES = {
@@ -24,6 +25,12 @@ SECTION_TITLES = {
 }
 RULE_TEXT = {"seed": "disputed transfer", "window": "3-15 min pass-through",
              "amount_match": "pass-through of one credit", "oldest": "balance rule"}
+LAYER_NAME = {"L1": "Layer 1 (Collector)", "L2": "Layer 2 (Distributor)", "L3": "Layer 3 (Cash-out)"}
+# what the documents print when the IO left a case field empty
+DEFAULT_PS = "Cyber Crime Police Station, Indore"
+DEFAULT_RANK = "Sub-Inspector"
+DEFAULT_SECTIONS = ("Sections 318(4), 319(2), 61(2) BNS, 2023 r/w Sections 66C, 66D "
+                    "Information Technology Act, 2000")
 
 ACCT_RE = re.compile(r"\b[A-Z]{4}\d{8}\b")
 IFSC_RE = re.compile(r"\b[A-Z]{4}0[A-Z0-9]{6}\b")
@@ -65,18 +72,48 @@ def _period() -> tuple[str, str]:
     return start.strftime("%d-%m-%Y"), end.strftime("%d-%m-%Y")
 
 
-def firewall(html: str, ev: Evidence, amounts: set[str], name: str) -> None:
-    accts = {a.account for a in ev.accounts}
-    ifscs = {a.ifsc for a in ev.accounts}
-    tids = {t.transaction_id for t in ev.txns}
-    eids = {a.eid for a in ev.accounts} | {t.eid for t in ev.txns}
-    bad = ([f"account {x}" for x in set(ACCT_RE.findall(html)) - accts]
-           + [f"IFSC {x}" for x in set(IFSC_RE.findall(html)) - ifscs]
-           + [f"transaction {x}" for x in set(TXN_RE.findall(html)) - tids]
-           + [f"evidence id {x}" for x in set(EID_RE.findall(html)) - eids]
-           + [f"amount {x}" for x in set(MONEY_RE.findall(html)) - amounts])
+def firewall(html: str, ev: Evidence, amounts: set[str], name: str) -> dict[str, set[str]]:
+    """Scan one rendered document. Raises FirewallError if any identifier or rupee figure is not in the
+    evidence; otherwise returns the distinct tokens it checked, by kind."""
+    found = {"accounts": set(ACCT_RE.findall(html)), "ifscs": set(IFSC_RE.findall(html)),
+             "txn_ids": set(TXN_RE.findall(html)), "eids": set(EID_RE.findall(html)),
+             "amounts": set(MONEY_RE.findall(html))}
+    allowed = {"accounts": {a.account for a in ev.accounts}, "ifscs": {a.ifsc for a in ev.accounts},
+               "txn_ids": {t.transaction_id for t in ev.txns},
+               "eids": {a.eid for a in ev.accounts} | {t.eid for t in ev.txns}, "amounts": amounts}
+    label = {"accounts": "account", "ifscs": "IFSC", "txn_ids": "transaction", "eids": "evidence id",
+             "amounts": "amount"}
+    bad = [f"{label[k]} {x}" for k in found for x in found[k] - allowed[k]]
     if bad:
         raise FirewallError(f"{name}: refused to write, not in the evidence: {', '.join(sorted(bad)[:10])}")
+    return found
+
+
+def _ts(s: str) -> datetime | None:
+    try:
+        return datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+
+
+def _duration(first: str, last: str) -> str:
+    a, b = _ts(first), _ts(last)
+    if a is None or b is None or b < a:
+        return ""
+    mins = int((b - a).total_seconds() // 60)
+    if mins < 60:
+        return f"{mins} min"
+    h, m = divmod(mins, 60)
+    if h < 48:
+        return f"{h} h {m} min"
+    d, h = divmod(h, 24)
+    return f"{d} days {h} h"
+
+
+def _dq_text(note: str) -> str:
+    """'RTGS_BELOW_MIN: 2 transfer(s) on this trail' -> plain words, with the code kept for reference."""
+    code, _, rest = note.partition(": ")
+    return f"{DQ_TEXT[code]} ({code}): {rest}" if code in DQ_TEXT and rest else note
 
 
 def _env(amounts: set[str]) -> Environment:
@@ -112,9 +149,17 @@ def _context(ev: Evidence, narrative: Narrative | None, narrative_source: str) -
     def rule_text(t: EvidenceTxn) -> str:
         return RULE_TEXT.get(t.rule, t.rule)
 
+    first_ts = ev.txns[0].ts if ev.txns else ""
+    last_ts = max((t.ts for t in ev.txns), default="")
+    c = ev.case
     return {"ev": ev, "acc": acc, "victim": victim, "layers": layers, "first_in": first_in, "freeze": freeze,
             "total_held": sum(a.held_paise for a in freeze), "seed": [t for t in ev.txns if t.rule == "seed"],
-            "narrative": sections, "narrative_source": narrative_source, "step": step, "rule_text": rule_text}
+            "narrative": sections, "narrative_source": narrative_source, "step": step, "rule_text": rule_text,
+            "layer_name": LAYER_NAME, "first_ts": first_ts, "last_ts": last_ts,
+            "duration": _duration(first_ts, last_ts), "dq_notes": [_dq_text(d) for d in ev.dq_notes],
+            "freeze_banks": sorted({a.bank_name for a in freeze}),
+            "ps": c.police_station or DEFAULT_PS, "rank": c.io_rank or DEFAULT_RANK,
+            "law": c.sections or DEFAULT_SECTIONS}
 
 
 def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
@@ -133,14 +178,22 @@ def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
     for a in ctx["freeze"]:
         banks.setdefault(a.bank_prefix, []).append(a)
     credits = {a.eid: [t for t in ev.txns if t.dst_eid == a.eid] for a in ctx["freeze"]}
-    notice = env.get_template("notice_s94.html.j2")
+    notice = env.get_template("notice.html.j2")
+    notices: list[tuple[str, str, int, int]] = []
     for prefix, rows in sorted(banks.items()):
+        bank_total = sum(a.held_paise for a in rows)
         html = notice.render(**ctx, bank_name=rows[0].bank_name, address=nodal_officer_address(prefix), rows=rows,
-                             credits=credits, bank_total=sum(a.held_paise for a in rows), period=_period())
+                             credits=credits, bank_total=bank_total, period=_period())
         docs[f"notice_{prefix}"] = (f"notice_{prefix}.html", html)
+        notices.append((prefix, rows[0].bank_name, len(rows), bank_total))
 
+    checked: dict[str, set[str]] = {}
     for name, (_, html) in docs.items():
-        firewall(html, ev, amounts, name)
+        for kind, tokens in firewall(html, ev, amounts, name).items():
+            checked.setdefault(kind, set()).update(tokens)
+    counts = {k: len(checked.get(k, ())) for k in ("accounts", "ifscs", "txn_ids", "amounts")}
+    verification = Verification(ok=True, **counts, total=sum(counts.values()), unverified=0,
+                                fingerprint=ev.facts_sha256)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     files, hashes = {}, {}
@@ -167,4 +220,7 @@ def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
     m_sha = audit.sha256_bytes(m_bytes)
     audit.log("documents", {"case_id": ev.case_id, "files": sorted(hashes), "used_llm": used_llm}, m_sha)
     return CaseOutput(case_id=ev.case_id, files=files, used_llm=used_llm, llm_fallback_reason=llm_fallback_reason,
-                      manifest_sha256=m_sha, facts_sha256=ev.facts_sha256)
+                      manifest_sha256=m_sha, facts_sha256=ev.facts_sha256, diary_url=files["diary"],
+                      notices=[NoticeInfo(bank_prefix=p, bank_name=n, accounts=k, hold_paise=h, url=files[f"notice_{p}"])
+                               for p, n, k, h in notices],
+                      verification=verification, narrative_source=narrative_source)

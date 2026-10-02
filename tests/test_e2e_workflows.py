@@ -77,13 +77,14 @@ def page(browser):
 
 def open_trace(page, base):
     page.goto(f"{base}/#trace={VICTIM}")
-    page.get_by_text("Accounts on the money trail").wait_for()
+    page.get_by_role("heading", name="How the money moved").wait_for(timeout=15_000)
+    page.locator(".tbox").first.wait_for(timeout=15_000)          # the tree draws once its panel width is known
 
 
 def test_w1_flagged_account_shows_risk_and_reasons(page, base):
-    """Expected: the flagged list loads; opening an account shows its risk band and reasons."""
+    """Expected: the suspect list loads; opening an account shows its risk band and reasons."""
     page.goto(f"{base}/#flagged")
-    page.get_by_text("Flagged mule accounts:").wait_for()
+    page.get_by_role("heading", name="1,073 suspect accounts").wait_for()
     page.locator("table.tbl a").first.click()
     badge = page.locator(".badge", has_text="Risk").first
     badge.wait_for()
@@ -92,59 +93,66 @@ def test_w1_flagged_account_shows_risk_and_reasons(page, base):
 
 
 def test_w2_victim_trace_shows_exact_layers(page, base):
-    """Expected: the layer table lists the same L1 / L2 / L3 accounts as the API trace."""
+    """Expected: the money-trail tree shows exactly the API trace's L1 / L2 / L3 accounts; the journey strip counts them."""
     open_trace(page, base)
     api = engine_mod._engine.trace(VICTIM)
     for role in ("L1", "L2", "L3"):
-        block = page.locator(f"section.reg-group[data-role={role}]")
-        shown = set(block.locator("tbody td.acct").all_inner_texts())
+        boxes = page.locator(f".tbox[data-role={role}]")
+        shown = {boxes.nth(i).get_attribute("data-acct") for i in range(boxes.count())}
         assert shown == {n.account for n in api.nodes if n.role == role}, role
+    strip = page.locator(".jstrip").inner_text()
+    assert "1\ncollector" in strip and "5\ndistributors" in strip and "5\ncash-out accounts" in strip
+    assert "₹4,55,541.61" in page.locator(".headline").inner_text()
 
 
 def test_w3_ring_shows_whole_syndicate_and_transactions(page, base):
-    """Expected: the ring of the shared L1 holds all 1,373 accounts; its transactions are listed."""
+    """Expected: the network of the shared L1 holds all 1,373 accounts; its transactions are listed."""
     page.goto(f"{base}/#ring={L1}")
     page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
     page.get_by_text("Transactions (").first.wait_for()
     assert page.locator("details[open] table.tbl.small tbody tr").count() >= 1
-    assert page.get_by_role("link", name="Export ring (ZIP)").get_attribute("href").endswith("export.zip")
+    assert page.get_by_role("link", name="Export network data (ZIP)").get_attribute("href").endswith("export.zip")
 
 
 def test_w4_time_slider_reveals_money_step_by_step(page, base):
-    """Expected: at the first minute only the victim's transfer is visible; at the end all 11 are."""
+    """Expected: at the first minute only the victim's transfer is drawn; at the end all 11 are."""
     open_trace(page, base)
-    graph = page.locator(".investigate .graph").first
-    slider = page.locator("input[type=range]").first
+    slider = page.locator(".trail-time input[type=range]")
     slider.focus()
     slider.press("Home")
-    page.wait_for_function("document.querySelector('.investigate .graph').dataset.visibleEdges === '1'")
+    page.wait_for_function("document.querySelector('svg.tree').dataset.visibleEdges === '1'")
     slider.press("End")
-    page.wait_for_function("document.querySelector('.investigate .graph').dataset.visibleEdges === '11'")
-    assert graph.get_attribute("data-visible-edges") == "11"
+    page.wait_for_function("document.querySelector('svg.tree').dataset.visibleEdges === '11'")
 
 
 def _generate(page, base, use_llm: bool) -> str:
     open_trace(page, base)
-    page.get_by_role("button", name="Case diary & notices").click()
-    page.get_by_label("FIR No.").fill("0123/2026")
-    box = page.get_by_role("checkbox", name="Draft the narrative with the local AI model", exact=False)
+    page.get_by_role("button", name="Prepare case diary and freeze notices").click()
+    page.locator(".verify").wait_for(timeout=60_000)              # the first draft is prepared on opening
+    page.get_by_label("FIR / Case No.").fill("0123/2026")
+    box = page.get_by_role("checkbox", name="Draft the narrative with the local language model", exact=False)
     if box.is_checked() != use_llm:
         box.click()
-    page.get_by_role("button", name="Generate documents").click()
-    page.get_by_role("link", name="Police case diary").wait_for(timeout=60_000)
-    return page.locator(".docs p.small").first.inner_text()
+    page.get_by_role("button", name="Prepare again").click()
+    page.wait_for_timeout(300)
+    page.wait_for_function("!document.querySelector('.docs-side .btn.cta').disabled", timeout=60_000)
+    return page.locator(".docs-side p", has_text="Narrative:").inner_text()
 
 
 def test_w5_w6_case_diary_and_bank_notice(page, base):
-    """Expected: the diary names the victim and the loss; each bank notice is a s.94 BNSS notice."""
+    """Expected: the diary is a Section 192 BNSS case diary naming the victim and the loss; each bank gets a Section 94 &
+    106 BNSS notice; the verification box reports the checked figures."""
     _generate(page, base, use_llm=False)
-    diary_url = page.get_by_role("link", name="Police case diary").get_attribute("href")
-    notice_url = page.get_by_role("link", name="Freeze notice: ICIC").get_attribute("href")
+    assert "Verification passed" in page.locator(".verify").inner_text()
+    diary_url = page.locator(".paper iframe").get_attribute("src")
+    page.get_by_role("tab", name="Notice: ICICI Bank").click()
+    page.wait_for_function("(document.querySelector('.paper iframe') || {}).src && document.querySelector('.paper iframe').src.includes('notice_ICIC')")
+    notice_url = page.locator(".paper iframe").get_attribute("src")
     page.goto(base + diary_url)
     body = page.content()
-    assert "POLICE CASE DIARY" in body and VICTIM in body and "₹4,55,541.61" in body
+    assert "Section 192 BNSS" in body and VICTIM in body and "₹4,55,541.61" in body
     page.goto(base + notice_url)
-    assert "Section 94" in page.content() and L1 in page.content()
+    assert "106" in page.content() and L1 in page.content()
 
 
 def test_w7_llm_on(page, base, monkeypatch):
@@ -170,87 +178,86 @@ def test_w9_ollama_unavailable(page, base, monkeypatch):
 def test_w10_invalid_account(page, base):
     """Expected: an unknown account gives a clear message, not a blank or broken page."""
     page.goto(base + "/")
-    page.get_by_label("Victim account ID").fill("ZZZZ00000000")
-    page.get_by_role("button", name="Trace money trail").click()
+    page.get_by_label("Search account number").fill("ZZZZ00000000")
+    page.get_by_label("Search account number").press("Enter")
     page.get_by_text("Unknown account: ZZZZ00000000").wait_for()
 
 
 def test_link_pasted_into_an_open_tab_navigates(page, base):
-    """Expected: changing only the #link in an already-open tab switches the screen (was ignored)."""
+    """Expected: changing only the #link in an already-open tab switches the screen."""
     page.goto(f"{base}/#flagged")
-    page.get_by_text("Flagged mule accounts:").wait_for()
+    page.get_by_role("heading", name="1,073 suspect accounts").wait_for()
     page.goto(f"{base}/#trace={VICTIM}")
-    page.get_by_text("Accounts on the money trail").wait_for(timeout=10_000)
+    page.get_by_role("heading", name="How the money moved").wait_for(timeout=10_000)
     page.go_back()
-    page.get_by_text("Flagged mule accounts:").wait_for(timeout=10_000)
+    page.get_by_role("heading", name="1,073 suspect accounts").wait_for(timeout=10_000)
 
 
-def test_evidence_screen_verifies_and_opens_flagged_rows(page, base):
-    """Expected: the Evidence screen (old #data links still work) re-verifies the file and lists a check's rows."""
-    page.goto(f"{base}/#data")
-    page.get_by_role("heading", name="Evidence", exact=True).wait_for()
-    assert "rows received" in page.content() and "DUP_TXN_ID" in page.content()
-    page.get_by_role("button", name="Re-verify the file now").click()
-    page.locator(".ev-status.ok").get_by_text("Unchanged").wait_for(timeout=15_000)
-    page.locator(".ev-check", has_text="DUP_TXN_ID").click()
-    page.locator(".ev-table tbody tr").first.wait_for()
-    assert page.locator(".ev-table tbody tr").count() >= 1
-    assert page.locator(".ev-log li", has_text="Re-verified").count() >= 1
+def test_sidebar_has_the_five_screens_and_no_evidence_page(page, base):
+    """Expected: the left menu lists the five screens in English and Hindi; old #home / #data links open Data
+    Management; there is no Evidence screen."""
+    page.goto(base + "/")
+    items = page.locator("nav.side a.side-btn")
+    items.first.wait_for()
+    assert items.count() == 5
+    text = " ".join(items.all_inner_texts())
+    for label in ("Dashboard", "Trace Victim Funds", "Suspect Accounts", "Fraud Networks", "Data Management", "डैशबोर्ड"):
+        assert label in text
+    page.goto(f"{base}/#home")
+    page.get_by_role("heading", name="Data Management").wait_for()
+    assert "Evidence" not in page.locator("nav.side").inner_text()
 
 
-def test_look_toggle_switches_and_persists(page, base):
-    """Expected: Briefing restyles the same screen; the choice survives a reload; ?look= overrides it."""
+def test_day_night_switch_and_persistence(page, base):
+    """Expected: Night restyles the same screen; the choice survives a reload; ?theme= overrides it."""
     open_trace(page, base)
-    assert page.evaluate("document.documentElement.dataset.look") == "official"
+    assert page.evaluate("document.documentElement.dataset.theme") == "light"
     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
-    font = page.evaluate("getComputedStyle(document.body).fontFamily")
-    page.get_by_role("button", name="Gen-Z").click()
-    assert page.evaluate("document.documentElement.dataset.look") == "genz"
+    page.get_by_role("button", name="Night").click()
+    assert page.evaluate("document.documentElement.dataset.theme") == "dark"
     assert page.evaluate("getComputedStyle(document.body).backgroundColor") != bg
-    assert page.evaluate("getComputedStyle(document.body).fontFamily") != font
     page.reload()
-    page.get_by_text("Accounts on the money trail").wait_for()
-    assert page.evaluate("document.documentElement.dataset.look") == "genz"
-    page.goto(f"{base}/?look=official#trace={VICTIM}")
-    page.get_by_text("Accounts on the money trail").wait_for()
-    assert page.evaluate("document.documentElement.dataset.look") == "official"
+    page.get_by_role("heading", name="How the money moved").wait_for()
+    assert page.evaluate("document.documentElement.dataset.theme") == "dark"
+    page.goto(f"{base}/?theme=light#trace={VICTIM}")
+    page.get_by_role("heading", name="How the money moved").wait_for()
+    assert page.evaluate("document.documentElement.dataset.theme") == "light"
 
 
-def test_one_click_ring_isolation_from_the_register(page, base):
-    """Expected: the Ring button on the L1 row isolates that account's whole syndicate."""
+def test_one_click_network_from_the_trace(page, base):
+    """Expected: View fraud network on the trace isolates the collector's whole syndicate."""
     open_trace(page, base)
-    page.get_by_role("button", name=f"Isolate ring around {L1}").click()
+    page.get_by_role("button", name="View fraud network").click()
     page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
     assert page.url.endswith(f"#ring={L1}")
     page.go_back()
-    page.get_by_text("Accounts on the money trail").wait_for()
+    page.get_by_role("heading", name="How the money moved").wait_for()
 
 
-def test_overview_charts_render_in_both_looks(page, base):
-    """Expected: the Overview's charts draw with data in both looks, and a bar opens the filtered list."""
-    for look in ("official", "briefing"):
-        page.goto(f"{base}/?look={look}#overview")
-        page.get_by_text("accounts are flagged").first.wait_for()
-        assert page.locator(".chart svg").count() >= 2 and page.locator(".bars .b-bar").count() >= 3
-    page.locator(".donut-legend").get_by_role("button", name="L1 collector").click()
-    page.get_by_text("Flagged mule accounts:").wait_for()
+def test_overview_charts_render(page, base):
+    """Expected: the Dashboard's charts draw with data, and a donut role opens the filtered suspect list."""
+    page.goto(f"{base}/#overview")
+    page.get_by_text("accounts are flagged").first.wait_for()
+    assert page.locator(".chart svg").count() >= 2 and page.locator(".bars .b-bar").count() >= 3
+    page.locator(".donut-legend").get_by_role("button", name="Collector (Layer 1)").click()
+    page.get_by_role("heading", name="Suspect Accounts").wait_for()
     assert "role=L1" in page.url
 
 
 def test_mistyped_id_gets_a_format_hint(page, base):
-    """Expected: an ID of the wrong length is explained under the box instead of failing silently."""
+    """Expected: an ID of the wrong length is explained instead of failing silently."""
     page.goto(base + "/")
-    page.get_by_label("Victim account ID").fill("KKBK1000")
-    page.get_by_role("button", name="Trace money trail").click()
+    page.get_by_label("Search account number").fill("KKBK1000")
+    page.get_by_label("Search account number").press("Enter")
     page.get_by_text("Account IDs are 12 characters").wait_for()
 
 
-def test_home_explains_the_flow_and_analyses_an_upload(page, base):
-    """Expected: Home shows the six steps with live figures; a dropped CSV is analysed stage by stage, can be opened,
-    and the header switcher brings the official data back."""
-    page.goto(base + "/")
+def test_data_management_explains_the_flow_and_analyses_an_upload(page, base):
+    """Expected: Data Management shows the six steps with live figures; a dropped CSV is analysed stage by stage, can be
+    opened, and the case switcher brings the official data back."""
+    page.goto(f"{base}/#data")
     page.get_by_text("Load and check every row").wait_for()
-    assert page.locator(".flow .step").count() == 6
+    assert page.locator(".steps6 .step6").count() == 6
     page.get_by_text("50,000").first.wait_for()                       # live figure from the loaded file
     small = b"".join(SAMPLE_PATH.read_bytes().splitlines(keepends=True)[:2001])
     page.locator("input[type=file]").set_input_files({"name": "small_case.csv", "mimeType": "text/csv", "buffer": small})
@@ -258,18 +265,18 @@ def test_home_explains_the_flow_and_analyses_an_upload(page, base):
     assert page.locator(".stages li.done").count() == 9
     page.get_by_role("button", name="Open this case").click()
     page.get_by_text("2,000 transactions").first.wait_for(timeout=20_000)
-    page.get_by_label("Active dataset").select_option("official")
+    page.get_by_label("Open case").select_option("official")
     page.get_by_text("50,000 transactions").first.wait_for(timeout=20_000)
 
 
-def test_home_rejects_a_file_without_the_columns(page, base):
-    page.goto(base + "/")
+def test_data_management_rejects_a_file_without_the_columns(page, base):
+    page.goto(f"{base}/#data")
     page.locator("input[type=file]").set_input_files({"name": "wrong.csv", "mimeType": "text/csv", "buffer": b"a,b\n1,2\n"})
     page.get_by_text("missing column(s)").wait_for()
 
 
 def test_ring_globe_journey_and_columns(page, base):
-    """Expected: the ring opens as a globe; the journey panel lists where money came from; Go here moves along it;
+    """Expected: the network opens as a globe; the journey panel lists where money came from; Go here moves along it;
     the Columns view is one click away."""
     page.goto(f"{base}/#ring={L1}")
     page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
@@ -282,20 +289,21 @@ def test_ring_globe_journey_and_columns(page, base):
 
 
 def test_panel_size_persists_across_reload(page, base):
-    """Expected: dragging the register / graph divider changes the layout and the new size survives a reload."""
-    open_trace(page, base)
+    """Expected: dragging the suspect list / account divider changes the layout and the new size survives a reload."""
+    page.goto(f"{base}/#flagged")
+    page.get_by_role("heading", name="1,073 suspect accounts").wait_for()
     sep = page.locator("[data-separator]").first
     box = sep.bounding_box()
-    before = page.locator("#register").bounding_box()["width"]
+    before = page.locator("#flagged-list").bounding_box()["width"]
     page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
     page.mouse.down()
     page.mouse.move(box["x"] - 150, box["y"] + box["height"] / 2, steps=8)
     page.mouse.up()
-    after = page.locator("#register").bounding_box()["width"]
+    after = page.locator("#flagged-list").bounding_box()["width"]
     assert after < before - 80
     page.reload()
-    page.get_by_text("Accounts on the money trail").wait_for()
-    assert abs(page.locator("#register").bounding_box()["width"] - after) < 30
+    page.get_by_role("heading", name="1,073 suspect accounts").wait_for()
+    assert abs(page.locator("#flagged-list").bounding_box()["width"] - after) < 30
 
 
 def test_ring_transfer_flow_panel(page, base):

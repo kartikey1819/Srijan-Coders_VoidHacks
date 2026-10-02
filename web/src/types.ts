@@ -38,8 +38,19 @@ export interface RingResult { seed: string; nodes: GraphNode[]; edges: GraphEdge
 export interface VictimCandidate { account: string; out_paise_to_flagged: number; first_ts: string }
 export interface DQSummary { rows: number; accounts: number; counts: Record<string, number>; input_sha256: string; ingest_seconds: Record<string, number> }
 
-export interface CaseInfo { fir_no?: string; ncrp_ack?: string; police_station?: string; io_name?: string; use_llm: boolean; seed_txns?: number[] }
-export interface CaseOutput { case_id: string; files: Record<string, string>; used_llm: boolean; llm_fallback_reason: string | null; manifest_sha256: string; facts_sha256: string }
+export interface CaseInfo {
+  fir_no?: string; ncrp_ack?: string; police_station?: string; io_name?: string; io_rank?: string; sections?: string
+  use_llm: boolean; seed_txns?: number[]
+}
+export interface NoticeInfo { bank_prefix: string; bank_name: string; accounts: number; hold_paise: number; url: string }
+export interface Verification {
+  ok: boolean; accounts: number; ifscs: number; txn_ids: number; amounts: number; total: number; unverified: number; fingerprint: string
+}
+export interface CaseOutput {
+  case_id: string; files: Record<string, string>; used_llm: boolean; llm_fallback_reason: string | null; manifest_sha256: string
+  facts_sha256: string; diary_url: string; notices: NoticeInfo[]; verification: Verification; narrative_source: string
+}
+export interface LlmStatus { available: boolean; model: string }
 
 export interface CountRow { key: string; label: string; count: number }
 export interface DayActivity { day: string; n_txn: number; n_flagged: number }
@@ -53,12 +64,3 @@ export interface DatasetProgress {
   id: string; status: string; stage: string | null; stages_done: Record<string, number>; rows: number; accounts: number
   flagged: number; error: string | null
 }
-
-export interface EvidenceCheck { flag: string; rule: string; rows: number; outside_graph: number; touching_flagged: number }
-export interface CustodyEvent { ts: string; action: string; detail: string }
-export interface EvidenceRecord {
-  file_name: string; file_path: string; file_present: boolean; size_bytes: number | null; sha256: string
-  rows: number; rows_in_graph: number; accounts: number; first_ts: string | null; last_ts: string | null; loaded_at: string | null
-  load_seconds: number; detect_seconds: number | null; checks: EvidenceCheck[]; custody: CustodyEvent[]
-}
-export interface VerifyResult { status: 'match' | 'mismatch' | 'missing'; sha256_now: string | null; expected: string; seconds: number; checked_at: string }

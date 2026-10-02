@@ -20,7 +20,7 @@ the UI section (10.5) and the test counts in `HOW_IT_WORKS.md` predate the last 
 9. [Ring isolation and export](#9-ring-isolation-and-export)
 10. [Evidence, documents and the AI guardrails](#10-evidence-documents-and-the-ai-guardrails)
 11. [Saved cases (datasets)](#11-saved-cases-datasets)
-12. [The Evidence tab (chain of custody)](#12-the-evidence-tab-chain-of-custody)
+12. [Data Management and file integrity](#12-data-management-and-file-integrity)
 13. [The user interface](#13-the-user-interface)
 14. [API reference](#14-api-reference)
 15. [Files on disk](#15-files-on-disk)
@@ -48,8 +48,8 @@ What an officer can do with it:
 | Find the mules | Every account gets a **Mule Risk Index** from 0 to 100 with named reasons. HIGH (70+) means flagged. |
 | Trace a victim's money | From a victim account ID, the trace follows the stolen money forward in time, up to 4 hops, and says exactly which account holds how much. |
 | See the whole syndicate | One click isolates the ring around any account (3D globe or strict columns) and exports the original rows. |
-| Produce paperwork | A police case diary and one Section 94 BNSS (old Section 91 CrPC) debit-hold notice per bank. Every figure comes from checked evidence. |
-| Prove the file is untouched | The Evidence tab re-hashes the file on demand, lists every row the quality checks flagged, keeps a custody log, and prints an integrity statement. |
+| Produce paperwork | A Section 192 BNSS case diary and one Sections 94 & 106 BNSS (91 & 102 CrPC) debit-hold notice per bank. Every figure is checked against the data before the documents are shown. |
+| Prove the file is untouched | The file's SHA-256 fingerprint is taken at loading, shown in the sidebar and printed on every document; the CSV is never written. |
 
 **Important design choices** (worth knowing before you touch anything):
 
@@ -141,7 +141,7 @@ flowchart TD
   LLM --> REN["Diary + one notice per bank, output firewall"]
   TPL --> REN
   ENG --> API["FastAPI on 127.0.0.1:8000"]
-  API --> UI["React UI: Home, Overview, Investigate, Ring, Flagged, Evidence"]
+  API --> UI["React UI: Dashboard, Trace Victim Funds, Suspect Accounts, Fraud Networks, Data Management"]
 ```
 
 In words:
@@ -192,12 +192,12 @@ Entry point: `run_ingest()` in `abhedya/ingest/pipeline.py`. Details: `HOW_IT_WO
 
 | Stage | What happens | Why |
 |---|---|---|
-| `hash` | SHA-256 of the whole file | identifies the evidence; later re-checked on the Evidence tab |
+| `hash` | SHA-256 of the whole file | identifies the evidence; shown in the sidebar and on every document |
 | `load_csv` | DuckDB `read_csv` with **every column as text** into `txn_raw` | a malformed value can never stop the load or silently become NULL |
 | `verify_order` | the database row order is compared with an independent RFC 4180 record reader | `txn_idx` (row number) is the real primary key; transaction IDs are not unique |
 | `account_map` | each account gets a dense integer id | compact arrays |
 | `derive+validate` | one SQL statement parses amounts to paise, timestamps, payment mode, narration category, IP class, device class; attaches data-quality flags; marks `usable` rows | parse safely with `TRY_CAST`, keep the raw text next to every cleaned value |
-| `dq_summary`, `account_table` | flag counts and per-account totals | Evidence tab, account panel |
+| `dq_summary`, `account_table` | flag counts and per-account totals | diary data-quality notes, account panel |
 | `graph_arrays` | CSR arrays cached as `.npy` | fast reload |
 | `detect` | features and risk scores | section 7 |
 
@@ -298,7 +298,7 @@ Money still held: HDFC Rs 20, ICIC Rs 20, AXIS Rs 380, PYTM Rs 580. Total Rs 1,0
 
 ### 8.3 What counts as the loss (seeds)
 
-- If the officer chose the disputed transfers (the picker on the Investigate screen, or `seed_txn` in the API), only
+- If the officer chose the disputed transfers ("Which payments did the victim report?" on the trace page, or `seed_txn` in the API), only
   those are traced.
 - Otherwise the default is the victim's transfers to accounts scored **40 or more** (MEDIUM or HIGH). The first trace
   warning says so ("Traced the N of M outgoing transfers..."). If none qualify, all outgoing transfers are traced.
@@ -381,12 +381,29 @@ attributed more than the transfer, held more than received, seeds not adding up 
 
 Jinja2 templates in `abhedya/docs/templates/` (autoescaping on, a missing value is an error):
 
-- **Case diary:** total siphoned; narrative (with its source stated); chronology of every trail transfer; layer-wise
-  accounts with bank, IFSC, first arrival, received and still held; holding accounts recommended for a debit hold;
-  points for the IO to verify; signature block.
-- **One notice per bank** under Section 94 BNSS (corresponding to Section 91 CrPC) read with Section 168 BNSS,
-  addressed to the bank's nodal officer, requesting a **debit hold limited to the amount shown** (not a full freeze),
-  with each disputed credit listed, plus a request for KYC, statements, linked accounts and device / IP logs.
+- **Letterhead:** Madhya Pradesh Police, Indore; the police station; Police Commissionerate · National Cyber Crime
+  Helpline 1930.
+- **Case diary (Section 192 BNSS, 2023):** particulars (FIR / Case No., NCRP / 1930 Complaint No., sections of law,
+  Investigating Officer with rank, date). Blank fields print a line to fill in by hand. Then six numbered sections:
+  1. complainant account and loss;
+  2. investigation narrative, with its source stated;
+  3. chronological money trail;
+  4. layer-wise accounts;
+  5. accounts recommended for immediate debit freeze;
+  6. further action proposed, including the trace warnings and data-quality notes as points to verify.
+
+  Then the IO signature block.
+- **One notice per bank** under **Sections 94 & 106 BNSS, 2023 (corresponding to Sections 91 & 102 CrPC)**,
+  addressed to the bank's nodal officer:
+  - it requests a **debit hold limited to the amount shown** (not a full freeze);
+  - it lists each disputed credit, and asks for KYC, statements, linked accounts and device / IP logs.
+- **In the UI ("Case documents" dialog):**
+  - Case particulars on the left (the local AI switch says whether the model is installed).
+  - A **Verification passed / failed** box showing how many accounts, IFSCs, transaction IDs and amounts the firewall
+    checked, how many failed, and the evidence fingerprint.
+  - Tabs for the diary, all notices and each bank (with its hold amount); Save HTML; Print / PDF.
+  - The API returns these in `CaseOutput.notices` and `CaseOutput.verification`; `GET /api/docs/llm` reports the
+    model.
 
 ### 10.3 The output firewall
 
@@ -412,36 +429,31 @@ evidence. The prose can still be clumsy, which is why the diary marks AI text as
 
 ## 11. Saved cases (datasets)
 
-`abhedya/datasets.py` and `/api/datasets`. Investigators can analyse any export from the Home screen.
+`abhedya/datasets.py` and `/api/datasets`. Investigators can analyse any export from the Data Management screen.
 
 - **Upload:** the file streams to disk while being hashed (1 GB limit, header checked for the 11 required columns),
   then is stored by hash in `data/datasets/<first 12 hex of SHA-256>/` as `source.csv` with its own `case.duckdb`.
   The same file uploaded twice opens the existing case.
-- **Analysis** runs in a background thread with live per-stage progress (the Home screen shows each stage's real
+- **Analysis** runs in a background thread with live per-stage progress (Data Management shows each stage's real
   timing). A 50,000-row file is ready in about 3 s.
 - **Switching** cases swaps the engine the API uses. The open case is remembered in `data/datasets/active.txt` and
   reopened after a restart.
-- **Removing** a case (Home, Saved cases, Remove, then confirm) deletes its database, graph cache and stored copy. For
+- **Removing** a case (Data Management, Saved cases, Remove, then confirm) deletes its database, graph cache and stored copy. For
   the official case only what was built from the file is deleted; the original CSV stays, and a marker
   (`official.removed`) stops `serve --data` from rebuilding it. Removing the open case opens another; the last
   remaining case cannot be removed.
 
 ---
 
-## 12. The Evidence tab (chain of custody)
+## 12. Data Management and file integrity
 
-`abhedya/api/routes_evidence.py`, `web/src/components/EvidenceView.tsx`.
-
-- **File seal:** file name, size, when it was loaded, period covered, SHA-256 (grouped for reading, one-click copy),
-  rows received = rows kept, and how many rows are in the money graph.
-- **Re-verify the file now:** hashes the file on disk again and compares it with the fingerprint taken at loading.
-  Result: unchanged, changed since loading, or original file not on this workstation. Logged to the audit log.
-- **Checks:** every data-quality rule with rows flagged, rows left out of the money graph, and rows that touch a
-  flagged mule account. Click a check to page through its actual rows; click an account to isolate its ring.
-- **Custody log:** every load, re-verification and statement download for this file, newest first.
-- **Integrity statement** (`.txt`): file details, fingerprint, how the file was handled, every check and the custody
-  log, as supporting details for the Section 63 Bharatiya Sakshya Adhiniyam (2023) certificate. It is a draft the
-  officer checks, completes and signs; it is not the certificate itself.
+The Evidence tab was removed after the judges' feedback (too much for an officer). What remains:
+- **Fingerprint:** the file's SHA-256 is taken at loading, shown in the sidebar footer, and printed on every
+  document's footer with the facts fingerprint.
+- **Data Management:** the six steps of how the system works, each with a live figure from the open file; upload with
+  live stage timings; saved cases (open, remove).
+- **Data-quality flags:** still computed for every row. They appear in the diary's points to verify and in the
+  account panel.
 
 ---
 
@@ -450,31 +462,35 @@ evidence. The prose can still be clumsy, which is why the diary marks AI text as
 React 19 + Vite 8 + TypeScript 6, served by the same FastAPI process. Every screen has a shareable address
 (`web/src/route.ts`), so Back / Forward and pasted links work.
 
-| Tab | Address | What it shows |
+The left sidebar has five screens, each in English with the Hindi name beneath. Pages scroll normally; only the
+masthead and sidebar stay put.
+
+| Screen | Address | What it shows |
 |---|---|---|
-| Home | `#home` | the six pipeline steps with live figures from the loaded data; drop zone to analyse a new CSV with live stage timings; saved cases (open / remove) |
-| Overview | `#overview` | score distribution with the 70 threshold; interactive donut of flagged accounts by layer; why accounts were flagged; flagged by bank; daily activity; victims found |
-| Investigate | `#trace=ACCOUNT` | case header (victim, taken, still held, L1 · L2 · L3, freeze requests, case progress); the register of trail accounts, freeze-first; the trace graph; "where the money sat" chart; the timeline at the bottom; account drawer; case diary & notices |
-| Syndicate ring | `#ring=ACCOUNT` | 3D globe of the whole ring (click a dot to light its money journey, double-click a link for the full flow of that link) or strict Victim / L1 / L2 / L3 columns; layer filters, time slider, ZIP export, PNG snapshot |
-| Flagged accounts | `#flagged?role=&bank=&reason=` | the HIGH list with reasons and filters; CSV downloads |
-| Evidence | `#evidence` (old `#data` still works) | section 12 |
+| Dashboard (डैशबोर्ड) | `#overview` (default) | headline sentence; score distribution with the 70 line; suspect accounts by role (donut); why accounts were flagged; suspects by bank; daily activity; victims found |
+| Trace Victim Funds (पीड़ित राशि का पता लगाएँ) | `#trace=ACCOUNT` | one scrolling report: select the victim; summary sentence and journey strip (collector, distributors, cash-out, can still be frozen); four insight cards; **How the money moved** (money-trail tree driven by the minute-by-minute timeline, Replay); where the money sat over time; collector's first minutes and the trace record; accounts to freeze; transactions in the trail |
+| Suspect Accounts (संदिग्ध खाते) | `#flagged?role=&bank=&reason=` | the flagged list with role badges and reasons in words, filters, account panel, CSV downloads |
+| Fraud Networks (धोखाधड़ी नेटवर्क) | `#ring` / `#ring=ACCOUNT` | start list of collectors; then the 3D globe (click a dot for its money journey, double-click a link for its flow) or strict columns; layer filters, time slider, ZIP export, PNG picture |
+| Data Management (डेटा प्रबंधन) | `#data` (old `#home` goes here) | how the system works (six steps with live figures); upload and live analysis; saved cases |
 
 Things worth knowing:
 
-- **Two looks** from the header switch: **Official** (light, IBM Plex, restrained) and **Gen-Z** (dark, Inter / Space
-  Grotesk, lime accent, more motion, playful copy). Same data and behaviour; only tokens, fonts, motion and wording
-  differ (`web/src/index.css`, `web/src/ui.css`, `web/src/copy.ts`). `?look=genz` forces a look.
+- **Look:** a government frame (tricolour strip, police masthead with crest, IST clock, "For official use only",
+  navy sidebar) around quiet ruled pages.
+  - **Day and Night** themes come from the masthead switch; `?theme=dark` forces one.
+  - Fonts are Noto Sans and Noto Sans Devanagari, with IBM Plex Mono for account numbers. All are offline.
+  - Details are in `DESIGN.md`.
+- **Plain words:** "Collector (Layer 1)", "can still be frozen", "+4 min after the victim's payment". Reason codes and
+  engine warnings are shown as sentences.
 - **Timeline:** play / pause, step size (1 min to 1 day per step, or automatic), playback rate 1x to 2x, previous / next
-  transfer, 15-day switch. The graph, register and chart all follow the time cursor.
-- **Resizable panels** on Investigate, Ring and Flagged (drag the dividers; double-click resets; remembered per
-  browser). Any panel can be maximised. The Investigate screen fills exactly the window and keeps the timeline
-  visible.
-- **Layer colours** are colour-blind checked: L1 orange, L2 purple, L3 teal; money at risk in red (Official) or pink
-  (Gen-Z).
+  transfer, 15-day switch. On the trace page it sits with the money-trail tree and drives the tree and the
+  over-time chart.
+- **Layer colours** are colour-blind checked in both themes: L1 orange, L2 purple, L3 teal, victim blue; green for
+  money that can still be frozen; red only for money at risk and warnings.
 - **Motion** follows Emil Kowalski's rules: ease-out, under 300 ms, transform and opacity only, and everything off
   under `prefers-reduced-motion`.
-- **Performance:** the trace screen is ready in about 0.4 s on the 2M file; the 1,373-account globe renders at 60+ fps
-  because the whole ring is drawn as one point cloud and one line set.
+- **Performance:** the trace page is ready in well under a second on the 2M file. The 1,373-account globe renders at
+  60+ fps because the whole ring is drawn as one point cloud and one line set.
 
 ---
 
@@ -499,7 +515,7 @@ All routes are under `/api`. Money is integer paise in JSON. Unknown accounts gi
 | POST | `/api/docs/{victim}` | build evidence and documents; body has FIR / NCRP numbers, station, IO, AI on/off, disputed transfers |
 | GET | `/api/docs/{case_id}/{file}` | a written document |
 | GET / POST / DELETE | `/api/datasets`, `/api/datasets/{id}/progress`, `/activate` | saved cases (upload is a raw POST body) |
-| GET / POST | `/api/evidence`, `/api/evidence/verify`, `/api/evidence/rows?flag=`, `/api/evidence/statement.txt` | Evidence tab |
+| GET | `/api/docs/llm` | whether the local AI model is installed |
 
 ---
 
@@ -529,11 +545,11 @@ All routes are under `/api`. Money is integer paise in JSON. Unknown accounts gi
 | `test_properties.py` | Hypothesis random worlds: score bounds, conservation, determinism, flags never change risk |
 | `test_adversarial_shapes.py` | window edges at 179/180/181 and 899/900/901 s, ties, hubs, cliques, long chains |
 | `test_ingest.py`, `test_robustness.py` | row order, raw values kept, malformed files, BOM, CRLF, quoted newlines, hostile text, file untouched |
-| `test_api.py` | routes, 404s, byte-identical ring export, saved cases (upload, switch, restart reopen, remove), Evidence tab |
+| `test_api.py` | routes, 404s, byte-identical ring export, saved cases (upload, switch, restart reopen, remove) |
 | `test_docs.py`, `test_validator.py`, `test_llm_grounding.py` | documents, firewall, validator rules, 20 hostile model replies rejected, AI on / off gives identical facts |
 | `test_security.py` | path traversal, injection-shaped IDs, resource limits, HTML escaping |
 | `test_contract.py` | every TypeScript type matches its pydantic model |
-| `test_e2e_workflows.py` | the real UI in headless Microsoft Edge: every main workflow, both looks, uploads, globe, Evidence tab |
+| `test_e2e_workflows.py` | the real UI in headless Microsoft Edge: every main workflow, sidebar, Day / Night, trace tree and playback, case documents, uploads, globe |
 
 **Ground truth without leakage:** `eval/ground_truth.py` is the only code that may use how the official data was
 generated. The engine never imports it, and a test scans `abhedya/` for generator strings and fails on any hit.
@@ -652,31 +668,36 @@ test set; traces on generated data used samples of 15-100 victims.
 | Task | Where | Then |
 |---|---|---|
 | Tune a detection weight or threshold | `abhedya/detect/params.py` | `python -m eval.evaluate` and `pytest tests/test_detect.py`; check the official file stays 1,073 / 0 |
-| Add a data-quality rule | `DQ_RULES` and `RULE_TEXT` in `abhedya/ingest/validate.py` | re-ingest; the Evidence tab picks it up automatically |
+| Add a data-quality rule | `DQ_RULES` and `RULE_TEXT` in `abhedya/ingest/validate.py` | re-ingest; the diary's points to verify pick it up automatically |
 | Change trace speed vs reach | `TRACE_MAX_LEDGER`, `SEED_MIN_SCORE` in `abhedya/config.py` | `pytest tests/test_trace.py` |
 | Add an API route | a router in `abhedya/api/`, models in `contracts/models.py`, types in `web/src/types.ts`, client in `web/src/api.ts` | a test in `tests/test_api.py` |
 | Change UI wording for one look | `web/src/copy.ts` | `npm run build`, browser tests |
 | Change colours / fonts / motion | `web/src/index.css` (tokens), `web/src/ui.css` | keep the colour-blind checks in `DESIGN.md` |
-| Measure on new data | `python -m abhedya ingest --data <csv>` or upload on Home | for labelled data use `tools/external_eval.py` (local) |
+| Measure on new data | `python -m abhedya ingest --data <csv>` or upload on Data Management | for labelled data use `tools/external_eval.py` (local) |
 
 ---
 
 ## 21. Demo script for the jury
 
-1. **Home:** point at the six steps with live numbers from the 2M file; mention load time and that nothing leaves the
-   laptop.
-2. **Overview:** 1,073 flagged, the clean gap at 70, layers 129 / 559 / 385, flagged by bank.
-3. **Blind victim test:** type the judge's victim ID in the header and press Trace.
-   - Read the case header: amount taken, still held, L1 · L2 · L3 counts, freeze requests by bank.
-   - Walk the register (freeze-first) and the graph; press Play on the timeline to show the money moving minute by
-     minute.
-   - Open an account in the drawer: score, reasons, counterparties.
-4. **Syndicate ring:** click Ring on an L1; show the globe, click a dot to light its journey, double-click a link for
-   the flow; switch to Columns; export the ZIP (original rows, byte-identical).
-5. **Case diary & notices:** fill FIR / IO fields, generate; open the diary and one bank notice; point at the facts
-   fingerprint and the "every figure comes from the evidence" firewall. Mention the AI can be off with no loss.
-6. **Evidence:** press Re-verify (file unchanged), open a check to show its rows, download the integrity statement.
-7. **Robustness (if asked):** drop `sample.csv` on Home and show it analysed live in about 3 seconds.
+1. **Dashboard:** the headline sentence (1,073 accounts behave like mules; 300 victims), the clean gap at 70, roles
+   129 / 559 / 385, suspects by bank. Mention load time and that nothing leaves the laptop.
+2. **Blind victim test:** type the judge's victim ID in the masthead search (or on Trace Victim Funds) and press Enter.
+   - Read the summary sentence and the journey strip: 1 collector, 5 distributors, 5 cash-out, amount that can still
+     be frozen.
+   - Walk the four insight cards, then **How the money moved**: press Replay, or Play on the timeline, to show the money
+     moving minute by minute. Point at a box to follow its path, and click it for the account.
+   - Show the collector's first 15 minutes and the trace record (the method in plain words).
+3. **Prepare case diary and freeze notices:**
+   - fill FIR / IO / rank;
+   - show the Verification passed box (figures checked, fingerprint);
+   - open the diary and one bank's notice; Print / PDF.
+
+   Mention the AI can be off with no loss.
+4. **Fraud Networks:** View fraud network from the trace. Show the globe, click a dot to light its journey, double-click
+   a link for the flow, switch to Columns, and export the ZIP (original rows, byte-identical).
+5. **Suspect Accounts:** filter by role or bank; open an account to show the reasons in words.
+6. **Robustness (if asked):** on Data Management, drop `sample.csv` and show it analysed live in about 3 seconds.
+7. **Night mode (if asked):** the Day / Night switch in the masthead.
 
 ---
 

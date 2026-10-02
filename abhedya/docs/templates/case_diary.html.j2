@@ -1,94 +1,106 @@
 {% extends "base.html.j2" %}
+{% macro field(v) %}{% if v %}{{ v }}{% else %}<span class="blank">&nbsp;</span>{% endif %}{% endmacro %}
 {% block title %}Case Diary {{ ev.case_id }}{% endblock %}
 {% block content %}
-<h1>POLICE CASE DIARY (DRAFT)</h1>
-<p class="sub">Cyber financial fraud: money-trail analysis of the complainant's loss</p>
+<h1>CASE DIARY (Section 192 BNSS, 2023): CYBER FINANCIAL FRAUD / MONEY-MULE TRAIL</h1>
 
-<table class="kv">
-  <tr><td>Case reference</td><td>{{ ev.case_id }}</td></tr>
-  <tr><td>FIR No.</td><td>{{ ev.case.fir_no or "________________" }}</td></tr>
-  <tr><td>NCRP acknowledgement No.</td><td>{{ ev.case.ncrp_ack or "________________" }}</td></tr>
-  <tr><td>Police station</td><td>{{ ev.case.police_station or "________________" }}</td></tr>
-  <tr><td>Investigating Officer</td><td>{{ ev.case.io_name or "________________" }}</td></tr>
-  <tr><td>Prepared on</td><td>{{ ev.generated_at|ist }}</td></tr>
-  <tr><td>Source data SHA-256</td><td class="mono">{{ ev.data_sha256 }}</td></tr>
-  <tr><td>Trace SHA-256</td><td class="mono">{{ ev.trace_sha256 }}</td></tr>
-  <tr><td>Facts fingerprint</td><td class="mono">{{ ev.facts_sha256 }}</td></tr>
+<table class="meta">
+  <tr><td>FIR / Case No.</td><td>{{ field(ev.case.fir_no) }}</td></tr>
+  <tr><td>NCRP / 1930 Complaint No.</td><td>{{ field(ev.case.ncrp_ack) }}</td></tr>
+  <tr><td>Sections of law</td><td>{{ law }}</td></tr>
+  <tr><td>Investigating Officer</td><td>{{ field(ev.case.io_name) }}, {{ rank }}</td></tr>
+  <tr><td>Diary prepared on</td><td>{{ ev.generated_at|ist }}</td></tr>
 </table>
 
 <!--FACTS-->
-<h2>1. Total funds siphoned from the victim</h2>
-<table class="kv">
-  <tr><td>Victim account</td><td id="{{ victim.eid }}">{{ victim.account }} · {{ victim.bank_name }} · IFSC {{ victim.ifsc }}</td></tr>
-  <tr><td>Disputed transfer(s)</td><td>{% for t in seed %}{{ t.transaction_id }} on {{ t.ts }} for {{ t.amount_paise|inr }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td></tr>
-  <tr><td>Total siphoned</td><td><b>{{ ev.loss_paise|inr }}</b></td></tr>
-  <tr><td>Accounts on the money trail</td><td>Layer 1: {{ layers.L1|length }} · Layer 2: {{ layers.L2|length }} · Layer 3 (cash-out): {{ layers.L3|length }}</td></tr>
-  <tr><td>Victim money still held</td><td><b>{{ total_held|inr }}</b> in {{ freeze|length }} account(s), listed in section 5</td></tr>
+<h2>1. Complainant (Victim) Account &amp; Loss</h2>
+<table>
+  <tr><th>Victim account</th><th>Bank</th><th>IFSC</th><th class="num">Total funds siphoned</th><th>Fraud window (first to last transfer)</th></tr>
+  <tr id="{{ victim.eid }}"><td class="mono">{{ victim.account }}</td><td>{{ victim.bank_name }}</td><td class="mono">{{ victim.ifsc }}</td>
+      <td class="num"><b>{{ ev.loss_paise|inr }}</b></td>
+      <td>{{ first_ts }} to {{ last_ts }}{% if duration %} ({{ duration }}){% endif %}</td></tr>
 </table>
+<p>Disputed transfer(s) from the complainant's account:
+  {% for t in seed %}<span class="mono">{{ t.transaction_id }}</span> on {{ t.ts }} for {{ t.amount_paise|inr }}{% if not loop.last %}; {% endif %}{% endfor %}.
+  The money was traced to {{ layers.L1|length }} Layer 1, {{ layers.L2|length }} Layer 2 and {{ layers.L3|length }} Layer 3 (cash-out)
+  account(s); {{ total_held|inr }} of it is still held in {{ freeze|length }} account(s) (section 5).</p>
 <!--/FACTS-->
 
-<h2>2. Narrative</h2>
-<p class="muted">{{ narrative_source }}</p>
+<h2>2. Investigation Narrative</h2>
 {% for s in narrative %}
   <p><b>{{ s.title }}.</b>{% for p in s.paragraphs %} {{ p.text }}{% if p.refs %}<span class="refs"> [{% for r in p.refs %}<a href="#{{ r }}">{{ r }}</a>{% if not loop.last %}, {% endif %}{% endfor %}]</span>{% endif %}{% endfor %}</p>
 {% endfor %}
+<p class="small muted"><i>Source of this narrative:</i> {{ narrative_source }} References in square brackets point to the
+  rows of sections 3 and 4.</p>
 
 <!--FACTS-->
-<h2>3. Chronology of the money trail</h2>
+<h2>3. Chronological Money Trail</h2>
 <table>
-  <tr><th>Ref</th><th>Date-time</th><th>Transaction ID</th><th>From</th><th>To</th><th>Step</th><th>Mode</th>
-      <th class="num">Amount</th><th class="num">Victim money</th><th>Linked by</th></tr>
+  <tr><th>Ref</th><th>Date-time</th><th>Transaction ID</th><th>From</th><th>To</th><th>Layer step</th><th>Mode</th>
+      <th class="num">Amount</th><th class="num">Victim's money</th></tr>
   {% for t in ev.txns %}
   <tr id="{{ t.eid }}">
     <td class="nw">{{ t.eid }}</td><td class="nw">{{ t.ts }}</td><td class="mono">{{ t.transaction_id }}</td>
     <td class="mono">{{ acc[t.src_eid].account }}</td><td class="mono">{{ acc[t.dst_eid].account }}</td>
-    <td>{{ step(t) }}</td><td>{{ t.mode }}</td>
+    <td>{{ step(t) }}<br><span class="tag">{{ rule_text(t) }}</span></td><td>{{ t.mode }}</td>
     <td class="num">{{ t.amount_paise|inr }}</td><td class="num">{{ t.attributed_paise|inr }}</td>
-    <td>{{ rule_text(t) }}</td>
   </tr>
   {% endfor %}
 </table>
 
-<h2>4. Layer-wise accounts identified</h2>
-{% for key, title in [("L1", "Layer 1: collector accounts (received the victim's money directly)"),
-                      ("L2", "Layer 2: distributor accounts (received it from another mule)"),
-                      ("L3", "Layer 3: cash-out accounts (received it through a wallet / crypto P2P channel)")] %}
-<p><b>{{ title }}</b></p>
+<h2>4. Layer-wise Accounts Identified</h2>
+{% for key, desc in [("L1", "received the complainant's money directly"),
+                     ("L2", "received it from another mule account"),
+                     ("L3", "moved it out through a wallet / crypto P2P channel")] %}
+<p><b>{{ layer_name[key] }}</b>: {{ layers[key]|length }} account(s) that {{ desc }}.</p>
 {% if layers[key] %}
 <table>
   <tr><th>Ref</th><th>Account</th><th>Bank</th><th>IFSC</th><th>First received</th>
-      <th class="num">Victim money received</th><th class="num">Still held</th></tr>
+      <th class="num">Victim's money received</th><th class="num">Still held</th></tr>
   {% for a in layers[key] %}
   <tr id="{{ a.eid }}"><td class="nw">{{ a.eid }}</td><td class="mono">{{ a.account }}</td><td>{{ a.bank_name }}</td><td class="mono">{{ a.ifsc }}</td>
       <td class="nw">{{ first_in[a.eid] }}</td><td class="num">{{ a.received_paise|inr }}</td><td class="num">{{ a.held_paise|inr }}</td></tr>
   {% endfor %}
 </table>
-{% else %}<p class="muted">None identified.</p>{% endif %}
+{% endif %}
 {% endfor %}
 
-<h2>5. Holding accounts recommended for immediate debit hold</h2>
-<p>Hold only the amount shown (the victim's money still in the account), not the whole account.</p>
+<h2>5. Accounts Recommended for Immediate Debit Freeze</h2>
+<div class="box">The complainant's money still traceable: <b>{{ total_held|inr }}</b> in <b>{{ freeze|length }}</b> account(s).
+  Each hold is limited to the amount shown (the complainant's money still in the account), not the whole account.</div>
 <table>
-  <tr><th>Ref</th><th>Account</th><th>Bank</th><th>IFSC</th><th>Layer</th><th class="num">Amount to hold</th></tr>
+  <tr><th>#</th><th>Account</th><th>Bank</th><th>IFSC</th><th>Layer</th><th class="num">Amount to hold</th></tr>
   {% for a in freeze %}
-  <tr><td class="nw">{{ a.eid }}</td><td class="mono">{{ a.account }}</td><td>{{ a.bank_name }}</td><td class="mono">{{ a.ifsc }}</td>
-      <td>{{ a.role }}</td><td class="num">{{ a.held_paise|inr }}</td></tr>
+  <tr><td>{{ loop.index }}</td><td class="mono">{{ a.account }}</td><td>{{ a.bank_name }}</td><td class="mono">{{ a.ifsc }}</td>
+      <td>{{ layer_name.get(a.role, a.role) }}</td><td class="num"><b>{{ a.held_paise|inr }}</b></td></tr>
   {% endfor %}
   <tr><th colspan="5">Total</th><th class="num">{{ total_held|inr }}</th></tr>
 </table>
 
-<h2>6. Points for the IO to verify</h2>
-{% for w in ev.warnings %}<p class="warn">{{ w }}</p>{% endfor %}
-{% for d in ev.dq_notes %}<p class="warn">Data quality: {{ d }}</p>{% endfor %}
-{% if not ev.warnings and not ev.dq_notes %}<p class="muted">No warnings were raised for this trail.</p>{% endif %}
-<p class="muted">Method: the victim's money was followed forward in time through at most four hops. Each transfer was linked
-by the rule shown in section 3: money received 3-15 minutes earlier ("3-15 min pass-through"), a transfer carrying at
-least 90% of one incoming amount ("pass-through of one credit"), or otherwise the account holder's own money is presumed
-spent first ("balance rule"). Amounts are exact; no figure in this document is estimated.</p>
+<h2>6. Further Action Proposed</h2>
+<ol>
+  <li>Serve notices under Sections 94 &amp; 106 BNSS, 2023 on the Nodal Officers of {{ freeze_banks|length }} bank(s)
+      ({{ freeze_banks|join(", ") }}) for an immediate debit hold limited to the amounts in section 5 (notices annexed).</li>
+  <li>Obtain from the banks the KYC documents, account statements and device / IP / login logs of the accounts in
+      sections 4 and 5, and the details of any onward transfer.</li>
+  <li>Verify every transfer in section 3 against the bank records before relying on it.</li>
+  <li>Points to verify:
+    <ul>
+      {% for w in ev.warnings %}<li>{{ w }}</li>{% endfor %}
+      {% for d in dq_notes %}<li>Data quality: {{ d }}</li>{% endfor %}
+      {% if not ev.warnings and not dq_notes %}<li>No trace warnings or data-quality issues were raised for this trail.</li>{% endif %}
+    </ul>
+  </li>
+</ol>
+<p class="small muted">Method: the complainant's money was followed forward in time through at most four hops. Each
+transfer was linked by the rule shown under its layer step in section 3: money received 3-15 minutes earlier ("3-15 min
+pass-through"), a transfer carrying at least 90% of one incoming amount ("pass-through of one credit"), or otherwise the
+account holder's own money is presumed spent first ("balance rule"). Amounts are exact; no figure in this diary is estimated.</p>
+<p class="small muted">Record integrity: source data SHA-256 <span class="mono">{{ ev.data_sha256 }}</span>; trace SHA-256
+<span class="mono">{{ ev.trace_sha256 }}</span>; facts fingerprint <span class="mono">{{ ev.facts_sha256 }}</span>;
+case reference {{ ev.case_id }}.</p>
 <!--/FACTS-->
 
-<h2>7. Remarks of the Investigating Officer</h2>
-<div class="box"></div>
-<div class="sign"><div>Place: ________________<br>Date: ________________</div>
-  <div>Signature: ________________<br>{{ ev.case.io_name or "Name / Rank: ________________" }}</div></div>
+<div class="sig"><div>Place: Indore<br>Date: <span class="blank">&nbsp;</span></div>
+  <div class="right">(Signature)<br><br>{{ field(ev.case.io_name) }}<br>{{ rank }}<br>{{ ps }}</div></div>
 {% endblock %}

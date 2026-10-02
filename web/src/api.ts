@@ -1,5 +1,5 @@
 import type {
-  AccountSummary, CaseInfo, CaseOutput, DatasetInfo, DatasetProgress, DQSummary, EvidenceRecord, Overview, RingResult, RiskRow, TraceResult, TxnRow, VerifyResult, VictimCandidate,
+  AccountSummary, CaseInfo, CaseOutput, DatasetInfo, DatasetProgress, DQSummary, LlmStatus, Overview, RingResult, RiskRow, TraceResult, TxnRow, VictimCandidate,
 } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -21,13 +21,16 @@ export const api = {
   progress: (id: string) => req<DatasetProgress>(`/api/datasets/${enc(id)}/progress`),
   activate: (id: string) => req<DatasetInfo>(`/api/datasets/${enc(id)}/activate`, { method: 'POST' }),
   removeDataset: (id: string) => req<DatasetInfo[]>(`/api/datasets/${enc(id)}`, { method: 'DELETE' }),
-  evidence: () => req<EvidenceRecord>('/api/evidence'),
-  verify: () => req<VerifyResult>('/api/evidence/verify', { method: 'POST' }),
-  flaggedRows: (flag: string, offset = 0, limit = 50) => req<TxnRow[]>(`/api/evidence/rows?flag=${enc(flag)}&limit=${limit}&offset=${offset}`),
   search: (q: string) => req<string[]>(`/api/search?q=${enc(q)}&limit=12`),
   victims: (limit = 50) => req<VictimCandidate[]>(`/api/victims?limit=${limit}`),
-  trace: (victim: string, seeds?: number[] | null) =>
-    req<TraceResult>(`/api/trace/${enc(victim)}${seeds?.length ? '?' + seeds.map((s) => `seed_txn=${s}`).join('&') : ''}`),
+  trace: (victim: string, seeds?: number[] | null, hops = 4) =>
+    req<TraceResult>(`/api/trace/${enc(victim)}?max_hops=${hops}${seeds?.length ? '&' + seeds.map((s) => `seed_txn=${s}`).join('&') : ''}`),
+  /** Transactions by row number, any count (fetched 500 at a time). */
+  byIndexAll: async (idx: number[]) => {
+    const out: TxnRow[] = []
+    for (let i = 0; i < idx.length; i += 500) out.push(...await req<TxnRow[]>(`/api/txns?${idx.slice(i, i + 500).map((x) => `idx=${x}`).join('&')}`))
+    return out
+  },
   account: (a: string) => req<AccountSummary>(`/api/account/${enc(a)}`),
   byIndex: (idx: number[]) => req<TxnRow[]>(`/api/txns?${idx.slice(0, 500).map((i) => `idx=${i}`).join('&')}`),
   txns: (a: string, limit = 50, offset = 0) => req<TxnRow[]>(`/api/account/${enc(a)}/txns?limit=${limit}&offset=${offset}`),
@@ -35,6 +38,7 @@ export const api = {
   top: (band: string, limit = 5000) => req<RiskRow[]>(`/api/risk/top?band=${band}&limit=${limit}`),
   ring: (a: string) => req<RingResult>(`/api/ring/${enc(a)}`),
   ringExportUrl: (a: string) => `/api/ring/${enc(a)}/export.zip`,
+  llm: () => req<LlmStatus>('/api/docs/llm'),
   docs: (victim: string, body: CaseInfo) => req<CaseOutput>(`/api/docs/${enc(victim)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }),

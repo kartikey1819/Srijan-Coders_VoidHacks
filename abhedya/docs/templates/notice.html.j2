@@ -1,0 +1,69 @@
+{% extends "base.html.j2" %}
+{% macro field(v) %}{% if v %}{{ v }}{% else %}<span class="blank">&nbsp;</span>{% endif %}{% endmacro %}
+{% block title %}Notice {{ bank_name }} {{ ev.case_id }}{% endblock %}
+{% block content %}
+<div class="urgent">MOST URGENT · CYBER FINANCIAL FRAUD · TIME-CRITICAL DEBIT HOLD</div>
+<table class="meta">
+  <tr><td>No.</td><td><span class="blank">&nbsp;</span></td></tr>
+  <tr><td>Date</td><td><span class="blank">&nbsp;</span></td></tr>
+  <tr><td>To</td><td>{{ address }}</td></tr>
+</table>
+
+<h1>NOTICE UNDER SECTIONS 94 &amp; 106 OF THE BHARATIYA NAGARIK SURAKSHA SANHITA, 2023
+  <span class="sub">(corresponding to Sections 91 &amp; 102 of the Code of Criminal Procedure, 1973)</span></h1>
+
+<p><b>Subject:</b> Immediate debit hold, limited to the disputed amount, on the account(s) below and production of
+  records, in FIR No. {{ field(ev.case.fir_no) }} / NCRP Complaint No. {{ field(ev.case.ncrp_ack) }}, {{ law }}.</p>
+
+<p>Sir / Madam,</p>
+<!--FACTS-->
+<p>This office is investigating a cyber financial fraud in which {{ ev.loss_paise|inr }} was taken from the
+  complainant's account <span class="mono">{{ victim.account }}</span> ({{ victim.bank_name }}, IFSC
+  <span class="mono">{{ victim.ifsc }}</span>) between {{ first_ts }} and {{ last_ts }}. Analysis of the transaction
+  records shows that the money was passed through a chain of mule accounts, and that the following account(s)
+  maintained with {{ bank_name }} received the complainant's money and still hold part of it:</p>
+
+<table>
+  <tr><th>Account No.</th><th>IFSC</th><th>Disputed credit: transaction ID</th><th>Date-time</th>
+      <th class="num">Amount credited</th><th class="num">Victim's money in it</th><th class="num">Amount to hold</th></tr>
+  {% for a in rows %}
+  {% set cr = credits[a.eid] %}
+  {% if not cr %}
+  <tr><td class="mono"><b>{{ a.account }}</b></td><td class="mono">{{ a.ifsc }}</td><td colspan="4">-</td>
+      <td class="num"><b>{{ a.held_paise|inr }}</b></td></tr>
+  {% endif %}
+  {% for t in cr %}
+  <tr>
+    {% if loop.first %}<td class="mono" rowspan="{{ cr|length }}"><b>{{ a.account }}</b></td>
+    <td class="mono" rowspan="{{ cr|length }}">{{ a.ifsc }}</td>{% endif %}
+    <td class="mono">{{ t.transaction_id }}</td><td class="nw">{{ t.ts }}</td>
+    <td class="num">{{ t.amount_paise|inr }}</td><td class="num">{{ t.attributed_paise|inr }}</td>
+    {% if loop.first %}<td class="num" rowspan="{{ cr|length }}"><b>{{ a.held_paise|inr }}</b></td>{% endif %}
+  </tr>
+  {% endfor %}
+  {% endfor %}
+  <tr><th colspan="6">Total to hold at {{ bank_name }}</th><th class="num">{{ bank_total|inr }}</th></tr>
+</table>
+<!--/FACTS-->
+
+<p>You are hereby requested, under the above provisions, to:</p>
+<ol>
+  <li><b>Immediately place a DEBIT HOLD (lien) on each account above, limited to the amount shown in the last
+      column.</b> This is not a request to freeze the whole account; the rest of the balance may be operated.</li>
+  <li>Furnish the KYC documents and account opening form, with the mobile number, e-mail ID and UPI handles linked to
+      each account.</li>
+  <li>Furnish the statement of each account from {{ period[0] }} to {{ period[1] }}.</li>
+  <li>Furnish the details of other accounts, wallets or UPI handles linked to the same customer.</li>
+  <li>Furnish the device, IP address and login logs of internet / mobile banking sessions for the period.</li>
+  <li>Furnish the beneficiary and exit details of any onward transfer of the money (wallet IDs, UPI handles, ATM IDs,
+      merchant IDs), and the balance available when the hold is placed.</li>
+</ol>
+<p>Please place the hold at once and furnish the records within <span class="blank" style="min-width:12mm">&nbsp;</span>
+  days of receipt of this notice. Replies may be sent to the undersigned at {{ ps }}. For any clarification, contact the
+  undersigned or the National Cyber Crime Helpline 1930.</p>
+
+<div class="sig"><div>Total debit hold requested from this bank:<br><b style="font-size:13pt">{{ bank_total|inr }}</b></div>
+  <div class="right">(Signature &amp; Seal)<br><br>{{ field(ev.case.io_name) }}<br>{{ rank }}<br>Investigating Officer<br>{{ ps }}</div></div>
+<p class="small muted" style="margin-top:8mm">Copy to: Nodal Officer, I4C / CFCFRMS (1930), for information.
+  Case reference {{ ev.case_id }}.</p>
+{% endblock %}

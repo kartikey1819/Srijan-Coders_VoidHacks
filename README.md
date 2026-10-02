@@ -3,7 +3,7 @@
 Offline money-mule investigation workstation (Void Hacks 8.0, Indore Police problem statement).
 Load a bank transaction CSV, see every account's mule risk (0–100, with reasons), trace a complainant's
 money through up to 4 hops, isolate the whole ring, and produce a police case diary plus one
-Section 94 BNSS (old Section 91 CrPC) freeze notice per bank. Everything runs on one machine; nothing is uploaded.
+Sections 94 & 106 BNSS (91 & 102 CrPC) freeze notice per bank. Everything runs on one machine; nothing is uploaded.
 
 ## Start (one command)
 
