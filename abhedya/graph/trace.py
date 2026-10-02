@@ -6,7 +6,7 @@ its other (clean) inflows. All candidate out-edges are processed in one global t
 outflow spends lots in the priority order config.ATTRIBUTION_ORDER:
   window        lot arrived 180-900 s before the outflow   (statement: dispersed within 3-15 min)
   amount_match  outflow carries >= 90% of the lot's original amount (statement: >= 90% passed on)
-  oldest        tainted lots first (oldest first), then clean lots
+  oldest        the holder's own clean lots first, then tainted lots (each oldest first)
 Clean lots matter: when a shared mule later forwards *another* victim's money, the window/amount
 rules match that outflow to the other victim's inflow instead of draining this victim's residue.
 Money is conserved: sum(held over non-victim accounts) + returned_to_victim == loss.

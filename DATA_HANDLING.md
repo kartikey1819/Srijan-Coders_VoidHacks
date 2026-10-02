@@ -55,6 +55,9 @@ Each check adds a flag to the row. No row is edited or dropped.
 - Run the engine on both files and report results for each.
 
 ## 6. Tune on half, check on half
+> Plan as written before the build. The weights were in the end set by hand and not fitted; both halves are
+> reported out-of-sample in `eval/report.md`. Where this file differs from the code, `docs/HOW_IT_WORKS.md` is current.
+
 - Split the 300 victims (`TASK_EARNING_REFUND` senders) 150/150. Tune thresholds and weights on one half and report accuracy on the other.
 - Don't target 1,500 flagged accounts: only 1,073 mule accounts appear in this file.
 

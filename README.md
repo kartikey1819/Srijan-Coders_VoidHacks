@@ -38,6 +38,8 @@ the evidence, never written by the model. Detection and tracing never use the mo
 
 ## How it works
 
+Full technical walkthrough (every stage, algorithm and parameter): [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
+
 | Part | Where | Notes |
 |---|---|---|
 | Ingest | `abhedya/ingest/` | DuckDB, tolerant reader: every row is kept, bad values are flagged (`DQ` screen) and left out of the money graph |
@@ -50,7 +52,7 @@ the evidence, never written by the model. Detection and tracing never use the mo
 
 ## Results
 
-- Official data: precision 1.0000, recall 1.0000 on the 300 planted chains; 300/300 traces exact.
+- Official data: precision 1.0000, recall 1.0000 over the 1,073 mule accounts; 300/300 victim traces exact.
 - Performance on 2M rows: `bench/results.md`. Live AI model: `bench/llm_results.md`.
 - Independent and adversarial testing (data generated from published laundering patterns, not from the
   official file): `reports/final_test_matrix.md`, `reports/final_readiness_report.md`, `reports/adversarial/`.
