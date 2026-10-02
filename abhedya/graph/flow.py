@@ -15,7 +15,8 @@ import numpy as np
 from abhedya import config
 from abhedya.graph.build import Graph
 from abhedya.graph.trace import trace_core
-from contracts.models import FlowLayer, FlowSummary
+from abhedya.docs.banks import bank_name
+from contracts.models import FlowBank, FlowCollector, FlowLayer, FlowSummary
 
 FAST_S = {"L1": 15 * 60, "L2": 60 * 60}      # "passed on within": 15 minutes for collectors, an hour for distributors
 _RANK = {"VICTIM": 0, "L1": 1, "L2": 2, "L3": 3}
@@ -62,6 +63,8 @@ def flow_summary(g: Graph, victims: list[int], seeds_for, suspects: set[int]) ->
     to_l2: list[int] = []
     to_l3: list[int] = []
     losses: list[int] = []
+    held_acct: dict[int, int] = defaultdict(int)             # account -> victim money it still holds (all victims)
+    coll_recv: dict[int, int] = defaultdict(int)             # collector -> victim money it received
     for v in victims:
         c = trace_core(g, v, seed_txns=seeds_for(v))
         if c.loss <= 0:
@@ -78,6 +81,9 @@ def flow_summary(g: Graph, victims: list[int], seeds_for, suspects: set[int]) ->
             h = c.held(u)
             if h >= config.FREEZE_MIN_PAISE:
                 held[r] += h
+                held_acct[u] += h
+            if r == "L1":
+                coll_recv[u] += c.received[u]
         t_seed = min(e.ts for e in c.edges if e.rule == "seed")
         first: dict[str, int] = {}
         for e in c.edges:
@@ -127,6 +133,16 @@ def flow_summary(g: Graph, victims: list[int], seeds_for, suspects: set[int]) ->
     shared = {c: vs for c, vs in victims_of.items() if len(vs) > 1}
     top_c = max(shared, key=lambda c: (len(shared[c]), -c), default=None)
     name = lambda u: str(g.accounts[u])  # noqa: E731
+    by_bank: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    for u, h in held_acct.items():
+        b = by_bank[name(u)[:4]]
+        b[0] += 1
+        b[1] += h
+    banks = [FlowBank(bank=k, bank_name=bank_name(k), accounts=a, held_paise=h)
+             for k, (a, h) in sorted(by_bank.items(), key=lambda kv: (-kv[1][1], kv[0]))]
+    top = sorted(shared, key=lambda c: (-len(shared[c]), -coll_recv[c], name(c)))[:5]
+    collectors = [FlowCollector(account=name(c), victims=sorted(name(v) for v in shared[c]), received_paise=coll_recv[c])
+                  for c in top]
     return FlowSummary(
         victims=len(losses), loss_paise=loss, avg_loss_paise=round(loss / len(losses)) if losses else 0,
         max_loss_paise=max(losses, default=0), layers=layers,
@@ -136,4 +152,5 @@ def flow_summary(g: Graph, victims: list[int], seeds_for, suspects: set[int]) ->
         linked_largest=groups[0] if groups else 0, linked_groups=len(groups), sent_back=backwards,
         club_victims=len(set().union(*shared.values())) if shared else 0, club_collectors=len(shared),
         club_top_collector=name(top_c) if top_c is not None else None,
-        club_top_victims=sorted(name(v) for v in shared[top_c]) if top_c is not None else [])
+        club_top_victims=sorted(name(v) for v in shared[top_c]) if top_c is not None else [],
+        banks=banks, top_collectors=collectors, to_l3_each_s=sorted(to_l3))

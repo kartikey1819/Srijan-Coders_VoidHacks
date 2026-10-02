@@ -275,6 +275,17 @@ class FlowLayer(BaseModel):          # one station of "where the victims' money 
     per_account: Optional[float]     # collectors: victims each; distributors: cash-out accounts each
     wallet_share: Optional[float]    # cash-out: share that arrived through wallet / crypto channels
 
+class FlowBank(BaseModel):           # where the freezable victim money sits, per bank
+    bank: str                        # account prefix, e.g. SBIN
+    bank_name: str
+    accounts: int                    # accounts holding victim money to freeze
+    held_paise: int
+
+class FlowCollector(BaseModel):      # a collector paid by several victims (their complaints can be clubbed)
+    account: str
+    victims: list[str]
+    received_paise: int
+
 class FlowSummary(BaseModel):        # GET /api/flow: every identified victim traced once, summed per layer
     victims: int
     loss_paise: int
@@ -293,6 +304,9 @@ class FlowSummary(BaseModel):        # GET /api/flow: every identified victim tr
     club_collectors: int             # collectors paid by two or more victims
     club_top_collector: Optional[str]  # the collector paid by the most victims
     club_top_victims: list[str]      # ... and those victims
+    banks: list[FlowBank] = []       # freezable money per bank, largest first
+    top_collectors: list[FlowCollector] = []  # up to 5 collectors shared by the most victims
+    to_l3_each_s: list[int] = []     # per victim: seconds from the payment to the first cash-out account, sorted
 
 class ScoreCheck(BaseModel):         # one of the four checks behind the Mule Risk Index
     key: str                         # SPEED, SHAPE, CHANNEL, NETWORK

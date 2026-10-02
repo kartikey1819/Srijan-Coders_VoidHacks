@@ -112,6 +112,12 @@ def test_flow_summary_names_complaints_to_club(client):
     f = client.get("/api/flow").json()
     assert (f["club_victims"], f["club_collectors"], f["club_top_collector"]) == (262, 91, "HDFC10000336")
     assert len(f["club_top_victims"]) == 8 and f["club_top_victims"] == sorted(f["club_top_victims"])
+    # freezable money per bank adds up to the total; top collectors lead with the largest group; cash-out times per victim
+    assert sum(b["held_paise"] for b in f["banks"]) == f["freezable_paise"] and len(f["banks"]) == 10
+    assert [b["held_paise"] for b in f["banks"]] == sorted((b["held_paise"] for b in f["banks"]), reverse=True)
+    assert f["top_collectors"][0]["account"] == "HDFC10000336" and len(f["top_collectors"][0]["victims"]) == 8
+    t = f["to_l3_each_s"]
+    assert len(t) == 300 and t == sorted(t) and abs(t[len(t) // 2] - f["to_l3_s"]) <= 60
 
 
 # ---- saved datasets: upload, live analysis, switch ----

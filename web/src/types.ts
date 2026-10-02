@@ -74,7 +74,10 @@ export interface FlowSummary {
   to_l2_s: number | null; to_l3_s: number | null; freezable_paise: number; traced_ms: number
   suspects: number; linked_largest: number; linked_groups: number; sent_back: number
   club_victims: number; club_collectors: number; club_top_collector: string | null; club_top_victims: string[]
+  banks: FlowBank[]; top_collectors: FlowCollector[]; to_l3_each_s: number[]
 }
+export interface FlowBank { bank: string; bank_name: string; accounts: number; held_paise: number }
+export interface FlowCollector { account: string; victims: string[]; received_paise: number }
 export interface ScoreCheck { key: string; label: string; max_points: number; points: number; detail: string }
 export interface ScoreExplain {
   account: string; score: number; combined: number; floor: number | null; floor_reason: string | null
