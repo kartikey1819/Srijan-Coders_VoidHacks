@@ -235,6 +235,8 @@ def activate(ds_id: str) -> DatasetInfo:
         cur = engine_mod._engine
         if cur is None or Path(cur.db_path).resolve() != path.resolve():
             engine_mod._engine = engine_mod.Engine(path)
+        if ds_id != "official":                # uploads are stored as source.csv: exports keep the name the officer gave
+            engine_mod._engine.display_name = (_read_meta(ds_id) or {}).get("name")
         _active = ds_id
     try:                                   # remembered across restarts (startup reopens it)
         DIR.mkdir(parents=True, exist_ok=True)
@@ -308,6 +310,7 @@ def startup() -> None:
         if st is not None and st.status == "done":
             with engine_mod._lock:
                 engine_mod._engine = engine_mod.Engine(db_path(last))
+                engine_mod._engine.display_name = (_read_meta(last) or {}).get("name")
                 _active = last
             return
     if official_db().exists() and not _removed().exists():
@@ -316,6 +319,7 @@ def startup() -> None:
     if ready:
         with engine_mod._lock:
             engine_mod._engine = engine_mod.Engine(db_path(ready[0].id))
+            engine_mod._engine.display_name = ready[0].name
             _active = ready[0].id
 
 

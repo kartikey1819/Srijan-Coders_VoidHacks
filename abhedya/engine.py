@@ -237,7 +237,7 @@ class Engine:
             "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "seed": ring.seed, "t_from": t_from, "t_to": t_to,
             "members": len(ring.nodes), "transactions": len(lines), "total_paise": ring.total_paise,
-            "source_file": self.meta["input_file"], "source_sha256": self.data_sha256, "git_commit": git_commit(),
+            "source_file": getattr(self, "display_name", None) or self.meta["input_file"], "source_sha256": self.data_sha256, "git_commit": git_commit(),
             "files": {"transactions.csv": audit.sha256_bytes(tx_bytes), "members.csv": audit.sha256_bytes(mem_bytes)},
             "warnings": warnings,
         }

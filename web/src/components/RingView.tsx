@@ -1,4 +1,4 @@
-import { Camera, DownloadSimple, Globe as GlobeIcon, Rows } from '@phosphor-icons/react'
+import { DownloadSimple, Globe as GlobeIcon, Rows } from '@phosphor-icons/react'
 import cytoscape from 'cytoscape'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
@@ -34,7 +34,6 @@ export function RingView({ seed, reasons }: Props) {
   const [trail, setTrail] = useState<string[]>([seed])
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'columns' ? 'columns' : 'globe'))
-  const [sha, setSha] = useState('')
   const [edge, setEdge] = useState<GraphEdge | null>(null)
   const globe = useRef<GlobeHandle>(null)
   const cols = useRef<{ snapshot: () => string | null }>(null)
@@ -46,7 +45,6 @@ export function RingView({ seed, reasons }: Props) {
     setRing(null); setErr(null); setSelected(seed); setTrail([seed]); setCutoff(Infinity)
     api.ring(seed).then((r) => { if (live) { setRing(r); setMs(performance.now() - t0) } })
       .catch((e) => live && setErr(String(e.message ?? e)))
-    api.stats().then((s) => live && setSha(s.input_sha256)).catch(() => undefined)
     return () => { live = false }
   }, [seed])
   useEffect(() => { safeStorage.setItem('abhedya.ringView', view) }, [view])
@@ -66,14 +64,6 @@ export function RingView({ seed, reasons }: Props) {
     if (id) setTrail((t) => (t[t.length - 1] === id ? t : [...t.slice(-7), id]))
   }, [])
   const toggle = (r: string) => setHidden((h) => { const n = new Set(h); if (n.has(r)) n.delete(r); else n.add(r); return n })
-  const snapshot = () => {
-    const url = view === 'globe' ? globe.current?.snapshot() : cols.current?.snapshot()
-    if (!url) return
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ring_${seed}_${sha.slice(0, 8) || 'data'}_${view}.png`
-    a.click()
-  }
   const span = ring?.t_from && ring?.t_to ? toEpoch(ring.t_to) - toEpoch(ring.t_from) : 0
   const cut = Math.min(cutoff, times[times.length - 1] ?? Infinity)
 
@@ -85,7 +75,6 @@ export function RingView({ seed, reasons }: Props) {
               <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}><GlobeIcon /> Globe</button>
               <button aria-pressed={view === 'columns'} onClick={() => setView('columns')}><Rows /> Columns</button>
             </div>
-            {ring && <button className="btn" onClick={snapshot}><Camera /> Picture (PNG)</button>}
             {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export network data (ZIP)</a>}
           </>}>
       <section className="gpanel">
