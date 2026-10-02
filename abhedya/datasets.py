@@ -54,6 +54,16 @@ def db_path(ds_id: str) -> Path:
     return official_db() if ds_id == "official" else DIR / ds_id / "case.duckdb"
 
 
+def _official_sha() -> str | None:
+    try:
+        import duckdb
+        with duckdb.connect(str(official_db()), read_only=True) as con:
+            return dict(con.execute("SELECT key, value FROM meta").fetchall()).get("input_sha256")
+    except Exception:  # noqa: BLE001  (busy or missing: treat as unknown)
+        e = engine_mod._engine
+        return e.data_sha256 if e is not None and _active == "official" else None
+
+
 def check_header(first_line: bytes) -> list[str]:
     """Required columns missing from a CSV header line (case-insensitive, BOM tolerated)."""
     text = first_line.decode("utf-8-sig", errors="replace").strip()
@@ -90,6 +100,10 @@ def list_datasets() -> list[DatasetInfo]:
 def progress(ds_id: str) -> DatasetProgress | None:
     if ds_id in _progress:
         return _progress[ds_id]
+    if ds_id == "official":
+        d = next((x for x in list_datasets() if x.id == "official"), None)
+        return DatasetProgress(id="official", status="done", stage=None, stages_done={}, rows=d.rows if d else 0,
+                               accounts=d.accounts if d else 0, flagged=0, error=None) if d else None
     m = _read_meta(ds_id)
     if m:
         return DatasetProgress(id=ds_id, status=m.get("status", "done"), stage=None, stages_done=m.get("timings_s", {}),
@@ -136,6 +150,8 @@ class UploadWriter:
                 raise ValueError(f"This does not look like a bank transaction export: missing column(s) {', '.join(missing)}. "
                                  f"Required: {', '.join(REQUIRED_COLUMNS)}.")
             sha = self.h.hexdigest()
+            if sha == _official_sha():                 # the official file itself: open it, never keep a second copy
+                return "official", True
             ds_id = sha[:12]
             dest = DIR / ds_id
             if (dest / "source.csv").exists():

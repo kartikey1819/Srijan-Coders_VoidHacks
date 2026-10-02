@@ -112,6 +112,8 @@ def test_upload_analyse_switch_and_back(client, tmp_path, monkeypatch):
         assert {d["id"] for d in client.get("/api/datasets").json()} >= {ds_id, "official"}
         again = client.post("/api/datasets?name=again.csv", content=body).json()
         assert again["id"] == ds_id                                           # same file, same case
+        dup = client.post("/api/datasets?name=copy.csv", content=SAMPLE.read_bytes()).json()
+        assert dup["id"] == "official"                                       # the loaded file itself is never copied
         assert client.post("/api/datasets/official/activate").json()["active"]
         assert client.get("/api/stats").json()["rows"] == 50_000
     finally:
