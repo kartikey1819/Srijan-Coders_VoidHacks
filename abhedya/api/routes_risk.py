@@ -6,7 +6,8 @@ from fastapi.responses import Response
 from abhedya import detect
 from abhedya.detect.export import csv_bytes
 from abhedya.engine import UnknownAccount, get_engine
-from contracts.models import RiskRow, VictimCandidate
+from abhedya.docs.banks import bank_name
+from contracts.models import CountRow, DayActivity, Overview, RiskRow, VictimCandidate
 
 router = APIRouter(prefix="/api")
 _NO_RISK = "Risk scores not computed: run `python -m abhedya ingest` without --skip-detect."
@@ -26,6 +27,38 @@ def _guard(fn):
 @router.get("/risk/top", response_model=list[RiskRow])
 def risk_top(limit: int = Query(100, ge=1, le=25_000), band: str | None = Query(None, pattern="^(HIGH|MEDIUM|LOW)$")):
     return _guard(lambda: detect.top(_cur(), limit, band))
+
+
+@router.get("/overview", response_model=Overview)
+def overview():
+    """Aggregates for the Overview screen. Computed once per engine (the data never changes while serving)."""
+    eng = get_engine()
+    cached = getattr(eng, "_overview", None)
+    if cached is None:
+        cached = eng._overview = _guard(lambda: _overview(eng.cursor()))
+    return cached
+
+
+def _overview(cur) -> Overview:
+    hist = [0] * 20
+    for b, n in cur.execute("SELECT least(score // 5, 19), count(*) FROM risk GROUP BY 1").fetchall():
+        hist[int(b)] = int(n)
+    bands = dict(cur.execute("SELECT band, count(*) FROM risk GROUP BY 1").fetchall())
+    roles = {"L1": "L1 collector", "L2": "L2 distributor", "L3": "L3 cash-out"}
+    by_role = [CountRow(key=k or "none", label=roles.get(k, "No layer hint"), count=n) for k, n in cur.execute(
+        "SELECT role_hint, count(*) FROM risk WHERE band = 'HIGH' GROUP BY 1 ORDER BY 1 NULLS LAST").fetchall()]
+    by_bank = [CountRow(key=k, label=bank_name(k), count=n) for k, n in cur.execute(
+        "SELECT substr(account, 1, 4), count(*) FROM risk WHERE band = 'HIGH' GROUP BY 1 ORDER BY 2 DESC, 1").fetchall()]
+    reasons = [CountRow(key=k, label=detect.REASON_LABELS.get(k, k), count=n) for k, n in cur.execute(
+        """SELECT split_part(r, ':', 1), count(*) FROM (SELECT unnest(reasons) AS r FROM risk WHERE band = 'HIGH')
+           GROUP BY 1 ORDER BY 2 DESC, 1""").fetchall()]
+    activity = [DayActivity(day=d, n_txn=n, n_flagged=f) for d, n, f in cur.execute(
+        """SELECT strftime(t.ts, '%Y-%m-%d'), count(*),
+                  count(*) FILTER (WHERE s.band = 'HIGH' OR d.band = 'HIGH')
+           FROM txn t JOIN risk s ON s.acct_id = t.src_id JOIN risk d ON d.acct_id = t.dst_id
+           WHERE t.usable GROUP BY 1 ORDER BY 1""").fetchall()]
+    return Overview(accounts=sum(hist), score_hist=hist, bands=bands, flagged_by_role=by_role,
+                    flagged_by_bank=by_bank, flagged_reasons=reasons, activity=activity)
 
 
 @router.get("/risk/reasons")

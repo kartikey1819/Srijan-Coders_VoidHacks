@@ -124,6 +124,25 @@ class VictimCandidate(BaseModel):
     out_paise_to_flagged: int
     first_ts: str
 
+class CountRow(BaseModel):           # one bar of an aggregate chart
+    key: str
+    label: str
+    count: int
+
+class DayActivity(BaseModel):
+    day: str                         # YYYY-MM-DD as in the data
+    n_txn: int                       # usable transfers that day
+    n_flagged: int                   # ... that touch a HIGH-risk account
+
+class Overview(BaseModel):           # the case-load picture (read-only aggregates of the risk and txn tables)
+    accounts: int
+    score_hist: list[int]            # accounts per 5-point score bucket: [0-4], [5-9], ..., [95-100]
+    bands: dict[str, int]
+    flagged_by_role: list[CountRow]
+    flagged_by_bank: list[CountRow]
+    flagged_reasons: list[CountRow]  # reason code frequency among HIGH accounts
+    activity: list[DayActivity]
+
 class DQSummary(BaseModel):
     rows: int
     accounts: int

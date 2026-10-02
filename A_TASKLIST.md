@@ -129,3 +129,14 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
 
 ## Waiting on teammates (for A11)
 - C: `web/`, `abhedya/{evidence,ai,docs}/`, `routes_docs.py`. Contract: `contracts/models.py`; sample: `contracts/fixtures/trace_KKBK10000000.json`.
+
+## UI redesign (Case Register)
+- ✅ Audit: design critique 23/40 and technical audit 8/20 on the old UI; findings drove the redesign (`.impeccable/critique/`)
+- ✅ Direction chosen by the team: Case Register; two looks (Official default, Briefing light-bold) on one kit (`DESIGN.md`)
+- ✅ Layer colours validated for colour-blind safety; red reserved for money still held
+- ✅ Investigate: answer-first register (freeze-first, T+ arrival times), case header, graph annex, money-over-time chart, pinned timeline with previous/next transfer, account drawer, documents panel with a preview of what will be produced
+- ✅ Overview (new home): risk distribution, flagged by layer/bank/reason, daily activity, victims list (moved off the header); new read-only `/api/overview`
+- ✅ Ring: one-click from any register/flagged row, labelled starting account, layer filters, time reveal; scrubbing 78 → 31.5 ms
+- ✅ Flagged: sortable, filters from Overview links; Data quality: chart, zero-count checks collapsed, load time excludes detection
+- ✅ Hash routing (Back/Forward, pasted links), keyboard-reachable rows, Esc/focus handling, readable slider value, bundled fonts (offline)
+- ✅ Tests: 190 passed (4 new browser tests, 1 new API test, contract covers the new models)

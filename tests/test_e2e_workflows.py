@@ -90,9 +90,9 @@ def test_w2_victim_trace_shows_exact_layers(page, base):
     """Expected: the layer table lists the same L1 / L2 / L3 accounts as the API trace."""
     open_trace(page, base)
     api = engine_mod._engine.trace(VICTIM)
-    for role, title in (("L1", "L1 collector"), ("L2", "L2 distributor"), ("L3", "L3 cash-out")):
-        block = page.locator("details", has=page.get_by_text(title))
-        shown = set(block.locator("tbody td.mono").all_inner_texts())
+    for role in ("L1", "L2", "L3"):
+        block = page.locator(f"section.reg-group[data-role={role}]")
+        shown = set(block.locator("tbody td.acct").all_inner_texts())
         assert shown == {n.account for n in api.nodes if n.role == role}, role
 
 
@@ -185,3 +185,46 @@ def test_data_quality_screen(page, base):
     page.goto(f"{base}/#data")
     page.get_by_text("Data quality").first.wait_for()
     assert "50,000 rows" in page.content() and "DUP_TXN_ID" in page.content()
+
+
+def test_look_toggle_switches_and_persists(page, base):
+    """Expected: Briefing restyles the same screen; the choice survives a reload; ?look= overrides it."""
+    open_trace(page, base)
+    assert page.evaluate("document.documentElement.dataset.look") == "official"
+    page.get_by_role("button", name="Briefing").click()
+    assert page.evaluate("document.documentElement.dataset.look") == "briefing"
+    page.reload()
+    page.get_by_text("Accounts on the money trail").wait_for()
+    assert page.evaluate("document.documentElement.dataset.look") == "briefing"
+    page.goto(f"{base}/?look=official#trace={VICTIM}")
+    page.get_by_text("Accounts on the money trail").wait_for()
+    assert page.evaluate("document.documentElement.dataset.look") == "official"
+
+
+def test_one_click_ring_isolation_from_the_register(page, base):
+    """Expected: the Ring button on the L1 row isolates that account's whole syndicate."""
+    open_trace(page, base)
+    page.get_by_role("button", name=f"Isolate ring around {L1}").click()
+    page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
+    assert page.url.endswith(f"#ring={L1}")
+    page.go_back()
+    page.get_by_text("Accounts on the money trail").wait_for()
+
+
+def test_overview_charts_render_in_both_looks(page, base):
+    """Expected: the Overview's charts draw with data in both looks, and a bar opens the filtered list."""
+    for look in ("official", "briefing"):
+        page.goto(f"{base}/?look={look}#overview")
+        page.get_by_text("accounts score 70 or more").wait_for()
+        assert page.locator(".chart svg").count() >= 2 and page.locator(".barlist .bar").count() >= 3
+    page.locator(".barlist .lbl", has_text="L1 collector").click()
+    page.get_by_text("Flagged mule accounts:").wait_for()
+    assert "role=L1" in page.url
+
+
+def test_mistyped_id_gets_a_format_hint(page, base):
+    """Expected: an ID of the wrong length is explained under the box instead of failing silently."""
+    page.goto(base + "/")
+    page.get_by_label("Victim account ID").fill("KKBK1000")
+    page.get_by_role("button", name="Trace money trail").click()
+    page.get_by_text("Account IDs are 12 characters").wait_for()

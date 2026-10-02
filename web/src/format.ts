@@ -34,7 +34,7 @@ export function fromEpoch(t: number): string {
 }
 
 export function delayText(s: number | null): string {
-  if (s === null) return 'disputed transfer'
+  if (s === null) return ''
   if (s < 60) return `${s} s later`
   if (s < 3600) return `${Math.round(s / 60)} min later`
   if (s < 86400) return `${(s / 3600).toFixed(1)} h later`
@@ -42,20 +42,42 @@ export function delayText(s: number | null): string {
 }
 
 export const RULE_TEXT: Record<string, string> = {
-  seed: 'disputed transfer', window: '3–15 min pass-through', amount_match: 'pass-through of one credit',
-  oldest: 'balance rule',
+  seed: 'disputed transfer', window: 'passed on within 3-15 min', amount_match: 'passed on at >= 90% of one credit',
+  oldest: 'balance rule (own money spent first)',
+}
+
+/** Seconds after the theft, as an officer would say it: "T+7 min", "T+2 h 05 min", "T+3 d 4 h". */
+export function tPlus(s: number): string {
+  if (!Number.isFinite(s) || s < 0) return 'T+0'
+  if (s < 60) return `T+${Math.round(s)} s`
+  if (s < 3600) return `T+${Math.floor(s / 60)} min`
+  if (s < 86400) return `T+${Math.floor(s / 3600)} h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')} min`
+  return `T+${Math.floor(s / 86400)} d ${Math.floor((s % 86400) / 3600)} h`
+}
+
+export function spanText(s: number): string {
+  if (s < 60) return `${Math.round(s)} s`
+  if (s < 3600) return `${Math.round(s / 60)} min`
+  if (s < 86400) return `${(s / 3600).toFixed(1)} h`
+  return `${(s / 86400).toFixed(1)} days`
+}
+
+/** Account IDs in this data: 4-letter bank prefix + 8 digits. */
+export const ACCOUNT_RE = /^[A-Z]{4}\d{8}$/
+export function accountHint(raw: string): string | null {
+  const s = raw.trim().toUpperCase()
+  if (!s) return null
+  if (ACCOUNT_RE.test(s)) return null
+  if (s.length !== 12) return `Account IDs are 12 characters: 4 letters + 8 digits (you typed ${s.length}).`
+  return 'Account IDs are 4 letters (bank) followed by 8 digits.'
 }
 
 /** Short names for risk reason codes (full sentences come from /api/risk/reasons). */
 export const REASON_SHORT: Record<string, string> = {
-  PT_STRICT: '3–15 min pass-through', PT_LENIENT: '<15 min pass-through', FANOUT_EPISODES: 'split to 3–7',
-  FANIN_BURST: 'fan-in burst', CYCLE: 'loop ring', TERM_OUT: 'cash-out sent', TERM_IN: 'cash-out received',
+  PT_STRICT: '3-15 min pass-through', PT_LENIENT: '<15 min pass-through', FANOUT_EPISODES: 'split to 3-7',
+  FANIN_BURST: 'fan-in burst', FANIN_DRAIN: 'drained collector', CYCLE: 'repeated ring', TERM_OUT: 'cash-out sent', TERM_IN: 'cash-out received',
   TERM_IN_FROM_SCRIPT_OR_FOREIGN: 'cash-out from script/proxy', SCRIPT_DEVICE_OUT: 'script device',
   FOREIGN_PROXY_IP_OUT: 'foreign proxy IP', SINK: 'keeps the money', LINKED_TO_FLAGGED: 'linked to suspects',
-}
-
-export const ROLE_COLOR: Record<string, string> = {
-  VICTIM: '#2563eb', L1: '#ea580c', L2: '#7c3aed', L3: '#dc2626', UNKNOWN: '#64748b',
 }
 
 export const ROLE_TEXT: Record<string, string> = {

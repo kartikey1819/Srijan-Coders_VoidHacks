@@ -64,3 +64,13 @@ def test_risk_routes(client):
     flagged = client.get("/api/export/flagged.csv").text.splitlines()
     assert flagged[0].startswith("account,ifsc") and len(flagged) - 1 == 1073
     assert client.get("/api/risk/ZZZZ00000000").status_code == 404
+
+
+def test_overview_aggregates_agree_with_the_risk_table(client):
+    o = client.get("/api/overview").json()
+    assert sum(o["score_hist"]) == o["accounts"] == sum(o["bands"].values())
+    flagged = o["bands"].get("HIGH", 0)
+    assert sum(r["count"] for r in o["flagged_by_role"]) == flagged == sum(r["count"] for r in o["flagged_by_bank"])
+    assert sum(o["score_hist"][14:]) == flagged          # buckets 70-100 are exactly the HIGH band
+    assert all(d["n_flagged"] <= d["n_txn"] for d in o["activity"])
+    assert client.get("/api/overview").json() == o        # cached, unchanged

@@ -1,5 +1,5 @@
 import type {
-  AccountSummary, CaseInfo, CaseOutput, DQSummary, RingResult, RiskRow, TraceResult, TxnRow, VictimCandidate,
+  AccountSummary, CaseInfo, CaseOutput, DQSummary, Overview, RingResult, RiskRow, TraceResult, TxnRow, VictimCandidate,
 } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -16,6 +16,7 @@ const enc = encodeURIComponent
 
 export const api = {
   stats: () => req<DQSummary>('/api/stats'),
+  overview: () => req<Overview>('/api/overview'),
   search: (q: string) => req<string[]>(`/api/search?q=${enc(q)}&limit=12`),
   victims: (limit = 50) => req<VictimCandidate[]>(`/api/victims?limit=${limit}`),
   trace: (victim: string, seeds?: number[] | null) =>

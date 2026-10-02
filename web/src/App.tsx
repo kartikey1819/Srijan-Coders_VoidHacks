@@ -1,103 +1,71 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from './api'
-import { AccountPanel } from './components/AccountPanel'
 import { DQView } from './components/DQView'
 import { FlaggedTable } from './components/FlaggedTable'
 import { Investigate } from './components/Investigate'
+import { Overview } from './components/Overview'
 import { RingView } from './components/RingView'
 import { SearchBar } from './components/SearchBar'
-import type { DQSummary, TraceResult } from './types'
-
-type Tab = 'investigate' | 'ring' | 'flagged' | 'data'
+import { useLook } from './look'
+import { useRoute } from './route'
+import type { DQSummary } from './types'
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('investigate')
+  const route = useRoute()
+  const [look, setLook] = useLook()
   const [stats, setStats] = useState<DQSummary | null>(null)
+  const [down, setDown] = useState(false)
   const [reasons, setReasons] = useState<Record<string, string>>({})
-  const [trace, setTrace] = useState<TraceResult | null>(null)
-  const [traceErr, setTraceErr] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [wallMs, setWallMs] = useState(0)
-  const [selected, setSelected] = useState<string | null>(null)
-  const [ringSeed, setRingSeed] = useState<string | null>(null)
-  const [seeds, setSeeds] = useState<number[] | null>(null)   // disputed transfers (null = all outgoing)
+  const lastTrace = useRef<string | null>(null)
+  const lastRing = useRef<string | null>(null)
+  if (route.name === 'investigate' && route.account) lastTrace.current = route.account
+  if (route.name === 'ring') lastRing.current = route.account
 
   useEffect(() => {
-    api.stats().then(setStats).catch(() => setStats(null))
+    api.stats().then(setStats).catch(() => setDown(true))
     api.reasons().then(setReasons).catch(() => setReasons({}))
   }, [])
-
-  const runTrace = useCallback(async (account: string, chosen: number[] | null = null) => {
-    setTab('investigate'); setBusy(true); setTraceErr(null); setSelected(null); setSeeds(chosen)
-    const t0 = performance.now()
-    try {
-      const t = await api.trace(account, chosen)
-      setWallMs(performance.now() - t0)
-      setTrace(t)
-      if (t.edges.length === 0) setTraceErr(`No outgoing money found for ${account}.`)
-    } catch (e) {
-      setTrace(null); setTraceErr(String((e as Error).message))
-    } finally { setBusy(false) }
-  }, [])
-
-  const openRing = useCallback((a: string) => { setRingSeed(a); setSelected(a); setTab('ring') }, [])
-  const openAccount = useCallback((a: string) => { setSelected(a) }, [])
-
-  // shareable links: #trace=ACCOUNT, #ring=ACCOUNT, #flagged, #data. Read on load and whenever the address
-  // changes (a link pasted into an open tab, back / forward). Our own updates below use replaceState, which
-  // does not fire hashchange, so this cannot loop.
   useEffect(() => {
-    const apply = () => {
-      const h = decodeURIComponent(window.location.hash.slice(1))
-      const [k, v] = h.split('=')
-      if (k === 'trace' && v) runTrace(v.split('&')[0])
-      else if (k === 'ring' && v) openRing(v)
-      else if (k === 'flagged' || k === 'data') setTab(k)
-    }
-    apply()
-    window.addEventListener('hashchange', apply)
-    return () => window.removeEventListener('hashchange', apply)
-  }, [runTrace, openRing])
-  useEffect(() => {
-    const h = tab === 'investigate' ? (trace ? `#trace=${trace.victim}` : '') : tab === 'ring' ? `#ring=${ringSeed ?? ''}` : `#${tab}`
-    if (window.location.hash !== h) window.history.replaceState(null, '', h || window.location.pathname)
-  }, [tab, trace, ringSeed])
+    const t = route.name === 'investigate' && route.account ? `${route.account} · trace` : route.name === 'ring' ? `${route.account} · ring` : null
+    document.title = t ? `${t} · Abhedya-Chakra` : 'Abhedya-Chakra'
+  }, [route])
 
-  const tabs: [Tab, string][] = [['investigate', 'Investigate'], ['ring', 'Syndicate ring'], ['flagged', 'Flagged accounts'], ['data', 'Data quality']]
+  const tabs: [string, string, string, boolean][] = [
+    ['overview', 'Overview', '#overview', false],
+    ['investigate', 'Investigate', lastTrace.current ? `#trace=${lastTrace.current}` : '#investigate', false],
+    ['ring', 'Syndicate ring', lastRing.current ? `#ring=${lastRing.current}` : '#ring', !lastRing.current],
+    ['flagged', 'Flagged accounts', '#flagged', false],
+    ['data', 'Data quality', '#data', false],
+  ]
   return (
     <div className="app">
-      <header>
-        <div className="brand">Abhedya-Chakra <span>money-trail workstation</span></div>
-        <SearchBar onTrace={runTrace} busy={busy} current={trace?.victim} />
-        <div className="meta small">{stats ? <>{stats.rows.toLocaleString('en-IN')} transactions · {stats.accounts.toLocaleString('en-IN')} accounts · offline</> : 'Engine not reachable'}</div>
+      <header className="top">
+        <div className="brand">Abhedya-Chakra<small>money-trail workstation</small></div>
+        <SearchBar current={route.name === 'investigate' ? route.account : null} />
+        <div className="seg" role="group" aria-label="Look">
+          <button aria-pressed={look === 'official'} onClick={() => setLook('official')}>Official</button>
+          <button aria-pressed={look === 'briefing'} onClick={() => setLook('briefing')}>Briefing</button>
+        </div>
+        <div className="dataset" title={stats?.input_sha256}>
+          {stats ? <>{stats.rows.toLocaleString('en-IN')} transactions · {stats.accounts.toLocaleString('en-IN')} accounts · file {stats.input_sha256.slice(0, 8)} · offline</>
+                 : down ? <span className="error">Engine not reachable</span> : 'Loading…'}
+        </div>
       </header>
-      <nav>
-        {tabs.map(([k, label]) => (
-          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}
-                  disabled={k === 'ring' && !ringSeed}>{label}</button>
+      <nav className="tabs" aria-label="Screens">
+        {tabs.map(([k, label, h, disabled]) => (
+          <a key={k} href={h} aria-current={route.name === k ? 'page' : undefined} aria-disabled={disabled || undefined}
+             title={disabled ? 'Isolate a ring from any account first (the Ring button on a row)' : undefined}>{label}</a>
         ))}
       </nav>
-      <main>
-        {tab === 'investigate' && (
-          <Investigate trace={trace} error={traceErr} wallMs={wallMs} selected={selected} reasons={reasons} seeds={seeds}
-                       onSelect={setSelected} onTrace={runTrace} onRing={openRing} />
-        )}
-        {tab === 'ring' && ringSeed && (
-          <div className="split">
-            <RingView seed={ringSeed} onSelect={openAccount} />
-            {selected && <aside className="right"><AccountPanel account={selected} reasons={reasons} onTrace={runTrace}
-                                                                 onRing={openRing} onSelect={openAccount} /></aside>}
-          </div>
-        )}
-        {tab === 'flagged' && (
-          <div className="split">
-            <FlaggedTable reasons={reasons} onOpen={openAccount} onRing={openRing} />
-            {selected && <aside className="right"><AccountPanel account={selected} reasons={reasons} onTrace={runTrace}
-                                                                 onRing={openRing} onSelect={openAccount} /></aside>}
-          </div>
-        )}
-        {tab === 'data' && <DQView stats={stats} />}
+      <main id="main">
+        {route.name === 'overview' && <Overview stats={stats} />}
+        {route.name === 'investigate' && <Investigate account={route.account} seeds={route.seeds} reasons={reasons} look={look} />}
+        {route.name === 'ring' && <RingView key={route.account} seed={route.account} reasons={reasons} />}
+        {route.name === 'flagged' && <FlaggedTable reasons={reasons} role={route.role} bank={route.bank} reason={route.reason} />}
+        {route.name === 'data' && <DQView stats={stats} />}
       </main>
     </div>
   )
 }
+
+

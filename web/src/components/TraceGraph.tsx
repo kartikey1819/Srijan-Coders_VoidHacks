@@ -1,29 +1,37 @@
 import cytoscape from 'cytoscape'
 import { useEffect, useRef } from 'react'
 import { inrShort, toEpoch } from '../format'
-import { baseStyle, layeredPositions } from '../graph'
+import { graphStyle, layeredPositions } from '../graph'
+import { prefersReducedMotion, useLookTick } from '../look'
 import type { TraceResult } from '../types'
 
 interface Props {
   trace: TraceResult
   cutoff: number          // epoch seconds; transfers after it are hidden (time-lapse)
   selected: string | null
-  onSelect: (account: string) => void
+  onSelect: (account: string | null) => void
+  look: string
 }
 
-export function TraceGraph({ trace, cutoff, selected, onSelect }: Props) {
+/** The trail as evidence: Victim | L1 | L2 | L3 columns, edge width = victim money, labels readable at fit. */
+export function TraceGraph({ trace, cutoff, selected, onSelect, look }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const cy = useRef<cytoscape.Core | null>(null)
   const select = useRef(onSelect)
   select.current = onSelect
+  const tick = useLookTick()
 
   useEffect(() => {
-    const c = cytoscape({ container: box.current, style: baseStyle, minZoom: 0.15, maxZoom: 3, pixelRatio: 1,
-                          wheelSensitivity: 0.3, boxSelectionEnabled: false })
+    const c = cytoscape({ container: box.current, minZoom: 0.2, maxZoom: 3, boxSelectionEnabled: false })
     c.on('tap', 'node', (e) => select.current(e.target.id()))
+    c.on('tap', (e) => { if (e.target === c) select.current(null) })
     cy.current = c
     return () => c.destroy()
   }, [])
+
+  useEffect(() => {
+    cy.current?.style(graphStyle({ animate: look === 'briefing' && !prefersReducedMotion() }))
+  }, [look, tick])
 
   useEffect(() => {
     const c = cy.current!
@@ -44,7 +52,8 @@ export function TraceGraph({ trace, cutoff, selected, onSelect }: Props) {
         order.set(n.account, String(i).padStart(6, '0'))
       })
     }
-    const pos = layeredPositions(trace.nodes.map((n) => ({ id: n.account, role: n.role, order: order.get(n.account) ?? '' })))
+    const pos = layeredPositions(trace.nodes.map((n) => ({ id: n.account, role: n.role, order: order.get(n.account) ?? '' })),
+      { colGap: 250, rowGap: 62 })
     const agg = new Map<string, { src: string; dst: string; att: number; t: number; late: boolean; cash: boolean; n: number }>()
     for (const e of trace.edges) {
       const k = `${e.src}>${e.dst}`
@@ -58,23 +67,24 @@ export function TraceGraph({ trace, cutoff, selected, onSelect }: Props) {
       ...trace.nodes.map((n) => ({
         group: 'nodes' as const,
         data: {
-          id: n.account, role: n.role, band: n.risk?.band ?? null,
+          id: n.account, role: n.role,
           first: n.first_in_ts ? toEpoch(n.first_in_ts) : 0,
-          label: n.role === 'VICTIM' ? `${n.account}\nVictim` : `${n.account}${n.held_paise > 0 ? `\nholds ${inrShort(n.held_paise)}` : ''}`,
-          size: 18 + 4 * Math.log10(1 + (n.role === 'VICTIM' ? trace.loss_paise : n.received_paise) / 100),
+          label: n.role === 'VICTIM' ? `${n.account}\nvictim` : `${n.account}${n.held_paise > 0 ? `\nholds ${inrShort(n.held_paise)}` : ''}`,
+          size: 20 + 4 * Math.log10(1 + (n.role === 'VICTIM' ? trace.loss_paise : n.received_paise) / 100),
         },
+        classes: n.role !== 'VICTIM' && n.held_paise > 0 ? 'holds' : '',
         position: pos[n.account],
       })),
       ...[...agg.values()].map((a) => ({
         group: 'edges' as const,
         data: { id: `${a.src}>${a.dst}`, source: a.src, target: a.dst, t: a.t,
-                width: 1.2 + 7 * Math.sqrt(a.att / maxAtt),
-                label: `${inrShort(a.att)}${a.n > 1 ? ` ×${a.n}` : ''}` },
+                width: 1.5 + 7 * Math.sqrt(a.att / maxAtt),
+                label: `${inrShort(a.att)}${a.n > 1 ? ` (${a.n})` : ''}` },
         classes: [a.late ? 'late' : '', a.cash ? 'cashout' : ''].join(' ').trim(),
       })),
     ]
     c.batch(() => { c.elements().remove(); c.add(els) })
-    c.fit(undefined, 40)
+    c.fit(undefined, 36)
   }, [trace])
 
   useEffect(() => {
@@ -94,10 +104,10 @@ export function TraceGraph({ trace, cutoff, selected, onSelect }: Props) {
       const n = c.getElementById(selected)
       if (n.empty()) return
       n.addClass('sel')
-      const keep = n.closedNeighborhood()
-      c.elements().not(keep).addClass('dim')
+      c.elements().not(n.closedNeighborhood()).addClass('dim')
     })
   }, [selected, trace])
 
-  return <div className="graph" ref={box} />
+  return <div className="graph" ref={box} role="img"
+              aria-label={`Money trail graph: ${trace.nodes.length} accounts, ${trace.edges.length} transfers. The same accounts are listed in the register.`} />
 }

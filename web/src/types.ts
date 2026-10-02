@@ -40,3 +40,10 @@ export interface DQSummary { rows: number; accounts: number; counts: Record<stri
 
 export interface CaseInfo { fir_no?: string; ncrp_ack?: string; police_station?: string; io_name?: string; use_llm: boolean; seed_txns?: number[] }
 export interface CaseOutput { case_id: string; files: Record<string, string>; used_llm: boolean; llm_fallback_reason: string | null; manifest_sha256: string; facts_sha256: string }
+
+export interface CountRow { key: string; label: string; count: number }
+export interface DayActivity { day: string; n_txn: number; n_flagged: number }
+export interface Overview {
+  accounts: number; score_hist: number[]; bands: Record<string, number>; flagged_by_role: CountRow[]
+  flagged_by_bank: CountRow[]; flagged_reasons: CountRow[]; activity: DayActivity[]
+}

@@ -1,9 +1,9 @@
 import type cytoscape from 'cytoscape'
-import { ROLE_COLOR } from './format'
+import { cssVar } from './look'
 
 const COLUMN = { VICTIM: 0, L1: 1, L2: 2, L3: 3, UNKNOWN: 4 } as const
 
-/** Layered preset layout: one column per role (Victim | L1 | L2 | L3), rows in arrival order.
+/** Layered preset layout: one column per role (Victim | L1 | L2 | L3), rows in a given order.
  *  Long columns wrap into sub-columns so a 1,400-node ring stays readable. */
 export function layeredPositions(
   items: { id: string; role: keyof typeof COLUMN; order: string }[],
@@ -16,7 +16,6 @@ export function layeredPositions(
     if (!byCol.has(c)) byCol.set(c, [])
     byCol.get(c)!.push(it)
   }
-  // a column that wraps into k sub-columns pushes the next columns right
   const out: Record<string, { x: number; y: number }> = {}
   let x = 0
   for (const c of [...byCol.keys()].sort((a, b) => a - b)) {
@@ -33,30 +32,44 @@ export function layeredPositions(
   return out
 }
 
-export const baseStyle: cytoscape.StylesheetStyle[] = [
-  {
-    selector: 'node',
-    style: {
-      'background-color': (n: cytoscape.NodeSingular) => ROLE_COLOR[n.data('role')] ?? '#64748b',
-      label: 'data(label)', 'font-size': 10, color: '#0f172a', 'text-valign': 'bottom', 'text-margin-y': 4,
-      'text-wrap': 'wrap', 'text-max-width': '140px', width: 'data(size)', height: 'data(size)',
-      'border-width': (n: cytoscape.NodeSingular) => (n.data('band') === 'HIGH' ? 3 : 1),
-      'border-color': (n: cytoscape.NodeSingular) => (n.data('band') === 'HIGH' ? '#111827' : '#cbd5e1'),
-      'min-zoomed-font-size': 7,
+export function roleColors(): Record<string, string> {
+  return { VICTIM: cssVar('--victim'), L1: cssVar('--l1'), L2: cssVar('--l2'), L3: cssVar('--l3'), UNKNOWN: '#8d97a3' }
+}
+
+/** Styles read the current look's tokens, so call again after a look change.
+ *  Identity is never colour alone: the victim is a square, columns carry the layer, labels carry the account. */
+export function graphStyle(opts: { animate: boolean }): cytoscape.StylesheetStyle[] {
+  const c = roleColors()
+  const ink = cssVar('--ink'), edge = cssVar('--edge'), held = cssVar('--held'), focus = cssVar('--focus')
+  const font = cssVar('--font') || 'sans-serif'
+  const fade = opts.animate ? { 'transition-property': 'opacity', 'transition-duration': 260 } : {}
+  return [
+    {
+      selector: 'node',
+      style: {
+        'background-color': (n: cytoscape.NodeSingular) => c[n.data('role')] ?? c.UNKNOWN,
+        label: 'data(label)', 'font-family': font, 'font-size': 17, color: ink, 'text-valign': 'bottom', 'text-margin-y': 5,
+        'text-wrap': 'wrap', 'text-max-width': '170px', width: 'data(size)', height: 'data(size)',
+        'border-width': 2, 'border-color': '#ffffff', 'min-zoomed-font-size': 6,
+        'text-background-color': '#ffffff', 'text-background-opacity': 0.8, 'text-background-padding': '2px',
+        ...fade,
+      },
     },
-  },
-  {
-    selector: 'edge',
-    style: {
-      width: 'data(width)', 'line-color': '#94a3b8', 'target-arrow-color': '#94a3b8', 'target-arrow-shape': 'triangle',
-      'curve-style': 'bezier', 'arrow-scale': 0.8, label: 'data(label)', 'font-size': 8, color: '#334155',
-      'text-background-color': '#ffffff', 'text-background-opacity': 0.85, 'text-background-padding': '1px',
-      'min-zoomed-font-size': 8,
+    { selector: 'node[role = "VICTIM"]', style: { shape: 'round-rectangle', 'font-weight': 700 } },
+    {
+      selector: 'edge',
+      style: {
+        width: 'data(width)', 'line-color': edge, 'target-arrow-color': edge, 'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier', 'arrow-scale': 0.9, label: 'data(label)', 'font-family': font, 'font-size': 15, color: ink,
+        'text-background-color': '#ffffff', 'text-background-opacity': 0.9, 'text-background-padding': '2px',
+        'min-zoomed-font-size': 7, ...fade,
+      },
     },
-  },
-  { selector: 'edge.late', style: { 'line-style': 'dashed' } },
-  { selector: 'edge.cashout', style: { 'line-color': '#dc2626', 'target-arrow-color': '#dc2626' } },
-  { selector: '.future', style: { display: 'none' } },
-  { selector: 'node.sel', style: { 'border-width': 5, 'border-color': '#facc15' } },
-  { selector: 'node.dim, edge.dim', style: { opacity: 0.18 } },
-]
+    { selector: 'edge.late', style: { 'line-style': 'dashed' } },
+    { selector: 'edge.cashout', style: { 'line-color': c.L3, 'target-arrow-color': c.L3 } },
+    { selector: 'node.holds', style: { 'border-color': held, 'border-width': 3 } },
+    { selector: 'node.sel', style: { 'border-width': 4, 'border-color': focus, 'overlay-opacity': 0 } },
+    { selector: '.dim', style: { opacity: 0.16 } },
+    { selector: '.future', style: { opacity: 0, events: 'no' } },   // last: not-yet-happened wins over dim
+  ]
+}

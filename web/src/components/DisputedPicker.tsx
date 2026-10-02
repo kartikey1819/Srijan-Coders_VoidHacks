@@ -22,7 +22,7 @@ export function DisputedPicker({ victim, seeds, onApply }: Props) {
   const toggle = (i: number) => setPick((p) => { const n = new Set(p); if (n.has(i)) n.delete(i); else n.add(i); return n })
 
   return (
-    <div className="card picker">
+    <div className="sheet sheet-body picker">
       <div className="row between">
         <span className="small">
           {seeds ? <>Tracing <b>{seeds.length}</b> disputed transfer(s) only.</>
@@ -39,10 +39,10 @@ export function DisputedPicker({ victim, seeds, onApply }: Props) {
               <thead><tr><th></th><th>Time</th><th>To</th><th className="num">Amount</th><th>Narration</th></tr></thead>
               <tbody>
                 {rows.map((t) => (
-                  <tr key={t.txn_idx} onClick={() => toggle(t.txn_idx)}>
+                  <tr key={t.txn_idx} className="click" onClick={() => toggle(t.txn_idx)}>
                     <td><input type="checkbox" checked={pick.has(t.txn_idx)} onChange={() => toggle(t.txn_idx)}
                                aria-label={`Disputed: ${t.transaction_id}`} /></td>
-                    <td className="mono nw">{t.ts}</td><td className="mono">{t.receiver}</td>
+                    <td className="mono nw">{t.ts}</td><td className="acct">{t.receiver}</td>
                     <td className="num">{inr(t.amount_paise)}</td><td className="narr">{t.narration}</td>
                   </tr>
                 ))}

@@ -1,3 +1,4 @@
+import { Copy, Graph, Path } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { inr } from '../format'
@@ -16,10 +17,13 @@ function reasonText(r: string, labels: Record<string, string>) {
   return `${labels[code] ?? code}${value ? `: ${value}` : ''}`
 }
 
+const list = (o: Record<string, number>) => Object.entries(o).map(([k, v]) => `${k.replaceAll('_', ' ')} ${v}`).join(', ') || 'none'
+
 export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Props) {
   const [s, setS] = useState<AccountSummary | null>(null)
   const [txns, setTxns] = useState<TxnRow[]>([])
   const [err, setErr] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     let live = true
@@ -30,41 +34,52 @@ export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Pr
     return () => { live = false }
   }, [account])
 
-  const more = () => api.txns(account, 50, txns.length).then((t) => setTxns((x) => [...x, ...t]))
+  const more = () => api.txns(account, 200, txns.length).then((t) => setTxns((x) => [...x, ...t]))
+  const copy = () => navigator.clipboard?.writeText(account).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500) })
 
-  if (err) return <div className="card"><p className="error">{err}</p></div>
-  if (!s) return <div className="card"><p className="muted">Loading {account}…</p></div>
+  if (err) return <p className="error">{err}</p>
+  if (!s) return <p className="muted">Loading {account}…</p>
   const r = s.risk
   return (
-    <div className="card">
-      <div className="row between">
-        <h3 className="mono">{s.account}</h3>
+    <div className="acct-panel">
+      <div className="row between gap wrap">
+        <h2 className="acct">{s.account}</h2>
         {r && <span className={`badge ${r.band}`}>Risk {r.score} · {r.band}{r.role_hint ? ` · ${r.role_hint}` : ''}</span>}
       </div>
-      <p className="small">{s.bank_name} · IFSC <span className="mono">{s.ifsc}</span> · active {s.first_ts?.slice(0, 10)} to {s.last_ts?.slice(0, 10)}</p>
+      <dl className="kv">
+        <dt>Bank</dt><dd>{s.bank_name}</dd>
+        <dt>IFSC</dt><dd className="mono">{s.ifsc}</dd>
+        <dt>Active</dt><dd>{s.first_ts?.slice(0, 16)} to {s.last_ts?.slice(0, 16)}</dd>
+      </dl>
       <div className="stats">
-        <div><b>{inr(s.sum_in_paise)}</b><span>in · {s.n_in} transfers</span></div>
-        <div><b>{inr(s.sum_out_paise)}</b><span>out · {s.n_out} transfers</span></div>
+        <div><b>{inr(s.sum_in_paise)}</b><span>received · {s.n_in} transfers</span></div>
+        <div><b>{inr(s.sum_out_paise)}</b><span>sent · {s.n_out} transfers</span></div>
+      </div>
+      <div className="row gap wrap" style={{ margin: '8px 0' }}>
+        <button className="btn" onClick={() => onRing(s.account)}><Graph /> Isolate ring</button>
+        <button className="btn" onClick={() => onTrace(s.account)} title="Follow this account's outgoing money as if it were the victim"><Path /> Trace money from here</button>
+        <button className="btn ghost" onClick={copy} aria-label="Copy account ID"><Copy /> {copied ? 'Copied' : 'Copy ID'}</button>
       </div>
       {r && r.reasons.length > 0 && (
-        <ul className="reasons">{r.reasons.map((x) => <li key={x}>{reasonText(x, reasons)}</li>)}</ul>
+        <>
+          <h3 style={{ marginTop: 10 }}>Why it is flagged</h3>
+          <ul className="reasons">{r.reasons.map((x) => <li key={x}>{reasonText(x, reasons)}</li>)}</ul>
+        </>
       )}
-      <p className="small">
-        Sent from: {Object.entries(s.devices).map(([k, v]) => `${k} ${v}`).join(', ') || '–'} ·
-        IP: {Object.entries(s.ip_classes).map(([k, v]) => `${k.replace('_', ' ')} ${v}`).join(', ') || '–'}
-        {Object.keys(s.dq_flags).length > 0 && <> · data flags: {Object.entries(s.dq_flags).map(([k, v]) => `${k} ${v}`).join(', ')}</>}
-      </p>
-      <div className="row gap">
-        <button className="btn" onClick={() => onTrace(s.account)}>Trace as victim</button>
-        <button className="btn" onClick={() => onRing(s.account)}>Isolate ring</button>
-      </div>
+      <dl className="kv">
+        <dt>Sent from devices</dt><dd>{list(s.devices)}</dd>
+        <dt>Sent from IPs</dt><dd>{list(s.ip_classes)}</dd>
+        <dt>Payment modes</dt><dd>{list(s.modes)}</dd>
+        {Object.keys(s.dq_flags).length > 0 && <><dt>Data-quality flags</dt><dd>{list(s.dq_flags)}</dd></>}
+      </dl>
       <details>
         <summary>Top counterparties</summary>
-        <table className="tbl">
+        <table className="tbl small">
           <tbody>
             {s.top_counterparties.map((c) => (
-              <tr key={c.direction + c.account} onClick={() => onSelect(c.account)}>
-                <td>{c.direction === 'in' ? '← from' : '→ to'}</td><td className="mono">{c.account}</td>
+              <tr key={c.direction + c.account} className="click" tabIndex={0} onClick={() => onSelect(c.account)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') onSelect(c.account) }}>
+                <td>{c.direction === 'in' ? 'from' : 'to'}</td><td className="acct">{c.account}</td>
                 <td className="num">{c.n_txn}×</td><td className="num">{inr(c.total_paise)}</td>
               </tr>
             ))}
@@ -72,24 +87,25 @@ export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Pr
         </table>
       </details>
       <details open>
-        <summary>Transactions ({s.n_in + s.n_out})</summary>
+        <summary>Transactions ({(s.n_in + s.n_out).toLocaleString('en-IN')})</summary>
         <table className="tbl small">
           <thead><tr><th>Time</th><th></th><th>Counterparty · narration</th><th className="num">Amount · mode</th></tr></thead>
           <tbody>
             {txns.map((t) => {
               const out = t.sender === s.account
+              const other = out ? t.receiver : t.sender
               return (
-                <tr key={t.txn_idx} title={`${t.transaction_id} · ${t.device} · ${t.ip}`}
-                    onClick={() => onSelect(out ? t.receiver : t.sender)}>
-                  <td className="mono nw">{t.ts}</td><td>{out ? '→' : '←'}</td>
-                  <td><span className="mono">{out ? t.receiver : t.sender}</span><div className="narr">{t.narration}</div></td>
+                <tr key={t.txn_idx} className="click" tabIndex={0} title={`${t.transaction_id} · ${t.device} · ${t.ip}`}
+                    onClick={() => onSelect(other)} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(other) }}>
+                  <td className="mono nw">{t.ts}</td><td>{out ? 'out' : 'in'}</td>
+                  <td><span className="acct">{other}</span><div className="narr">{t.narration}</div></td>
                   <td className="num">{inr(t.amount_paise)}<div className="muted">{t.mode}</div></td>
                 </tr>
               )
             })}
           </tbody>
         </table>
-        {txns.length < s.n_in + s.n_out && <button className="btn ghost" onClick={more}>Load more</button>}
+        {txns.length < s.n_in + s.n_out && <button className="btn ghost" onClick={more}>Load 200 more</button>}
       </details>
     </div>
   )
