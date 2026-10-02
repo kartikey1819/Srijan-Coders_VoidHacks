@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { BarList, DailyColumns, ScoreHistogram } from '../charts'
+import { useCopy } from '../copy'
 import { inr } from '../format'
 import { go } from '../route'
 import type { DQSummary, Overview as OverviewData, VictimCandidate } from '../types'
 
 /** The case-load picture: what the engine found in this file, every chart a way into the evidence. */
 export function Overview({ stats }: { stats: DQSummary | null }) {
+  const c = useCopy()
   const [o, setO] = useState<OverviewData | null>(null)
   const [victims, setVictims] = useState<VictimCandidate[]>([])
   const [err, setErr] = useState<string | null>(null)
@@ -22,7 +24,7 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
   return (
     <div className="page">
       <div>
-        <h1>What this file contains</h1>
+        <h1>{c.overviewTitle}</h1>
         <p className="lede">
           {stats ? <>{stats.rows.toLocaleString('en-IN')} transactions between {o.accounts.toLocaleString('en-IN')} accounts. </> : null}
           The engine flags <b>{flagged.toLocaleString('en-IN')}</b> accounts as likely mules and finds <b>{victims.length.toLocaleString('en-IN')}</b> accounts

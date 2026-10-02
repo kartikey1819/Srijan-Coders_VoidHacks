@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from abhedya import config
-from abhedya.api import routes_docs, routes_risk, routes_trace
+from abhedya.api import routes_datasets, routes_docs, routes_risk, routes_trace
 from abhedya.engine import UnknownAccount
 
 # no /docs or /redoc pages: they load scripts from an internet CDN and the app must work offline
@@ -13,6 +13,7 @@ app = FastAPI(title="Abhedya-Chakra", docs_url=None, redoc_url=None)
 app.include_router(routes_trace.router)
 app.include_router(routes_risk.router)
 app.include_router(routes_docs.router)
+app.include_router(routes_datasets.router)
 
 
 @app.exception_handler(UnknownAccount)

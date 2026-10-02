@@ -47,3 +47,9 @@ export interface Overview {
   accounts: number; score_hist: number[]; bands: Record<string, number>; flagged_by_role: CountRow[]
   flagged_by_bank: CountRow[]; flagged_reasons: CountRow[]; activity: DayActivity[]
 }
+
+export interface DatasetInfo { id: string; name: string; rows: number; accounts: number; sha256: string; created_at: string; status: string; active: boolean }
+export interface DatasetProgress {
+  id: string; status: string; stage: string | null; stages_done: Record<string, number>; rows: number; accounts: number
+  flagged: number; error: string | null
+}

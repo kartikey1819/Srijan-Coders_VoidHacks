@@ -1,5 +1,6 @@
 import { Graph } from '@phosphor-icons/react'
 import type { KeyboardEvent } from 'react'
+import { useCopy } from '../copy'
 import { inr, ROLE_TEXT, tPlus } from '../format'
 import { LAYERS, type Trail } from '../trail'
 import type { TraceResult } from '../types'
@@ -15,13 +16,14 @@ interface Props {
 
 /** The answer: every account the victim's money reached, by layer, freeze-first (most still held on top). */
 export function Register({ trace, trail, cutoff, selected, onSelect, onRing }: Props) {
+  const c = useCopy()
   let no = 0
   const key = (a: string) => (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a) } }
   return (
     <section className="sheet register" aria-labelledby="reg-h">
       <div className="sheet-head">
-        <h2 id="reg-h">Accounts on the money trail</h2>
-        <span className="small muted">Freeze first: most money still held on top</span>
+        <h2 id="reg-h">{c.register}</h2>
+        <span className="small muted">{c.registerNote}</span>
       </div>
       <div className="scroll">
         {LAYERS.map((role) => {
@@ -40,13 +42,14 @@ export function Register({ trace, trail, cutoff, selected, onSelect, onRing }: P
                 <table className="tbl">
                   <thead><tr><th className="no">No.</th><th>Account</th><th>Bank</th><th>Money arrived</th>
                     <th className="num">Received</th><th className="num">Still held</th><th><span className="sr-only">Actions</span></th></tr></thead>
-                  <tbody>
-                    {rows.map((n) => {
+                  <tbody className="stagger">
+                    {rows.map((n, i) => {
                       no += 1
                       const t = trail.arrival.get(n.account)
                       return (
                         <tr key={n.account} className={`click${t !== undefined && t > cutoff ? ' future' : ''}`} tabIndex={0}
-                            aria-selected={n.account === selected} onClick={() => onSelect(n.account)} onKeyDown={key(n.account)}>
+                            aria-selected={n.account === selected} onClick={() => onSelect(n.account)} onKeyDown={key(n.account)}
+                            style={{ ['--i' as string]: i }}>
                           <td className="no">{no}</td>
                           <td className="acct">{n.account}</td>
                           <td>{n.bank_name}</td>

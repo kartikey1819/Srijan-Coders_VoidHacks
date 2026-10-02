@@ -74,3 +74,55 @@ def test_overview_aggregates_agree_with_the_risk_table(client):
     assert sum(o["score_hist"][14:]) == flagged          # buckets 70-100 are exactly the HIGH band
     assert all(d["n_flagged"] <= d["n_txn"] for d in o["activity"])
     assert client.get("/api/overview").json() == o        # cached, unchanged
+
+
+# ---- saved datasets: upload, live analysis, switch ----
+def _wait_done(client, ds_id, timeout=120):
+    import time
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        p = client.get(f"/api/datasets/{ds_id}/progress").json()
+        if p["status"] in ("done", "error"):
+            return p
+        time.sleep(0.3)
+    raise AssertionError("analysis did not finish")
+
+
+def test_upload_analyse_switch_and_back(client, tmp_path, monkeypatch):
+    from abhedya import datasets
+    from abhedya.audit.log import sha256_file
+    monkeypatch.setattr(datasets, "DIR", tmp_path / "datasets")
+    monkeypatch.setattr(datasets, "_active", "official")
+    official_path = engine_mod._engine.db_path
+    monkeypatch.setattr(datasets, "official_db", lambda: official_path)
+    lines = SAMPLE.read_bytes().splitlines(keepends=True)
+    body = b"".join(lines[:3001])                         # header + 3,000 official rows
+    before = sha256_file(SAMPLE)
+    r = client.post("/api/datasets?name=small.csv", content=body, headers={"Content-Type": "application/octet-stream"})
+    assert r.status_code == 202, r.text
+    ds_id = r.json()["id"]
+    p = _wait_done(client, ds_id)
+    assert p["status"] == "done" and p["rows"] == 3000 and "graph_arrays" in p["stages_done"] and "detect" in p["stages_done"]
+    assert (tmp_path / "datasets" / ds_id / "source.csv").read_bytes() == body      # stored byte for byte
+    official = engine_mod._engine
+    try:
+        info = client.post(f"/api/datasets/{ds_id}/activate").json()
+        assert info["active"] and info["rows"] == 3000
+        assert client.get("/api/stats").json()["rows"] == 3000
+        assert {d["id"] for d in client.get("/api/datasets").json()} >= {ds_id, "official"}
+        again = client.post("/api/datasets?name=again.csv", content=body).json()
+        assert again["id"] == ds_id                                           # same file, same case
+        assert client.post("/api/datasets/official/activate").json()["active"]
+        assert client.get("/api/stats").json()["rows"] == 50_000
+    finally:
+        engine_mod._engine = official
+    assert sha256_file(SAMPLE) == before
+
+
+def test_upload_rejects_a_file_without_the_columns(client, tmp_path, monkeypatch):
+    from abhedya import datasets
+    monkeypatch.setattr(datasets, "DIR", tmp_path / "datasets")
+    r = client.post("/api/datasets?name=x.csv", content=b"a,b,c\n1,2,3\n")
+    assert r.status_code == 422 and "Sender_Account" in r.json()["detail"]
+    assert client.post("/api/datasets?name=e.csv", content=b"").status_code == 422
+    assert client.get("/api/datasets/zzz/progress").status_code == 404

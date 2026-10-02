@@ -143,6 +143,26 @@ class Overview(BaseModel):           # the case-load picture (read-only aggregat
     flagged_reasons: list[CountRow]  # reason code frequency among HIGH accounts
     activity: list[DayActivity]
 
+class DatasetInfo(BaseModel):        # one saved case (the official file, or an upload)
+    id: str
+    name: str
+    rows: int
+    accounts: int
+    sha256: str
+    created_at: str
+    status: str                      # queued | running | done | error
+    active: bool
+
+class DatasetProgress(BaseModel):    # live analysis of an upload
+    id: str
+    status: str
+    stage: Optional[str] = None      # stage now running
+    stages_done: dict[str, float]    # stage -> seconds
+    rows: int
+    accounts: int
+    flagged: int
+    error: Optional[str] = None
+
 class DQSummary(BaseModel):
     rows: int
     accounts: int

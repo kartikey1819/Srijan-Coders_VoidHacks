@@ -4,10 +4,10 @@ import { api } from '../api'
 import { inr } from '../format'
 import type { CaseOutput, TraceResult } from '../types'
 
-interface Props { trace: TraceResult; seeds?: number[] | null; onClose: () => void }
+interface Props { trace: TraceResult; seeds?: number[] | null; onClose: () => void; onGenerated?: () => void }
 
 /** Case diary + one Section 94 BNSS (old 91 CrPC) notice per bank. Shows what will be produced before producing it. */
-export function DocsPanel({ trace, seeds, onClose }: Props) {
+export function DocsPanel({ trace, seeds, onClose, onGenerated }: Props) {
   const [form, setForm] = useState({ fir_no: '', ncrp_ack: '', police_station: '', io_name: '' })
   const [useLlm, setUseLlm] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -40,6 +40,7 @@ export function DocsPanel({ trace, seeds, onClose }: Props) {
     try {
       const body = Object.fromEntries(Object.entries(form).filter(([, v]) => v.trim()))
       setOut(await api.docs(trace.victim, { ...body, use_llm: useLlm, seed_txns: seeds ?? [] }))
+      onGenerated?.()
     } catch (e) { setErr(String((e as Error).message)) } finally { setBusy(false) }
   }
 

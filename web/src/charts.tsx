@@ -45,7 +45,7 @@ export function ScoreHistogram({ hist, threshold = 70, onPick }: { hist: number[
   const bw = Math.min(24, x.bandwidth())
   return (
     <Chart title={`${flagged.toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')} accounts score ${threshold} or more`}
-           sub="Accounts per 5-point band of the 0-100 Mule Risk Index. Flagged bands are dark; the rule marks the threshold."
+           sub="Accounts per 5-point band of the 0-100 Mule Risk Index. Flagged bands are highlighted; the rule marks the threshold."
            source="risk table (all accounts)" tip={tip}>
       <div ref={ref}>
         {w > 0 && (
@@ -66,7 +66,7 @@ export function ScoreHistogram({ hist, threshold = 70, onPick }: { hist: number[
                      body: <><b>{n.toLocaleString('en-IN')}</b> accounts, score {i * 5}-{i === 19 ? 100 : i * 5 + 4}</> })}
                    onBlur={() => setTip(null)}>
                   <rect x={x(i)} y={m.t} width={x.bandwidth()} height={h - m.b - m.t} fill="transparent" />
-                  {n > 0 && <path fill={on ? 'var(--ink)' : '#b9c1cb'}
+                  {n > 0 && <path className="grow-y" style={{ animationDelay: `${i * 20}ms` }} fill={on ? 'var(--held)' : 'var(--bar-off)'}
                     d={`M${bx},${base}V${top + r}Q${bx},${top} ${bx + r},${top}H${bx + bw - r}Q${bx + bw},${top} ${bx + bw},${top + r}V${base}Z`} />}
                 </g>
               )
@@ -88,21 +88,21 @@ export function ScoreHistogram({ hist, threshold = 70, onPick }: { hist: number[
 }
 
 /** Horizontal bars, one series: one colour. Each label is a link through to the filtered list. */
-export function BarList({ title, sub, source, rows, color = 'var(--ink-2)', colorOf, onPick, max = 10 }: {
+export function BarList({ title, sub, source, rows, color = 'var(--ink-2)', colorOf, onPick, max = 10, format }: {
   title: ReactNode; sub?: ReactNode; source?: string; rows: { key: string; label: string; count: number }[]
-  color?: string; colorOf?: (key: string) => string; onPick?: (key: string) => void; max?: number
+  color?: string; colorOf?: (key: string) => string; onPick?: (key: string) => void; max?: number; format?: (n: number) => string
 }) {
   const shown = rows.slice(0, max)
   const top = Math.max(1, ...shown.map((r) => r.count))
   return (
     <Chart title={title} sub={sub} source={source}>
       <div className="barlist">
-        {shown.map((r) => (
+        {shown.map((r, i) => (
           <div key={r.key} style={{ display: 'contents' }}>
             {onPick ? <button className="lbl" onClick={() => onPick(r.key)} title={r.label}>{r.label}</button>
                     : <span title={r.label}>{r.label}</span>}
-            <div><div className="bar" style={{ width: `${(100 * r.count) / top}%`, background: colorOf?.(r.key) ?? color }} /></div>
-            <span className="val">{r.count.toLocaleString('en-IN')}</span>
+            <div><div className="bar grow-x" style={{ width: `${(100 * r.count) / top}%`, background: colorOf?.(r.key) ?? color, animationDelay: `${Math.min(i, 10) * 30}ms` }} /></div>
+            <span className="val">{format ? format(r.count) : r.count.toLocaleString('en-IN')}</span>
           </div>
         ))}
       </div>
@@ -138,7 +138,7 @@ export function DailyColumns({ title, sub, source, days }: {
                    onFocus={() => setTip({ x: x(d.day) ?? 0, y: top - 30, body: <><b>{d.value.toLocaleString('en-IN')}</b> {d.day}</> })}
                    onBlur={() => setTip(null)}>
                   <rect x={x(d.day)} y={m.t} width={x.bandwidth()} height={h - m.b - m.t} fill="transparent" />
-                  {d.value > 0 && <path fill="var(--ink-2)"
+                  {d.value > 0 && <path className="grow-y" style={{ animationDelay: `${i * 25}ms` }} fill="var(--ink-2)"
                     d={`M${bx},${base}V${top + r}Q${bx},${top} ${bx + r},${top}H${bx + bw - r}Q${bx + bw},${top} ${bx + bw},${top + r}V${base}Z`} />}
                   {(i % 2 === 0 || days.length < 9) && <text x={(x(d.day) ?? 0) + x.bandwidth() / 2} y={h - 8} textAnchor="middle">{d.day.slice(8)}</text>}
                 </g>
@@ -188,8 +188,8 @@ export function HeldOverTime({ trail, cursor, onCursor, height = 150 }: {
               const ln = line<typeof pts[number]>().curve(curveStepAfter).x((p) => x(p.t)).y((p) => y(base(p, k) + p[l]))
               return (
                 <g key={l}>
-                  <path d={a(pts) ?? ''} fill={`var(--${l.toLowerCase()})`} fillOpacity={0.22} />
-                  <path d={ln(pts) ?? ''} fill="none" stroke={`var(--${l.toLowerCase()})`} strokeWidth={2} />
+                  <path className="fade-in" d={a(pts) ?? ''} fill={`var(--${l.toLowerCase()})`} fillOpacity={0.22} />
+                  <path className="draw" pathLength={1} d={ln(pts) ?? ''} fill="none" stroke={`var(--${l.toLowerCase()})`} strokeWidth={2} />
                 </g>
               )
             })}

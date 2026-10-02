@@ -9,6 +9,7 @@ import time
 import pytest
 
 from abhedya import config
+from tests.conftest import SAMPLE as SAMPLE_PATH
 from abhedya import engine as engine_mod
 from abhedya.ai import narrator
 from contracts.models import NarrParagraph, NarrSection, Narrative
@@ -30,10 +31,13 @@ def _free_port() -> int:
 def base(sample_db, tmp_path_factory):
     import uvicorn
 
+    from abhedya import datasets
     from abhedya.api.app import app
     old_engine, old_cases = engine_mod._engine, config.CASES_DIR
+    old_ds = (datasets.DIR, datasets.official_db, datasets._active)
     engine_mod._engine = engine_mod.Engine(sample_db)
     config.CASES_DIR = tmp_path_factory.mktemp("cases")
+    datasets.DIR, datasets.official_db, datasets._active = tmp_path_factory.mktemp("datasets"), (lambda: sample_db), "official"
     port = _free_port()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
     th = threading.Thread(target=server.run, daemon=True)
@@ -46,6 +50,7 @@ def base(sample_db, tmp_path_factory):
     server.should_exit = True
     th.join(10)
     engine_mod._engine, config.CASES_DIR = old_engine, old_cases
+    datasets.DIR, datasets.official_db, datasets._active = old_ds
 
 
 @pytest.fixture(scope="module")
@@ -191,11 +196,15 @@ def test_look_toggle_switches_and_persists(page, base):
     """Expected: Briefing restyles the same screen; the choice survives a reload; ?look= overrides it."""
     open_trace(page, base)
     assert page.evaluate("document.documentElement.dataset.look") == "official"
-    page.get_by_role("button", name="Briefing").click()
-    assert page.evaluate("document.documentElement.dataset.look") == "briefing"
+    bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
+    font = page.evaluate("getComputedStyle(document.body).fontFamily")
+    page.get_by_role("button", name="Gen-Z").click()
+    assert page.evaluate("document.documentElement.dataset.look") == "genz"
+    assert page.evaluate("getComputedStyle(document.body).backgroundColor") != bg
+    assert page.evaluate("getComputedStyle(document.body).fontFamily") != font
     page.reload()
     page.get_by_text("Accounts on the money trail").wait_for()
-    assert page.evaluate("document.documentElement.dataset.look") == "briefing"
+    assert page.evaluate("document.documentElement.dataset.look") == "genz"
     page.goto(f"{base}/?look=official#trace={VICTIM}")
     page.get_by_text("Accounts on the money trail").wait_for()
     assert page.evaluate("document.documentElement.dataset.look") == "official"
@@ -228,3 +237,56 @@ def test_mistyped_id_gets_a_format_hint(page, base):
     page.get_by_label("Victim account ID").fill("KKBK1000")
     page.get_by_role("button", name="Trace money trail").click()
     page.get_by_text("Account IDs are 12 characters").wait_for()
+
+
+def test_home_explains_the_flow_and_analyses_an_upload(page, base):
+    """Expected: Home shows the six steps with live figures; a dropped CSV is analysed stage by stage, can be opened,
+    and the header switcher brings the official data back."""
+    page.goto(base + "/")
+    page.get_by_text("Load and check every row").wait_for()
+    assert page.locator(".flow .step").count() == 6
+    page.get_by_text("50,000").first.wait_for()                       # live figure from the loaded file
+    small = b"".join(SAMPLE_PATH.read_bytes().splitlines(keepends=True)[:2001])
+    page.locator("input[type=file]").set_input_files({"name": "small_case.csv", "mimeType": "text/csv", "buffer": small})
+    page.get_by_text("Analysis complete").wait_for(timeout=60_000)
+    assert page.locator(".stages li.done").count() == 9
+    page.get_by_role("button", name="Open this case").click()
+    page.get_by_text("2,000 transactions").first.wait_for(timeout=20_000)
+    page.get_by_label("Active dataset").select_option("official")
+    page.get_by_text("50,000 transactions").first.wait_for(timeout=20_000)
+
+
+def test_home_rejects_a_file_without_the_columns(page, base):
+    page.goto(base + "/")
+    page.locator("input[type=file]").set_input_files({"name": "wrong.csv", "mimeType": "text/csv", "buffer": b"a,b\n1,2\n"})
+    page.get_by_text("missing column(s)").wait_for()
+
+
+def test_ring_globe_journey_and_columns(page, base):
+    """Expected: the ring opens as a globe; the journey panel lists where money came from; Go here moves along it;
+    the Columns view is one click away."""
+    page.goto(f"{base}/#ring={L1}")
+    page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
+    page.locator("[data-testid=ring-globe] canvas").wait_for(timeout=20_000)
+    page.get_by_role("heading", name="Money came from (4)").wait_for()
+    page.get_by_role("button", name=f"Go to {VICTIM}").click()
+    page.locator(".crumbs").get_by_text(VICTIM).wait_for()
+    page.get_by_role("button", name="Columns").click()
+    page.wait_for_function("document.querySelectorAll('.graph canvas').length > 0")
+
+
+def test_panel_size_persists_across_reload(page, base):
+    """Expected: dragging the register / graph divider changes the layout and the new size survives a reload."""
+    open_trace(page, base)
+    sep = page.locator("[data-separator]").first
+    box = sep.bounding_box()
+    before = page.locator("#register").bounding_box()["width"]
+    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.mouse.down()
+    page.mouse.move(box["x"] - 150, box["y"] + box["height"] / 2, steps=8)
+    page.mouse.up()
+    after = page.locator("#register").bounding_box()["width"]
+    assert after < before - 80
+    page.reload()
+    page.get_by_text("Accounts on the money trail").wait_for()
+    assert abs(page.locator("#register").bounding_box()["width"] - after) < 30

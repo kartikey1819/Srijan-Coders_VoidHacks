@@ -1,11 +1,13 @@
 import { DownloadSimple, Graph } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
 import { REASON_SHORT } from '../format'
 import { go } from '../route'
+import { safeStorage } from '../store'
 import type { RiskRow } from '../types'
 import { AccountPanel } from './AccountPanel'
-import { Drawer } from './Drawer'
+import { PanelFrame } from './PanelFrame'
 
 interface Props { reasons: Record<string, string>; role: string | null; bank: string | null; reason: string | null }
 type SortKey = 'score' | 'account' | 'role'
@@ -37,7 +39,7 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
   const banks = useMemo(() => [...new Set((rows ?? []).map((r) => r.account.slice(0, 4)))].sort(), [rows])
   const codes = useMemo(() => [...new Set((rows ?? []).flatMap((r) => r.reasons.map((x) => x.split(':')[0])))].sort(), [rows])
   const by = (k: string) => (rows ?? []).filter((r) => r.role_hint === k).length
-  const close = useCallback(() => setOpen(null), [])
+  const layout = useDefaultLayout({ id: 'flagged-h', storage: safeStorage })
   const th = (k: SortKey, label: string, cls = '') => (
     <th className={cls} aria-sort={sort.k === k ? (sort.desc ? 'descending' : 'ascending') : undefined}>
       <button className="th-sort" onClick={() => setSort((s) => ({ k, desc: s.k === k ? !s.desc : k === 'score' }))}>
@@ -73,30 +75,43 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
         <span className="small muted">{shown.length.toLocaleString('en-IN')} shown</span>
         {(role || bank || reason) && <button className="btn ghost sm" onClick={() => go({ name: 'flagged', role: null, bank: null, reason: null })}>Clear filters</button>}
       </div>
-      <div className="sheet">
-        <table className="tbl">
-          <thead><tr>{th('account', 'Account')}{th('score', 'Score', 'num')}{th('role', 'Layer')}<th>Why</th><th><span className="sr-only">Actions</span></th></tr></thead>
-          <tbody>
-            {shown.slice(0, limit).map((r) => (
-              <tr key={r.account} aria-selected={open === r.account}>
-                <td className="acct"><a href={`#account-${r.account}`} onClick={(e) => { e.preventDefault(); setOpen(r.account) }}>{r.account}</a></td>
-                <td className="num"><span className={`badge ${r.band}`}>{r.score}</span></td>
-                <td>{r.role_hint ?? '-'}</td>
-                <td>{r.reasons.slice(0, 4).map((x) => {
-                  const [code, value] = x.split(':')
-                  return <span key={x} className="chip" title={`${reasons[code] ?? code}${value ? `: ${value}` : ''}`}>{REASON_SHORT[code] ?? code}{value ? ` ${value}` : ''}</span>
-                })}</td>
-                <td className="row-acts"><button className="btn ghost sm" aria-label={`Isolate ring around ${r.account}`}
-                  onClick={() => go({ name: 'ring', account: r.account })}><Graph /> Ring</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ height: 'max(460px, calc(100vh - 300px))' }}>
+        <Group orientation="horizontal" id="flagged-h" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
+          <Panel id="flagged-list" defaultSize="62%" minSize="35%">
+            <PanelFrame label="Flagged list" title={`${shown.length.toLocaleString('en-IN')} accounts`}>
+              <table className="tbl">
+                <thead><tr>{th('account', 'Account')}{th('score', 'Score', 'num')}{th('role', 'Layer')}<th>Why</th><th><span className="sr-only">Actions</span></th></tr></thead>
+                <tbody className="stagger">
+                  {shown.slice(0, limit).map((r, i) => (
+                    <tr key={r.account} aria-selected={open === r.account} style={{ ['--i' as string]: i }}>
+                      <td className="acct"><a href={`#account-${r.account}`} onClick={(e) => { e.preventDefault(); setOpen(r.account) }}>{r.account}</a></td>
+                      <td className="num"><span className={`badge ${r.band}`}>{r.score}</span></td>
+                      <td>{r.role_hint ?? '-'}</td>
+                      <td>{r.reasons.slice(0, 4).map((x) => {
+                        const [code, value] = x.split(':')
+                        return <span key={x} className="chip" title={`${reasons[code] ?? code}${value ? `: ${value}` : ''}`}>{REASON_SHORT[code] ?? code}{value ? ` ${value}` : ''}</span>
+                      })}</td>
+                      <td className="row-acts"><button className="btn ghost sm" aria-label={`Isolate ring around ${r.account}`}
+                        onClick={() => go({ name: 'ring', account: r.account })}><Graph /> Ring</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {shown.length > limit && <div style={{ padding: 10 }}><button className="btn" onClick={() => setLimit(limit + 500)}>Show 500 more ({(shown.length - limit).toLocaleString('en-IN')} left)</button></div>}
+            </PanelFrame>
+          </Panel>
+          <Separator className="sep-v" />
+          <Panel id="flagged-side" minSize="25%">
+            <PanelFrame label="Account details" title={open ? 'Account' : 'Pick an account'}>
+              <div className="sheet-body">
+                {open ? <AccountPanel account={open} reasons={reasons} onSelect={setOpen}
+                          onTrace={(a) => go({ name: 'investigate', account: a, seeds: null })} onRing={(a) => go({ name: 'ring', account: a })} />
+                      : <p className="muted">Click an account on the left to see why it is flagged, its transfers and counterparties.</p>}
+              </div>
+            </PanelFrame>
+          </Panel>
+        </Group>
       </div>
-      {shown.length > limit && <button className="btn" onClick={() => setLimit(limit + 500)}>Show 500 more ({(shown.length - limit).toLocaleString('en-IN')} left)</button>}
-      {open && <Drawer title="Flagged account" onClose={close}>
-        <AccountPanel account={open} reasons={reasons} onSelect={setOpen}
-          onTrace={(a) => go({ name: 'investigate', account: a, seeds: null })} onRing={(a) => go({ name: 'ring', account: a })} /></Drawer>}
     </div>
   )
 }

@@ -140,3 +140,13 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
 - ✅ Flagged: sortable, filters from Overview links; Data quality: chart, zero-count checks collapsed, load time excludes detection
 - ✅ Hash routing (Back/Forward, pasted links), keyboard-reachable rows, Esc/focus handling, readable slider value, bundled fonts (offline)
 - ✅ Tests: 190 passed (4 new browser tests, 1 new API test, contract covers the new models)
+
+## UI round 2
+- ✅ Saved cases: upload any CSV (stored byte for byte, SHA-256 id), live per-stage analysis in the background, switch from the header; official file untouched (`abhedya/datasets.py`, `/api/datasets*`, 2 API tests)
+- ✅ Home (new first screen): six-step flow with live figures and looping illustrations, drop zone with live stages and result card
+- ✅ Official | Gen-Z: Gen-Z is a dark, bold look (Space Grotesk / Inter / JetBrains Mono, lime accent, counters, "case cracked" progress from real steps); Official uses IBM Plex; dark palette validated
+- ✅ Ring: 3D globe with click-to-light journey, journey panel with Go here and breadcrumb, Columns toggle, PNG snapshot
+- ✅ Resizable, persisted panels on Investigate, Ring, Flagged; maximize on every panel
+- ✅ Data quality uses the full width (integrity panel, stage timings, what we never do)
+- ✅ Motion pass (Kowalski rules), chart enter animations, trace-graph zoom tools and hover cards
+- ✅ Tests: 19 browser tests (6 new), detector 0 findings

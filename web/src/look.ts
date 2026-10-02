@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react'
 
-export type Look = 'official' | 'briefing'
+export type Look = 'official' | 'genz'
 const KEY = 'abhedya.look'
 
+function normalise(v: string | null): Look | null {
+  if (v === 'official') return 'official'
+  if (v === 'genz' || v === 'briefing') return 'genz'      // 'briefing' was the previous name of the second look
+  return null
+}
+
 function initial(): Look {
-  const q = new URLSearchParams(window.location.search).get('look')
-  if (q === 'official' || q === 'briefing') return q
+  const q = normalise(new URLSearchParams(window.location.search).get('look'))
+  if (q) return q
   try {
-    const s = window.localStorage.getItem(KEY)
-    if (s === 'official' || s === 'briefing') return s
+    const s = normalise(window.localStorage.getItem(KEY))
+    if (s) return s
   } catch { /* storage blocked: default */ }
   return 'official'
 }
 
-/** The Official / Briefing switch: one component kit, two sets of tokens on <html data-look>. */
+/** Official / Gen-Z: one component kit, two token sets, fonts and copy voices on <html data-look>. */
 export function useLook(): [Look, (l: Look) => void] {
   const [look, setLook] = useState<Look>(initial)
   useEffect(() => {
@@ -24,20 +30,30 @@ export function useLook(): [Look, (l: Look) => void] {
   return [look, setLook]
 }
 
-/** Current value of a CSS custom property (Cytoscape cannot read var()). */
+export function currentLook(): Look {
+  return document.documentElement.dataset.look === 'genz' ? 'genz' : 'official'
+}
+
+/** Current value of a CSS custom property (Cytoscape and WebGL cannot read var()). */
 export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
-/** Re-render when the look changes, so canvas charts can re-read their colours. */
-export function useLookTick(): number {
-  const [n, setN] = useState(0)
+/** Re-render when the look changes; returns the look. */
+export function useLookName(): Look {
+  const [l, setL] = useState<Look>(currentLook)
   useEffect(() => {
-    const on = () => setN((x) => x + 1)
+    const on = () => setL(currentLook())
     window.addEventListener('lookchange', on)
     return () => window.removeEventListener('lookchange', on)
   }, [])
-  return n
+  return l
+}
+
+/** Kept for canvas components that only need a tick. */
+export function useLookTick(): number {
+  const l = useLookName()
+  return l === 'genz' ? 1 : 0
 }
 
 export function prefersReducedMotion(): boolean {

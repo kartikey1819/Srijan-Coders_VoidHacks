@@ -1,12 +1,17 @@
 import { FileText, Graph } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
+import { useCopy } from '../copy'
+import { markStep, readSteps, safeStorage, type CaseSteps } from '../store'
 import { HeldOverTime } from '../charts'
 import { inr, spanText, toEpoch } from '../format'
 import { go } from '../route'
 import { deriveTrail } from '../trail'
 import type { TraceResult } from '../types'
 import { AccountPanel } from './AccountPanel'
+import { Count } from './Count'
+import { PanelFrame } from './PanelFrame'
 import { DisputedPicker } from './DisputedPicker'
 import { DocsPanel } from './DocsPanel'
 import { Drawer } from './Drawer'
@@ -50,6 +55,19 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
   }, [account, seeds])
 
   const trail = useMemo(() => (trace && trace.edges.length ? deriveTrail(trace) : null), [trace])
+  const c = useCopy()
+  const layoutH = useDefaultLayout({ id: 'inv-h', storage: safeStorage })
+  const layoutV = useDefaultLayout({ id: 'inv-v', storage: safeStorage })
+  const [steps, setSteps] = useState<CaseSteps>({ reviewed: false, ring: false, notices: false })
+  useEffect(() => {
+    if (!account) return
+    const on = () => setSteps(readSteps(account))
+    on()
+    window.addEventListener('casestep', on)
+    return () => window.removeEventListener('casestep', on)
+  }, [account])
+  const pick = useCallback((a: string | null) => { setSelected(a); if (a && account) markStep(account, 'reviewed') }, [account])
+  const ringFor = useCallback((a: string) => { if (account) markStep(account, 'ring'); go({ name: 'ring', account: a }) }, [account])
   const close = useCallback(() => setSelected(null), [])
   const onTrace = useCallback((a: string) => { setSelected(null); go({ name: 'investigate', account: a, seeds: null }) }, [])
   const onRing = useCallback((a: string) => go({ name: 'ring', account: a }), [])
@@ -106,50 +124,67 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
   const sel = selected ? trace.edges.filter((e) => e.src === selected || e.dst === selected) : []
   const pct = trace.loss_paise ? Math.round((100 * trail.heldNow) / trace.loss_paise) : 0
 
+  const done = 1 + (steps.reviewed ? 1 : 0) + (steps.ring ? 1 : 0) + (steps.notices ? 1 : 0)
   return (
-    <div className="investigate">
+    <div className="inv investigate">
       <section className="sheet case" aria-label="Case summary">
-        <div className="fig"><span>Victim</span><b className="mono">{trace.victim}</b><small>{victim?.bank_name}</small></div>
-        <div className="fig"><span>Taken from the victim</span><b>{inr(trace.loss_paise)}</b>
+        <div className="fig"><span>{c.victim}</span><b className="mono">{trace.victim}</b><small>{victim?.bank_name}</small></div>
+        <div className="fig"><span>{c.taken}</span><b><Count value={trace.loss_paise} format={inr} /></b>
           <small>{nSeeds} disputed transfer{nSeeds === 1 ? '' : 's'} · from {new Date(trail.t0 * 1000).toISOString().slice(0, 16).replace('T', ' ')}</small></div>
-        <div className="fig"><span>Still held in {holders.length} account{holders.length === 1 ? '' : 's'}</span>
-          <b className="held">{inr(trail.heldNow)}</b><small>{pct}% of the amount taken</small></div>
-        <div className="fig"><span>Spread through L1 · L2 · L3</span><b>{count('L1')} · {count('L2')} · {count('L3')}</b>
+        <div className="fig"><span>{c.heldIn(holders.length)}</span>
+          <b className="held"><Count value={trail.heldNow} format={inr} /></b><small>{c.heldPct(pct)}</small></div>
+        <div className="fig"><span>{c.spread}</span><b>{count('L1')} · {count('L2')} · {count('L3')}</b>
           <small>within {spanText(trail.tEnd - trail.t0)} of the theft</small></div>
-        <div className="fig"><span>Freeze requests</span><b>{trace.freeze_candidates.length}</b>
+        <div className="fig"><span>{c.freeze}</span><b><Count value={trace.freeze_candidates.length} format={(n) => String(Math.round(n))} /></b>
           <small>accounts at {banks.size} bank{banks.size === 1 ? '' : 's'}</small></div>
+        <div className="fig meter" title="Steps taken on this case in this browser: traced, an account reviewed, the ring isolated, notices drafted.">
+          <span>{c.progress}: <b style={{ fontSize: 'inherit' }}>{Math.round((100 * done) / 4)}%</b></span>
+          <div className="track"><div className="fill" style={{ transform: `scaleX(${done / 4})` }} /></div>
+          <div className="steps"><span className="on">traced</span><span className={steps.reviewed ? 'on' : ''}>reviewed</span>
+            <span className={steps.ring ? 'on' : ''}>ring</span><span className={steps.notices ? 'on' : ''}>notices</span></div>
+        </div>
         <div className="act">
           <button className="btn primary" onClick={() => setDocs(true)}><FileText /> Case diary &amp; notices</button>
         </div>
       </section>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)', minHeight: 0 }}>
-        {errBox}
-        {trace.warnings.map((w) => <div key={w} className="banner note small">{w}</div>)}
-        {(seeds || nSeeds > 1) && <DisputedPicker victim={trace.victim} seeds={seeds}
-          onApply={(s) => go({ name: 'investigate', account: trace.victim, seeds: s })} />}
-        <Register trace={trace} trail={trail} cutoff={cutoff} selected={selected} onSelect={setSelected} onRing={onRing} />
-      </div>
+      {errBox}
+      {trace.warnings.map((w) => <div key={w} className="banner note small">{w}</div>)}
+      {(seeds || nSeeds > 1) && <DisputedPicker victim={trace.victim} seeds={seeds}
+        onApply={(s) => go({ name: 'investigate', account: trace.victim, seeds: s })} />}
 
-      <div className="annex">
-        <section className="sheet" aria-label="Money trail graph">
-          <div className="sheet-head">
-            <h2>How the money moved</h2>
-            <div className="legend">
-              <span><span className="key VICTIM" />Victim</span><span><span className="key L1" />L1</span>
-              <span><span className="key L2" />L2</span><span><span className="key L3" />L3 cash-out</span>
-              <span><span className="ln dash" />after 15 min</span>
-            </div>
-          </div>
-          <div className="graph-wrap investigate-graph">
-            <TraceGraph trace={trace} cutoff={cutoff} selected={selected} onSelect={setSelected} look={look} />
-          </div>
-          <div className="statusline">Traced in {trace.elapsed_ms} ms on the engine ({wallMs.toFixed(0)} ms in the browser) ·
-            {' '}{trace.nodes.length} accounts · {trace.edges.length} transfers · click an account for details, empty space to clear</div>
-        </section>
-        <section className="sheet" style={{ padding: '10px 14px' }}>
-          <HeldOverTime trail={trail} cursor={Math.min(cutoff, trail.tEnd)} onCursor={setCutoff} />
-        </section>
+      <div className="inv-main">
+        <Group orientation="horizontal" id="inv-h" defaultLayout={layoutH.defaultLayout} onLayoutChanged={layoutH.onLayoutChanged}>
+          <Panel id="register" defaultSize="52%" minSize="28%">
+            <Register trace={trace} trail={trail} cutoff={cutoff} selected={selected} onSelect={pick} onRing={ringFor} />
+          </Panel>
+          <Separator className="sep-v" />
+          <Panel id="annex" minSize="26%">
+            <Group orientation="vertical" id="inv-v" defaultLayout={layoutV.defaultLayout} onLayoutChanged={layoutV.onLayoutChanged}>
+              <Panel id="graph" defaultSize="60%" minSize="25%">
+                <PanelFrame label="Money trail graph" title={c.graph}
+                  actions={<div className="legend">
+                    <span><span className="key VICTIM" />Victim</span><span><span className="key L1" />L1</span>
+                    <span><span className="key L2" />L2</span><span><span className="key L3" />L3</span>
+                    <span><span className="ln dash" />after 15 min</span></div>}>
+                  <div className="graph-wrap investigate-graph" style={{ flex: 1, minHeight: 0 }}>
+                    <TraceGraph trace={trace} cutoff={cutoff} selected={selected} onSelect={pick} look={look} />
+                  </div>
+                  <div className="statusline">Traced in {trace.elapsed_ms} ms on the engine ({wallMs.toFixed(0)} ms in the browser) ·
+                    {' '}{trace.nodes.length} accounts · {trace.edges.length} transfers · hover for details, click to open</div>
+                </PanelFrame>
+              </Panel>
+              <Separator className="sep-h" />
+              <Panel id="chart" minSize="20%">
+                <PanelFrame label="Money over time" title="Where the money sat">
+                  <div style={{ padding: '8px 14px' }}>
+                    <HeldOverTime trail={trail} cursor={Math.min(cutoff, trail.tEnd)} onCursor={setCutoff} />
+                  </div>
+                </PanelFrame>
+              </Panel>
+            </Group>
+          </Panel>
+        </Group>
       </div>
 
       <Timeline times={trail.times} value={Math.min(cutoff, trail.tEnd)} onChange={setCutoff} t0={trail.t0} fullRange={WINDOW} />
@@ -170,10 +205,10 @@ export function Investigate({ account, seeds, reasons, look }: Props) {
               </table>
             </details>
           )}
-          <AccountPanel account={selected} reasons={reasons} onTrace={onTrace} onRing={onRing} onSelect={setSelected} />
+          <AccountPanel account={selected} reasons={reasons} onTrace={onTrace} onRing={ringFor} onSelect={pick} />
         </Drawer>
       )}
-      {docs && <DocsPanel trace={trace} seeds={seeds} onClose={() => setDocs(false)} />}
+      {docs && <DocsPanel trace={trace} seeds={seeds} onClose={() => setDocs(false)} onGenerated={() => markStep(trace.victim, 'notices')} />}
     </div>
   )
 }

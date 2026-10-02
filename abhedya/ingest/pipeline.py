@@ -18,7 +18,9 @@ def cache_dir_for(db_path: Path, sha256: str) -> Path:
     return db_path.parent / "cache" / sha256[:16]
 
 
-def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool = True) -> dict:
+def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool = True,
+               progress=None) -> dict:
+    """`progress(stage, seconds)`, if given, is called after each stage (reporting only; it changes nothing)."""
     csv_path, db_path = Path(csv_path).resolve(), Path(db_path).resolve()
     if not csv_path.exists():
         raise FileNotFoundError(csv_path)
@@ -35,6 +37,8 @@ def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool 
         out = fn()
         timings[name] = round(time.perf_counter() - t0, 3)
         print(f"  {name:<16} {timings[name]:>7.2f} s")
+        if progress:
+            progress(name, timings[name])
         return out
 
     print(f"ingest {csv_path.name}")
@@ -59,6 +63,8 @@ def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool 
         t0 = time.perf_counter()
         detect_info = detect.run(con)
         timings["detect"] = round(time.perf_counter() - t0, 3)
+        if progress:
+            progress("detect", timings["detect"])
         detect_info["exports_sha256"] = write_exports(con, db_path.parent / "exports")
         print(f"  {'detect':<16} {timings['detect']:>7.2f} s   bands {detect_info['bands']}")
 

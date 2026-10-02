@@ -1,45 +1,57 @@
-import { DownloadSimple } from '@phosphor-icons/react'
+import { Camera, DownloadSimple, Globe as GlobeIcon, Rows } from '@phosphor-icons/react'
 import cytoscape from 'cytoscape'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
+import { useCopy } from '../copy'
 import { inr, ROLE_TEXT, spanText, toEpoch } from '../format'
 import { graphStyle, layeredPositions } from '../graph'
-import { useLookTick } from '../look'
+import { cssVar, useLookTick } from '../look'
 import { go } from '../route'
+import { journeyOf, ringIndex, type Hop } from '../ringJourney'
+import { safeStorage } from '../store'
 import type { RingResult } from '../types'
 import { AccountPanel } from './AccountPanel'
+import { Globe, type GlobeHandle } from './Globe'
+import { PanelFrame } from './PanelFrame'
 import { Timeline } from './Timeline'
 
 interface Props { seed: string; reasons: Record<string, string> }
+type View = 'globe' | 'columns'
 
 const ROLES = ['VICTIM', 'L1', 'L2', 'L3', 'UNKNOWN'] as const
 const WINDOW: [number, number] = [toEpoch('2026-09-15 00:00:00'), toEpoch('2026-09-29 23:59:00')]
 
-/** One-click syndicate isolation: the whole connected ring of suspects around an account, no node cap. */
+/** One-click syndicate isolation. Globe (default) to see the whole ring and follow one account's journey;
+ *  Columns to read the exact Victim | L1 | L2 | L3 layers. */
 export function RingView({ seed, reasons }: Props) {
-  const box = useRef<HTMLDivElement>(null)
-  const cy = useRef<cytoscape.Core | null>(null)
-  const edgesByT = useRef<cytoscape.EdgeSingular[]>([])
-  const nodesByT = useRef<cytoscape.NodeSingular[]>([])
-  const shownUpTo = useRef(-1)
-  const nodesUpTo = useRef(-1)
+  const c = useCopy()
   const [ring, setRing] = useState<RingResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [ms, setMs] = useState(0)
   const [cutoff, setCutoff] = useState(Infinity)
   const [selected, setSelected] = useState<string | null>(seed)
+  const [trail, setTrail] = useState<string[]>([seed])
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const tick = useLookTick()
+  const [view, setView] = useState<View>(() => (safeStorage.getItem('abhedya.ringView') === 'columns' ? 'columns' : 'globe'))
+  const [sha, setSha] = useState('')
+  const globe = useRef<GlobeHandle>(null)
+  const cols = useRef<{ snapshot: () => string | null }>(null)
+  const layout = useDefaultLayout({ id: 'ring-h', storage: safeStorage })
 
   useEffect(() => {
     let live = true
     const t0 = performance.now()
-    setRing(null); setErr(null); setSelected(seed); setCutoff(Infinity)
+    setRing(null); setErr(null); setSelected(seed); setTrail([seed]); setCutoff(Infinity)
     api.ring(seed).then((r) => { if (live) { setRing(r); setMs(performance.now() - t0) } })
       .catch((e) => live && setErr(String(e.message ?? e)))
+    api.stats().then((s) => live && setSha(s.input_sha256)).catch(() => undefined)
     return () => { live = false }
   }, [seed])
+  useEffect(() => { safeStorage.setItem('abhedya.ringView', view) }, [view])
 
+  const ix = useMemo(() => (ring ? ringIndex(ring) : null), [ring])
+  const journey = useMemo(() => (ix && selected ? journeyOf(ix, selected) : null), [ix, selected])
   const times = useMemo(() => (ring ? [...new Set(ring.edges.map((e) => toEpoch(e.first_ts)))].sort((a, b) => a - b) : []), [ring])
   const counts = useMemo(() => {
     const m: Record<string, number> = {}
@@ -47,8 +59,140 @@ export function RingView({ seed, reasons }: Props) {
     return m
   }, [ring])
 
+  const pick = useCallback((id: string | null) => {
+    setSelected(id)
+    if (id) setTrail((t) => (t[t.length - 1] === id ? t : [...t.slice(-7), id]))
+  }, [])
+  const toggle = (r: string) => setHidden((h) => { const n = new Set(h); if (n.has(r)) n.delete(r); else n.add(r); return n })
+  const snapshot = () => {
+    const url = view === 'globe' ? globe.current?.snapshot() : cols.current?.snapshot()
+    if (!url) return
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ring_${seed}_${sha.slice(0, 8) || 'data'}_${view}.png`
+    a.click()
+  }
+  const span = ring?.t_from && ring?.t_to ? toEpoch(ring.t_to) - toEpoch(ring.t_from) : 0
+  const cut = Math.min(cutoff, times[times.length - 1] ?? Infinity)
+
+  return (
+    <div className="inv">
+      <section className="sheet">
+        <div className="sheet-head">
+          <h1>{c.ringTitle} <span className="acct">{seed}</span></h1>
+          <div className="row gap wrap">
+            <div className="seg view-switch" role="group" aria-label="Ring view">
+              <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}><GlobeIcon /> Globe</button>
+              <button aria-pressed={view === 'columns'} onClick={() => setView('columns')}><Rows /> Columns</button>
+            </div>
+            {ring && <button className="btn" onClick={snapshot}><Camera /> Snapshot (PNG)</button>}
+            {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export ring (ZIP)</a>}
+          </div>
+        </div>
+        {ring && (
+          <div className="toolbar">
+            <span><b>{ring.nodes.length.toLocaleString('en-IN')} accounts</b> · {ring.n_txn.toLocaleString('en-IN')} transfers ·
+              {' '}{inr(ring.total_paise)}{span > 0 && <> · active over {spanText(span)}</>}</span>
+            <span className="muted small">isolated in {ms.toFixed(0)} ms</span>
+            <span style={{ marginLeft: 'auto' }} className="row gap wrap" role="group" aria-label="Show layers">
+              {ROLES.filter((r) => counts[r]).map((r) => (
+                <label key={r} className="check small"><input type="checkbox" checked={!hidden.has(r)} onChange={() => toggle(r)} />
+                  <span className={`key ${r}`} />{ROLE_TEXT[r]} {counts[r].toLocaleString('en-IN')}</label>
+              ))}
+            </span>
+          </div>
+        )}
+      </section>
+      {err && <div className="banner bad" role="alert"><b>{err}</b></div>}
+      {!ring && !err && <p className="muted">Isolating the ring around {seed}…</p>}
+      {ring && ix && (
+        <div className="inv-main">
+          <Group orientation="horizontal" id="ring-h" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
+            <Panel id="ring-graph" defaultSize="64%" minSize="30%">
+              <PanelFrame label="Ring graph" title={view === 'globe' ? 'Every account in the ring' : 'Victims · L1 · L2 · L3'}
+                actions={<span className="small muted">{view === 'globe' ? 'Drag to turn, scroll to zoom, click a dot' : 'Zoom in for labels; click an account'}</span>}>
+                <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                  {view === 'globe'
+                    ? <Globe ref={globe} ring={ring} journey={journey} selected={selected} hidden={hidden} cutoff={cut} onPick={pick} />
+                    : <Columns ref={cols} ring={ring} selected={selected} hidden={hidden} cutoff={cut} onPick={pick} journey={journey?.nodes ?? null} />}
+                </div>
+              </PanelFrame>
+            </Panel>
+            <Separator className="sep-v" />
+            <Panel id="ring-side" minSize="22%">
+              <PanelFrame label="Journey and account" title={selected ? 'Money journey' : 'Pick an account'}>
+                <div className="sheet-body journey">
+                  {trail.length > 1 && (
+                    <nav className="crumbs" aria-label="Where you came from">
+                      {trail.map((a, i) => (
+                        <span key={`${a}-${i}`}>{i > 0 && '›'}<button onClick={() => { setTrail(trail.slice(0, i + 1)); setSelected(a) }}>{a}</button></span>
+                      ))}
+                    </nav>
+                  )}
+                  {!selected && <p className="muted">Click any dot to see where its money came from and where it went.</p>}
+                  {selected && journey && (
+                    <>
+                      <p className="small" style={{ margin: '8px 0' }}><b className="acct">{selected}</b> sits on paths through <b>{journey.upstream}</b> accounts
+                        upstream and <b>{journey.downstream}</b> downstream (up to 4 hops, in time order).</p>
+                      <HopList title={`Money came from (${journey.from.length})`} hops={journey.from} onGo={pick} />
+                      <HopList title={`Money went to (${journey.to.length})`} hops={journey.to} onGo={pick} />
+                      <div style={{ marginTop: 14 }}>
+                        <AccountPanel account={selected} reasons={reasons} onSelect={pick}
+                          onTrace={(a) => go({ name: 'investigate', account: a, seeds: null })} onRing={(a) => go({ name: 'ring', account: a })} />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </PanelFrame>
+            </Panel>
+          </Group>
+        </div>
+      )}
+      {ring && times.length > 0 && <Timeline times={times} value={cut} onChange={setCutoff} fullRange={WINDOW}
+                                             label="Show the ring's transfers up to this minute" />}
+    </div>
+  )
+}
+
+function HopList({ title, hops, onGo }: { title: string; hops: Hop[]; onGo: (a: string) => void }) {
+  const [all, setAll] = useState(false)
+  if (!hops.length) return null
+  const shown = all ? hops : hops.slice(0, 6)
+  return (
+    <>
+      <h3>{title}</h3>
+      {shown.map((h) => (
+        <div key={h.account} className="hop">
+          <span className={`key ${h.role}`} aria-hidden="true" />
+          <div><div className="acct">{h.account}</div>
+            <div className="small muted">{ROLE_TEXT[h.role] ?? h.role} · {h.bank} · {h.n} transfer{h.n === 1 ? '' : 's'} · first {h.first.slice(5, 16)}</div></div>
+          <div style={{ textAlign: 'right' }}><div className="num">{inr(h.total)}</div>
+            <button className="btn ghost sm" onClick={() => onGo(h.account)} aria-label={`Go to ${h.account}`}>Go here</button></div>
+        </div>
+      ))}
+      {hops.length > 6 && <button className="btn ghost sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${hops.length}`}</button>}
+    </>
+  )
+}
+
+interface ColProps { ring: RingResult; selected: string | null; hidden: Set<string>; cutoff: number; onPick: (a: string | null) => void; journey: Set<string> | null }
+
+/** The strict layered view: victims | L1 | L2 | L3 columns. Scrubbing touches only elements whose state changes. */
+const Columns = forwardRef<{ snapshot: () => string | null }, ColProps>(function Columns({ ring, selected, hidden, cutoff, onPick, journey }, ref) {
+  const box = useRef<HTMLDivElement>(null)
+  const cy = useRef<cytoscape.Core | null>(null)
+  const edgesByT = useRef<cytoscape.EdgeSingular[]>([])
+  const nodesByT = useRef<cytoscape.NodeSingular[]>([])
+  const shownUpTo = useRef(-1)
+  const nodesUpTo = useRef(-1)
+  const pickRef = useRef(onPick)
+  pickRef.current = onPick
+  const tick = useLookTick()
+
+  useImperativeHandle(ref, () => ({ snapshot: () => cy.current?.png({ full: false, scale: 2, bg: cssVar('--sheet') }) ?? null }), [])
+
   useEffect(() => {
-    if (!ring || !box.current) return
+    if (!box.current) return
     const pos = layeredPositions(ring.nodes.map((n) => ({ id: n.account, role: n.role, order: n.account })),
       { colGap: 260, rowGap: 22, maxRows: 60, subGap: 70 })
     const first = new Map<string, number>()
@@ -66,35 +210,37 @@ export function RingView({ seed, reasons }: Props) {
       ],
       layout: { name: 'preset' },
     })
-    c.on('tap', 'node', (e) => setSelected(e.target.id()))
+    c.on('tap', 'node', (e) => pickRef.current(e.target.id()))
+    c.on('tap', (e) => { if (e.target === c) pickRef.current(null) })
     edgesByT.current = c.edges().toArray().sort((a, b) => a.data('t') - b.data('t')) as cytoscape.EdgeSingular[]
-    shownUpTo.current = edgesByT.current.length - 1
     nodesByT.current = c.nodes().toArray().sort((a, b) => a.data('first') - b.data('first')) as cytoscape.NodeSingular[]
+    shownUpTo.current = edgesByT.current.length - 1
     nodesUpTo.current = nodesByT.current.length - 1
     c.fit(undefined, 24)
     cy.current = c
-    return () => { c.destroy(); cy.current = null }
+    const ro = new ResizeObserver(() => { c.resize() })
+    ro.observe(box.current)
+    return () => { ro.disconnect(); c.destroy(); cy.current = null }
   }, [ring])
 
   useEffect(() => {
     const c = cy.current
-    if (!c || !ring) return
+    if (!c) return
     c.style([
       ...graphStyle({ animate: false }),
       { selector: 'node', style: { label: 'data(label)', 'font-size': 7, 'min-zoomed-font-size': 9, 'border-width': 1, width: 'data(size)', height: 'data(size)' } },
-      { selector: `node[id = "${ring.seed}"]`, style: { 'font-size': 26, 'min-zoomed-font-size': 0, 'font-weight': 700, 'border-width': 3, 'border-color': '#ffffff' } },
+      { selector: `node[id = "${ring.seed}"]`, style: { 'font-size': 26, 'min-zoomed-font-size': 0, 'font-weight': 700, 'border-width': 3 } },
       { selector: 'edge', style: { 'curve-style': 'haystack', width: 0.8, label: '', opacity: 0.45, 'target-arrow-shape': 'none' } },
       { selector: '.off', style: { display: 'none' } },
-      { selector: 'node.sel', style: { 'border-width': 3, 'border-color': '#1f5fbf' } },
+      { selector: '.faint', style: { opacity: 0.12 } },
+      { selector: 'node.sel', style: { 'border-width': 3, 'border-color': cssVar('--focus') } },
       { selector: '.future', style: { opacity: 0, events: 'no' } },
     ])
   }, [ring, tick])
 
-  // time filter: only touch the edges whose state changes (edges are sorted by time)
   useEffect(() => {
-    const c = cy.current, es = edgesByT.current
+    const c = cy.current, es = edgesByT.current, ns = nodesByT.current
     if (!c || !es.length) return
-    const ns = nodesByT.current
     const upTo = <T extends cytoscape.SingularElementArgument>(arr: T[], key: string) => {
       let k = -1, lo = 0, hi = arr.length - 1
       while (lo <= hi) { const m = (lo + hi) >> 1; if (arr[m].data(key) <= cutoff) { k = m; lo = m + 1 } else hi = m - 1 }
@@ -121,54 +267,13 @@ export function RingView({ seed, reasons }: Props) {
   useEffect(() => {
     const c = cy.current
     if (!c) return
-    c.batch(() => { c.nodes().removeClass('sel'); if (selected) c.getElementById(selected).addClass('sel') })
-  }, [selected, ring])
+    c.batch(() => {
+      c.elements().removeClass('sel faint')
+      if (selected) c.getElementById(selected).addClass('sel')
+      if (journey) c.nodes().forEach((n) => { if (!journey.has(n.id())) n.addClass('faint') })
+    })
+  }, [selected, journey, ring])
 
-  const toggle = (r: string) => setHidden((h) => { const n = new Set(h); if (n.has(r)) n.delete(r); else n.add(r); return n })
-  const onTrace = useCallback((a: string) => go({ name: 'investigate', account: a, seeds: null }), [])
-  const onRing = useCallback((a: string) => go({ name: 'ring', account: a }), [])
-  const span = ring?.t_from && ring?.t_to ? toEpoch(ring.t_to) - toEpoch(ring.t_from) : 0
-
-  return (
-    <div className={`ringview${selected ? '' : ' solo'}`}>
-      <div className="ringmain">
-        <section className="sheet">
-          <div className="sheet-head">
-            <h1>Syndicate around <span className="acct">{seed}</span></h1>
-            {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export ring (ZIP)</a>}
-          </div>
-          {ring && (
-            <div className="toolbar">
-              <span><b>{ring.nodes.length.toLocaleString('en-IN')} accounts</b> · {ring.n_txn.toLocaleString('en-IN')} transfers ·
-                {' '}{inr(ring.total_paise)}{span > 0 && <> · active over {spanText(span)}</>}</span>
-              <span className="muted small">isolated in {ms.toFixed(0)} ms</span>
-              <span style={{ marginLeft: 'auto' }} className="row gap wrap" role="group" aria-label="Show layers">
-                {ROLES.filter((r) => counts[r]).map((r) => (
-                  <label key={r} className="check small"><input type="checkbox" checked={!hidden.has(r)} onChange={() => toggle(r)} />
-                    <span className={`key ${r}`} />{ROLE_TEXT[r]} {counts[r].toLocaleString('en-IN')}</label>
-                ))}
-              </span>
-            </div>
-          )}
-        </section>
-        {err && <div className="banner bad" role="alert"><b>{err}</b></div>}
-        {!ring && !err && <p className="muted">Isolating the ring around {seed}…</p>}
-        <section className="sheet grow" aria-label="Ring graph">
-          <div className="graph" ref={box} role="img" aria-label={ring ? `Ring of ${ring.nodes.length} accounts in columns: victims, collectors, distributors, cash-out` : 'Ring graph'} />
-          <div className="statusline">Columns: victims · L1 collectors · L2 distributors · L3 cash-out. Zoom in for account labels; click an account for details.</div>
-        </section>
-        {ring && times.length > 0 && <Timeline times={times} value={Math.min(cutoff, times[times.length - 1])} onChange={setCutoff} fullRange={WINDOW}
-                                               label="Show the ring's transfers up to this minute" />}
-      </div>
-      {selected && (
-        <aside className="sheet side sheet-body" aria-label="Account details">
-          <div className="row between" style={{ marginBottom: 6 }}>
-            <span className="small muted">{selected === seed ? 'Starting account' : 'Selected account'}</span>
-            <button className="btn ghost sm" onClick={() => setSelected(null)}>Close</button>
-          </div>
-          <AccountPanel account={selected} reasons={reasons} onTrace={onTrace} onRing={onRing} onSelect={setSelected} />
-        </aside>
-      )}
-    </div>
-  )
-}
+  return <div className="graph" ref={box} style={{ position: 'absolute', inset: 0 }} role="img"
+              aria-label={`Ring of ${ring.nodes.length} accounts in columns: victims, collectors, distributors, cash-out`} />
+})

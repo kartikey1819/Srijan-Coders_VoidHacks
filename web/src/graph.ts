@@ -42,6 +42,7 @@ export function graphStyle(opts: { animate: boolean }): cytoscape.StylesheetStyl
   const c = roleColors()
   const ink = cssVar('--ink'), edge = cssVar('--edge'), held = cssVar('--held'), focus = cssVar('--focus')
   const font = cssVar('--font') || 'sans-serif'
+  const bg = cssVar('--label-bg') || '#ffffff', ring = cssVar('--sheet') || '#ffffff'
   const fade = opts.animate ? { 'transition-property': 'opacity', 'transition-duration': 260 } : {}
   return [
     {
@@ -50,8 +51,8 @@ export function graphStyle(opts: { animate: boolean }): cytoscape.StylesheetStyl
         'background-color': (n: cytoscape.NodeSingular) => c[n.data('role')] ?? c.UNKNOWN,
         label: 'data(label)', 'font-family': font, 'font-size': 17, color: ink, 'text-valign': 'bottom', 'text-margin-y': 5,
         'text-wrap': 'wrap', 'text-max-width': '170px', width: 'data(size)', height: 'data(size)',
-        'border-width': 2, 'border-color': '#ffffff', 'min-zoomed-font-size': 6,
-        'text-background-color': '#ffffff', 'text-background-opacity': 0.8, 'text-background-padding': '2px',
+        'border-width': 2, 'border-color': ring, 'min-zoomed-font-size': 6,
+        'text-background-color': bg, 'text-background-opacity': 0.85, 'text-background-padding': '2px',
         ...fade,
       },
     },
@@ -61,8 +62,8 @@ export function graphStyle(opts: { animate: boolean }): cytoscape.StylesheetStyl
       style: {
         width: 'data(width)', 'line-color': edge, 'target-arrow-color': edge, 'target-arrow-shape': 'triangle',
         'curve-style': 'bezier', 'arrow-scale': 0.9, label: 'data(label)', 'font-family': font, 'font-size': 15, color: ink,
-        'text-background-color': '#ffffff', 'text-background-opacity': 0.9, 'text-background-padding': '2px',
-        'min-zoomed-font-size': 7, ...fade,
+        'text-background-color': bg, 'text-background-opacity': 0.9, 'text-background-padding': '2px',
+        'min-zoomed-font-size': 9, ...fade,
       },
     },
     { selector: 'edge.late', style: { 'line-style': 'dashed' } },
