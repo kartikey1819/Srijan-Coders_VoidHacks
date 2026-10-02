@@ -240,8 +240,9 @@ def test_one_click_network_from_the_trace(page, base):
 def test_overview_charts_render(page, base):
     """Expected: the Dashboard's charts draw with data, and a layer in the accounts donut opens the filtered list."""
     page.goto(f"{base}/#overview")
-    page.get_by_text("accounts are flagged").first.wait_for()
-    assert page.locator(".chart svg").count() >= 1 and page.locator(".bars .b-bar").count() >= 3
+    page.locator(".bars .b-bar").first.wait_for()
+    assert page.locator(".bars .b-bar").count() >= 3
+    assert page.get_by_text("accounts are flagged").count() == 0          # the score distribution chart was removed
     page.locator(".cf-legend").get_by_role("button", name="Collectors").click()
     page.get_by_role("heading", name="Suspect Accounts").wait_for()
     assert "role=L1" in page.url

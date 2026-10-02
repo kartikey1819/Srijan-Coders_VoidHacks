@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { api } from '../api'
-import { BarList, DailyColumns, ScoreSpread } from '../charts'
+import { BarList, DailyColumns } from '../charts'
 import { inr, REASON_SHORT } from '../format'
 import { go } from '../route'
 import type { DQSummary, FlowSummary, Overview as OverviewData, VictimCandidate } from '../types'
@@ -39,9 +39,6 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
       {flow ? <CaseFlow f={flow} stats={stats} days={o.activity.map((d) => d.day)} banks={o.flagged_by_bank} />
         : <section className="gpanel cflow-wait" aria-busy="true"><p className="muted">Tracing every victim's money…</p></section>}
       <div className="overview">
-        <section className="sheet sheet-body w12">
-          <ScoreSpread hist={o.score_hist} bands={o.bands} onPick={() => go({ name: 'flagged', role: null, bank: null, reason: null })} />
-        </section>
         <section className="sheet sheet-body w6">
           <BarList title="Why accounts were flagged" sub="The behaviour behind each flag. One account usually shows several."
                    source="risk reason codes" total={flagged} max={6}

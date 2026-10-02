@@ -117,7 +117,6 @@ A large dialog:
     is held by layer); under it, every account checked (donut: regular, victims, each layer) and three notes: banks to
     notify, whether the suspects form one linked network, and whether any money was sent back to an earlier account.
     Below 1360 px the freeze strip moves under the chain so the key figures stay in the first view;
-  - the score distribution with the 70 line;
   - why accounts were flagged; suspects by bank; daily activity; victims found.
 
   Every chart opens the filtered list.
