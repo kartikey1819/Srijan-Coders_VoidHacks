@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useWidth } from '../../charts'
+import { useWidth } from '../../useWidth'
 import { inr, toEpoch } from '../../format'
 import type { TraceResult } from '../../types'
 import { after } from './model'

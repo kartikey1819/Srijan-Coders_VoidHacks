@@ -55,12 +55,13 @@ def make_documents(victim: str, case: CaseInfo):
         return render_case(ev, narrative, config.CASES_DIR / ev.case_id, source, used_llm,
                            None if used_llm else reason, url_prefix=f"/api/docs/{ev.case_id}/")
     except FirewallError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 def _case_dir(case_id: str):
     case_dir = (config.CASES_DIR / case_id).resolve() if CASE_ID.match(case_id) else None
-    if case_dir is None or config.CASES_DIR.resolve() not in case_dir.parents or not (case_dir / "evidence.json").is_file():
+    if (case_dir is None or config.CASES_DIR.resolve() not in case_dir.parents
+            or not (case_dir / "evidence.json").is_file()):
         raise HTTPException(status_code=404, detail="Not found")
     return case_dir
 

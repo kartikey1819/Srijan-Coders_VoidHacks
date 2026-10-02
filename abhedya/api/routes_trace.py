@@ -1,4 +1,6 @@
 """Engine routes (plan/00_OVERVIEW.md section 5.4). Owner: A."""
+from typing import Annotated
+
 from fastapi import APIRouter, Query
 from fastapi.responses import Response
 
@@ -25,14 +27,14 @@ def dq_summary():
 
 
 @router.get("/search", response_model=list[str])
-def search(q: str = "", limit: int = Query(20, ge=1, le=100)):
+def search(q: str = "", limit: Annotated[int, Query(ge=1, le=100)] = 20):
     return get_engine().search(q, limit)
 
 
 @router.get("/trace/{victim}", response_model=TraceResult)
-def trace(victim: str, max_hops: int = Query(config.MAX_HOPS, ge=1, le=8),
-          seed_txn: list[int] | None = Query(None, description="txn_idx of the disputed transaction(s); "
-                                                                 "default: all of the victim's outflows")):
+def trace(victim: str, max_hops: Annotated[int, Query(ge=1, le=8)] = config.MAX_HOPS,
+          seed_txn: Annotated[list[int] | None, Query(description="txn_idx of the disputed transaction(s); "
+                                                                  "default: all of the victim's outflows")] = None):
     return get_engine().trace(victim, max_hops=max_hops, seed_txns=set(seed_txn) if seed_txn else None)
 
 
@@ -42,12 +44,13 @@ def account(acct: str):
 
 
 @router.get("/account/{acct}/txns", response_model=list[TxnRow])
-def account_txns(acct: str, limit: int = Query(200, ge=1, le=5000), offset: int = Query(0, ge=0)):
+def account_txns(acct: str, limit: Annotated[int, Query(ge=1, le=5000)] = 200,
+                 offset: Annotated[int, Query(ge=0)] = 0):
     return get_engine().account_txns(acct, limit, offset)
 
 
 @router.get("/txns", response_model=list[TxnRow])
-def txns_by_index(idx: list[int] = Query(..., max_length=500)):
+def txns_by_index(idx: Annotated[list[int], Query(max_length=500)]):
     """Transactions by their row number in the file (the ids a ring edge carries). Read-only; integers only."""
     return get_engine().txns([i for i in idx if i >= 0])
 

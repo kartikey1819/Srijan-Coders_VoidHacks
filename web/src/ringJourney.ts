@@ -63,3 +63,21 @@ export function journeyOf(ix: ReturnType<typeof ringIndex>, acct: string, hops =
   const to = (ix.out.get(acct) ?? []).map((e) => hop(e, e.dst)).sort((a, b) => b.total - a.total)
   return { nodes, links, from, to, upstream: up, downstream: down }
 }
+
+export interface Candidate { account: string; amount: number }
+
+/** Victims whose money can reach `acct` inside the network (walking payers back up to five steps), largest payment
+ *  into the network first. A victim account is its own only candidate. */
+export function victimsReaching(ix: ReturnType<typeof ringIndex>, acct: string): Candidate[] {
+  if (ix.role.get(acct)?.role === 'VICTIM') return [{ account: acct, amount: (ix.out.get(acct) ?? []).reduce((s, e) => s + e.total_paise, 0) }]
+  const seen = new Set([acct])
+  let front = [acct]
+  for (let step = 0; step < 5 && front.length; step++) {
+    const next: string[] = []
+    for (const v of front) for (const e of ix.inn.get(v) ?? []) if (!seen.has(e.src)) { seen.add(e.src); next.push(e.src) }
+    front = next
+  }
+  return [...seen].filter((a) => ix.role.get(a)?.role === 'VICTIM')
+    .map((a) => ({ account: a, amount: (ix.out.get(a) ?? []).reduce((s, e) => s + e.total_paise, 0) }))
+    .sort((a, b) => b.amount - a.amount || a.account.localeCompare(b.account))
+}

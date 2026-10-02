@@ -40,7 +40,7 @@ def build_arrays(con: duckdb.DuckDBPyConnection, out_dir: Path) -> dict:
         order = np.lexsort((txn, ts, key))
         ptr = np.searchsorted(key[order], np.arange(V + 1, dtype=np.int64)).astype(np.int64)
         np.save(out_dir / f"{prefix}_ptr.npy", ptr)
-        for name, arr in zip(EDGE_FIELDS, (peer, ts, amt, txn, cat)):
+        for name, arr in zip(EDGE_FIELDS, (peer, ts, amt, txn, cat), strict=True):
             np.save(out_dir / f"{prefix}_{name}.npy", arr[order])
     np.save(out_dir / "accounts.npy", accounts)
     np.save(out_dir / "ifsc.npy", ifsc)

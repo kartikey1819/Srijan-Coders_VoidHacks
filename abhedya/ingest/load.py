@@ -5,6 +5,7 @@ even when a value is malformed (derive.py parses values safely and flags failure
 matched by name, case-insensitively; extra columns are ignored and recorded.
 txn_idx = 0-based data-record number in the file (verified against the file itself).
 """
+from collections import deque
 from itertools import islice
 from pathlib import Path
 
@@ -74,9 +75,8 @@ def verify_row_order(con: duckdb.DuckDBPyConnection, csv_path: Path, id_index: i
         tail = [ln for ln in f.read().splitlines() if ln.strip()]
     if tail and field(tail[-1], id_index) == last_got:
         return
-    last = None                        # slow path (e.g. a multi-line last record): walk all records
-    for last in iter_records(csv_path):
-        pass
+    final = deque(iter_records(csv_path), maxlen=1)   # slow path (e.g. a multi-line last record): walk all records
+    last = final[0] if final else None
     if last is None or field(last, id_index) != last_got:
         raise RuntimeError("txn_raw row order does not match the CSV (tail check failed)")
 

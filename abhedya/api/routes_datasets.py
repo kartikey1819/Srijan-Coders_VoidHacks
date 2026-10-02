@@ -31,7 +31,7 @@ async def upload(request: Request, name: str = Query("upload.csv", max_length=20
         ds_id, existed = w.finish()
     except ValueError as e:
         w.abort()
-        raise HTTPException(status_code=413 if "1 GB" in str(e) else 422, detail=str(e))
+        raise HTTPException(status_code=413 if "1 GB" in str(e) else 422, detail=str(e)) from e
     if not existed:
         datasets.enqueue(ds_id)
     p = datasets.progress(ds_id)
@@ -54,7 +54,7 @@ def activate(ds_id: str):
     try:
         return datasets.activate(_check(ds_id))
     except FileNotFoundError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 @router.delete("/datasets/{ds_id}", response_model=list[DatasetInfo])
@@ -63,8 +63,9 @@ def remove(ds_id: str):
     try:
         return datasets.remove(_check(ds_id))
     except KeyError:
-        raise HTTPException(status_code=404, detail="Unknown dataset")
+        raise HTTPException(status_code=404, detail="Unknown dataset") from None
     except (ValueError, FileNotFoundError) as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except OSError as e:
-        raise HTTPException(status_code=409, detail=f"Could not delete the files ({e.strerror or e}); close other programs using them and retry.")
+        raise HTTPException(status_code=409, detail=f"Could not delete the files ({e.strerror or e}); "
+                                                    "close other programs using them and retry.") from e

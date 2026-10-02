@@ -19,8 +19,9 @@ inflows cost about the same per outflow as quiet ones. An inflow that no later o
 the window or amount_match rule can only ever be spent as the holder's own balance (oldest first), so a run of such
 inflows is kept as one balance lot instead of thousands of single ones; the result is the same. And an account's
 history before the victim's money first reaches it is all its own money: wherever that balance was exactly zero,
-everything before was spent and can never matter again, so the replay starts there (_fresh_start). tests/trace_reference.py is the plain version; both give the
-same edges, amounts and holdings (tests/test_trace.py checks this).
+everything before was spent and can never matter again, so the replay starts there (_fresh_start).
+tests/trace_reference.py is the plain version; both give the same edges, amounts and holdings (tests/test_trace.py
+checks this).
 """
 from __future__ import annotations
 
@@ -76,7 +77,8 @@ def _bucket(paise: int) -> int:
 def _inert_inflows(g: Graph, u: int) -> np.ndarray:
     """For each inflow of u (in-edge order): True if no outflow of u could ever pick it by the window rule (none
     180-900 s after it) or by amount_match (none at or after it carrying 90-100% of it). Such a lot is only ever spent
-    by the oldest rule. Borderline amounts count as pickable, so the shortcut never changes a result. Cached per graph."""
+    by the oldest rule. Borderline amounts count as pickable, so the shortcut never changes a result.
+    Cached per graph."""
     cache = g.__dict__.setdefault("_inert_cache", {})
     hit = cache.get(u)
     if hit is not None:
@@ -235,11 +237,11 @@ def _bundles(rule: str, live: list[Lot], amount: int, t: int) -> list[list[int]]
     amount_match judges a whole inflow transaction (its tainted and clean parts together)."""
     if rule == "window":
         lo, hi = config.PT_WINDOW_S
-        return [[i] for i, l in enumerate(live) if lo <= t - l.t <= hi]
+        return [[i] for i, lot in enumerate(live) if lo <= t - lot.t <= hi]
     if rule == "amount_match":
         groups: dict[int, list[int]] = {}
-        for i, l in enumerate(live):
-            key = l.src if l.src >= 0 else -1 - i
+        for i, lot in enumerate(live):
+            key = lot.src if lot.src >= 0 else -1 - i
             g = groups.get(key)
             if g is None:
                 groups[key] = [i]
@@ -249,8 +251,8 @@ def _bundles(rule: str, live: list[Lot], amount: int, t: int) -> list[list[int]]
         out = []
         for idxs in groups.values():
             if len(idxs) == 1:
-                l = live[idxs[0]]
-                orig, rem = l.original, l.remaining
+                lot = live[idxs[0]]
+                orig, rem = lot.original, lot.remaining
             else:
                 orig = rem = 0
                 for i in idxs:
@@ -262,12 +264,12 @@ def _bundles(rule: str, live: list[Lot], amount: int, t: int) -> list[list[int]]
                 out.append(idxs)
         return out
     # fallback (lowest-intermediate-balance presumption): the holder's own (clean) money is spent first
-    return [[i] for i, l in enumerate(live) if not l.tainted] + [[i] for i, l in enumerate(live) if l.tainted]
+    return [[i] for i, lot in enumerate(live) if not lot.tainted] + [[i] for i, lot in enumerate(live) if lot.tainted]
 
 
 def _split(total: int, lots: list[Lot]) -> list[int]:
     """Take `total` from a bundle pro rata to what each lot still holds (exact integer paise)."""
-    rem = [l.remaining for l in lots]
+    rem = [lot.remaining for lot in lots]
     avail = sum(rem)
     if total >= avail:
         return rem
@@ -322,8 +324,8 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
             """In this outflow's starting snapshot: unspent, already arrived, and allowed to move."""
             if p in used:
                 return True                      # only lots this outflow used have changed since it started
-            l = lots[p]
-            return l.remaining > 0 and l.t <= t and (l.spendable or not l.tainted)
+            lot = lots[p]
+            return lot.remaining > 0 and lot.t <= t and (lot.spendable or not lot.tainted)
 
         def window() -> list[list[int]]:
             lo, hi = config.PT_WINDOW_S
@@ -344,14 +346,14 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
                     continue
                 keep = []
                 for p in lst:
-                    l = lots[p]
-                    if (l.src >= 0 and l.src in book.multi) or l.remaining < ratio * l.original \
-                            or (l.tainted and not l.spendable):
+                    lot = lots[p]
+                    if (lot.src >= 0 and lot.src in book.multi) or lot.remaining < ratio * lot.original \
+                            or (lot.tainted and not lot.spendable):
                         continue                 # can never be a lone candidate again: drop from the index
                     keep.append(p)
                     if live(p):
-                        m = ratio * l.original
-                        if l.remaining >= m and m <= a <= l.original:
+                        m = ratio * lot.original
+                        if lot.remaining >= m and m <= a <= lot.original:
                             found.append((p, [p]))
                 if len(keep) != len(lst):
                     book.buckets[b] = keep
@@ -373,10 +375,10 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
             while book.chead < n and (lots[book.chead].tainted or lots[book.chead].remaining == 0):
                 book.chead += 1
             for p in range(book.chead, n):
-                l = lots[p]
-                if l.t > t and book.ordered:
+                lot = lots[p]
+                if lot.t > t and book.ordered:
                     break
-                if not l.tainted and p not in used and live(p):
+                if not lot.tainted and p not in used and live(p):
                     yield [p]
             for p in book.tainted:
                 if p not in used and live(p):
@@ -405,7 +407,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
                 bundle = [lots[p] for p in fresh]
                 takes = _split(need, bundle)
                 used.update(fresh)
-                for lot, take in zip(bundle, takes):
+                for lot, take in zip(bundle, takes, strict=True):
                     if take <= 0:
                         continue
                     lot.remaining -= take
@@ -534,7 +536,8 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
     if ties:
         core.warnings.append(f"{ties} transfer(s) spent money that arrived in the same second (ordered by file row).")
     if core.not_followed:
-        names = ", ".join(str(g.accounts[u]) for u in sorted(core.not_followed, key=lambda u: -core.not_followed[u])[:5])
+        busiest = sorted(core.not_followed, key=lambda u: -core.not_followed[u])[:5]
+        names = ", ".join(str(g.accounts[u]) for u in busiest)
         more = len(core.not_followed) - 5
         core.warnings.append(
             f"{len(core.not_followed)} very busy account(s) were not followed further ({names}"

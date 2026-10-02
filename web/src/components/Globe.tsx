@@ -1,6 +1,6 @@
 import { ArrowCounterClockwise, ArrowsInSimple, Minus, Pause, Play, Plus } from '@phosphor-icons/react'
 import { forceRadial } from 'd3-force-3d'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useEffectEvent, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import ForceGraph3D from 'react-force-graph-3d'
 import * as THREE from 'three'
 import { toEpoch } from '../format'
@@ -63,8 +63,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
   const look = useThemeName()
   const reduced = prefersReducedMotion()
   const objs = useRef<{ points: THREE.Points; lines: THREE.LineSegments; hover: THREE.LineSegments } | null>(null)
-  const pickRef = useRef(onPick); pickRef.current = onPick
-  const openRef = useRef(onOpenLink); openRef.current = onOpenLink
+  const openLink = useEffectEvent((e: GraphEdge) => onOpenLink(e))   // always the latest handler, without re-binding listeners
 
   useEffect(() => {
     const el = box.current
@@ -272,7 +271,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
     const onLeave = () => showHover(null)
     const onDbl = (e: MouseEvent) => {
       const li = hit(e, 'lines')
-      if (li !== null) openRef.current(data.links[li].edge)
+      if (li !== null) openLink(data.links[li].edge)
     }
     el.addEventListener('pointermove', onMove)
     el.addEventListener('pointerleave', onLeave)

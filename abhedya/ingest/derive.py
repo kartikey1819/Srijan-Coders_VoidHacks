@@ -54,7 +54,8 @@ def build_txn(con: duckdb.DuckDBPyConnection) -> None:
                coalesce(regexp_matches(r.narr_upper, '{config.INSTRUCTION_LIKE_RE}'), false) AS narr_instruction_like,
                r.IP_Address AS ip,
                r.ip_octet1,
-               CASE WHEN NOT coalesce(regexp_full_match(r.IP_Address, '[0-9]{{1,3}}(\\.[0-9]{{1,3}}){{3}}'), false) THEN 'invalid'
+               CASE WHEN NOT coalesce(regexp_full_match(r.IP_Address, '[0-9]{{1,3}}(\\.[0-9]{{1,3}}){{3}}'), false)
+                         THEN 'invalid'
                     WHEN r.ip_octet1 IN ({octets}) THEN 'foreign_proxy'
                     ELSE 'domestic' END AS ip_class,
                r.Device_Type AS device,
@@ -83,9 +84,11 @@ def build_account(con: duckdb.DuckDBPyConnection) -> None:
                least(coalesce(i.first_in, o.first_out), coalesce(o.first_out, i.first_in)) AS first_ts,
                greatest(coalesce(i.last_in, o.last_out), coalesce(o.last_out, i.last_in)) AS last_ts
         FROM acct_map m
-        LEFT JOIN (SELECT dst_id, count(*) AS n_in, sum(amount_paise) AS sum_in, min(ts) AS first_in, max(ts) AS last_in
+        LEFT JOIN (SELECT dst_id, count(*) AS n_in, sum(amount_paise) AS sum_in,
+                          min(ts) AS first_in, max(ts) AS last_in
                    FROM txn GROUP BY dst_id) i ON i.dst_id = m.acct_id
-        LEFT JOIN (SELECT src_id, count(*) AS n_out, sum(amount_paise) AS sum_out, min(ts) AS first_out, max(ts) AS last_out
+        LEFT JOIN (SELECT src_id, count(*) AS n_out, sum(amount_paise) AS sum_out,
+                          min(ts) AS first_out, max(ts) AS last_out
                    FROM txn GROUP BY src_id) o ON o.src_id = m.acct_id
         ORDER BY m.acct_id"""
     )

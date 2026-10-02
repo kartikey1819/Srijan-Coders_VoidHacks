@@ -4,7 +4,7 @@ import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panel
 import { api } from '../api'
 import { inr, ROLE_TEXT, spanText, toEpoch } from '../format'
 import { go } from '../route'
-import { journeyOf, ringIndex, type Hop } from '../ringJourney'
+import { journeyOf, ringIndex, victimsReaching, type Hop } from '../ringJourney'
 import { safeStorage } from '../store'
 import type { GraphEdge, RingResult } from '../types'
 import { AccountPanel } from './AccountPanel'
@@ -13,7 +13,7 @@ import { Globe, type GlobeHandle } from './Globe'
 import { NetFlow } from './NetFlow'
 import { Page } from './Page'
 import { PanelFrame } from './PanelFrame'
-import { RingTrail, victimsReaching } from './RingTrail'
+import { RingTrail } from './RingTrail'
 import { Timeline } from './Timeline'
 import { BankIcon } from './BankIcon'
 import { DocsModal } from './DocsModal'
@@ -43,8 +43,7 @@ export function RingView({ seed, reasons }: Props) {
 
   useEffect(() => {
     let live = true
-    const t0 = performance.now()
-    setRing(null); setErr(null); setSelected(seed); setTrail([seed]); setCutoff(Infinity)
+    const t0 = performance.now()               // the view is keyed by seed, so every network starts from fresh state
     api.ring(seed).then((r) => { if (live) { setRing(r); setMs(performance.now() - t0) } })
       .catch((e) => live && setErr(String(e.message ?? e)))
     return () => { live = false }

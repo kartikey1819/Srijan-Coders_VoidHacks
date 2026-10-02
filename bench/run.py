@@ -150,12 +150,12 @@ def w_query(_: Path) -> dict:
         l1 = next(n.account for n in tr.nodes if n.role == "L1")
         lat["ring isolation from a victim's L1: 20 victims"].append(ms(e.ring, l1)[0])
 
-        def docs():
+        def docs(tr):
             ev = build_evidence(tr, e.txns([x.txn_idx for x in tr.edges]), case)
             nar = fallback_narrative(ev)
             render_case(ev, nar, out_root / ev.case_id, "templates (benchmark)", False, "benchmark")
             return ev, nar
-        t_docs, (ev, nar) = ms(docs)
+        t_docs, (ev, nar) = ms(docs, tr)
         lat["evidence + diary + bank notices (templates): 20 victims"].append(t_docs)
         lat["full investigation (trace + every trail account + ring + documents): 20 victims"].append(
             (time.perf_counter() - t_all) * 1000)
@@ -189,16 +189,17 @@ def w_http(victims_file: Path) -> dict:
             out["server_ready_ms"] = (time.perf_counter() - t0) * 1000
             out["first_trace_ms"] = ms(lambda: c.get(f"/api/trace/{victims[0]}").raise_for_status())[0]
             lat = {
-                "GET /api/trace: 300 victims": [ms(lambda: c.get(f"/api/trace/{v}").raise_for_status())[0]
+                "GET /api/trace: 300 victims": [ms(lambda v=v: c.get(f"/api/trace/{v}").raise_for_status())[0]
                                                 for v in victims],
-                "GET /api/account: 200 random": [ms(lambda: c.get(f"/api/account/{v}").raise_for_status())[0]
+                "GET /api/account: 200 random": [ms(lambda v=v: c.get(f"/api/account/{v}").raise_for_status())[0]
                                                  for v in randoms],
                 "GET /api/risk/top (HIGH, 500 rows): 20": [ms(lambda: c.get("/api/risk/top?band=HIGH&limit=500")
                                                               .raise_for_status())[0] for _ in range(20)],
-                "POST /api/docs (AI off): 10 victims": [ms(lambda: c.post(f"/api/docs/{v}", json={"use_llm": False})
-                                                           .raise_for_status())[0] for v in victims[:10]],
+                "POST /api/docs (AI off): 10 victims": [
+                    ms(lambda v=v: c.post(f"/api/docs/{v}", json={"use_llm": False}).raise_for_status())[0]
+                    for v in victims[:10]],
                 "POST /api/docs (AI on, model unreachable): 5 victims": [
-                    ms(lambda: c.post(f"/api/docs/{v}", json={"use_llm": True}).raise_for_status())[0]
+                    ms(lambda v=v: c.post(f"/api/docs/{v}", json={"use_llm": True}).raise_for_status())[0]
                     for v in victims[10:15]],
             }
             out["lat"] = {k: pct(v) for k, v in lat.items()}
@@ -222,8 +223,8 @@ def spawn(kind: str, arg: Path) -> dict:
         raise SystemExit(f"{kind} worker failed")
     res = json.loads(p.stdout.strip().splitlines()[-1])
     res["process_wall_s"] = round(wall, 3)
-    print(f"  {kind:<9} {res.get('total_s', '')!s:>8}  wall {wall:6.2f} s  peak {res['peak_mb'] if 'peak_mb' in res else 0:.0f} MB",
-          flush=True)
+    peak = res.get("peak_mb", 0)
+    print(f"  {kind:<9} {res.get('total_s', '')!s:>8}  wall {wall:6.2f} s  peak {peak:.0f} MB", flush=True)
     return res
 
 

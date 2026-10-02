@@ -37,7 +37,8 @@ def base(sample_db, tmp_path_factory):
     old_ds = (datasets.DIR, datasets.official_db, datasets._active)
     engine_mod._engine = engine_mod.Engine(sample_db)
     config.CASES_DIR = tmp_path_factory.mktemp("cases")
-    datasets.DIR, datasets.official_db, datasets._active = tmp_path_factory.mktemp("datasets"), (lambda: sample_db), "official"
+    datasets.DIR, datasets.official_db, datasets._active = (tmp_path_factory.mktemp("datasets"), (lambda: sample_db),
+                                                            "official")
     port = _free_port()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
     th = threading.Thread(target=server.run, daemon=True)
@@ -93,14 +94,16 @@ def test_w1_flagged_account_shows_risk_and_reasons(page, base):
 
 
 def test_w2_victim_trace_shows_exact_layers(page, base):
-    """Expected: the money-trail tree shows exactly the API trace's L1 / L2 / L3 accounts; the journey strip counts them."""
+    """Expected: the money-trail tree shows exactly the API trace's L1 / L2 / L3 accounts; the journey strip counts
+    them."""
     open_trace(page, base)
     api = engine_mod._engine.trace(VICTIM)
     for role in ("L1", "L2", "L3"):
         boxes = page.locator(f".tbox[data-role={role}]")
         shown = {boxes.nth(i).get_attribute("data-acct") for i in range(boxes.count())}
         assert shown == {n.account for n in api.nodes if n.role == role}, role
-    page.wait_for_function("document.querySelector('.jstrip').innerText.includes('5\\ndistributors')")   # figures count up once
+    # figures count up once
+    page.wait_for_function("document.querySelector('.jstrip').innerText.includes('5\\ndistributors')")
     strip = page.locator(".jstrip").inner_text()
     assert "1\ncollector" in strip and "5\ndistributors" in strip and "5\ncash-out accounts" in strip
     assert "₹4,55,541.61" in page.locator(".headline").inner_text()
@@ -141,14 +144,15 @@ def _generate(page, base, use_llm: bool) -> str:
 
 
 def test_w5_w6_case_diary_and_bank_notice(page, base):
-    """Expected: the diary is a Section 192 BNSS case diary naming the victim and the loss; each bank gets a Section 94 &
-    106 BNSS notice; the verification box reports the checked figures."""
+    """Expected: the diary is a Section 192 BNSS case diary naming the victim and the loss; each bank gets a
+    Section 94 & 106 BNSS notice; the verification box reports the checked figures."""
     _generate(page, base, use_llm=False)
     assert "Verification passed" in page.locator(".verify").inner_text()
     diary_url = page.locator(".paper iframe").get_attribute("src")
     page.get_by_role("tab", name="Freeze notices").click()
     page.get_by_role("button", name="Notice: ICICI Bank").click()
-    page.wait_for_function("(document.querySelector('.paper iframe') || {}).src && document.querySelector('.paper iframe').src.includes('notice_ICIC')")
+    page.wait_for_function("(document.querySelector('.paper iframe') || {}).src"
+                           " && document.querySelector('.paper iframe').src.includes('notice_ICIC')")
     notice_url = page.locator(".paper iframe").get_attribute("src")
     page.goto(base + diary_url)
     body = page.content()
@@ -257,10 +261,12 @@ def test_dashboard_first_view_shows_where_the_money_went(page, base):
     flow = page.locator(".cflow")
     flow.wait_for(timeout=30_000)
     page.wait_for_function("""(() => { const t = [...document.querySelectorAll('.cf-st .cf-big')].map(e => e.innerText);
-        return t.length === 4 && t[0].startsWith('300') && t[1].startsWith('129') && t[2].startsWith('559') && t[3].startsWith('385') })()""")   # figures count up
+        return t.length === 4 && t[0].startsWith('300') && t[1].startsWith('129')
+            && t[2].startsWith('559') && t[3].startsWith('385') })()""")   # figures count up
     chain = page.locator(".cf-chain").inner_text()
     for text in ("Victims", "300", "₹8.48 Cr", "Collectors", "129", "98% out in 15 min", "2.3 victims each",
-                 "Distributors", "559", "96% out in 1 hour", "Cash-out", "385", "100% crypto / wallet", "+5 min", "+18 min"):
+                 "Distributors", "559", "96% out in 1 hour", "Cash-out", "385", "100% crypto / wallet",
+                 "+5 min", "+18 min"):
         assert text in chain, text
     assert "₹8,47,66,804.55" in page.locator(".cf-freeze").inner_text()
     assert "All 1,073 suspect accounts are connected" in page.locator(".cf-notes").inner_text()
@@ -268,7 +274,8 @@ def test_dashboard_first_view_shows_where_the_money_went(page, base):
     assert box["y"] + box["height"] <= 900            # the whole panel is in the first view
     acts = page.locator(".cf-acts li")
     assert acts.count() == 3, acts.all_inner_texts()
-    assert "Freeze" in acts.nth(0).inner_text() and "notices" in acts.nth(1).inner_text() and "Club" in acts.nth(2).inner_text()
+    assert ("Freeze" in acts.nth(0).inner_text() and "notices" in acts.nth(1).inner_text()
+            and "Club" in acts.nth(2).inner_text())
     page.locator(".cf-st.l2").click()
     page.get_by_role("heading", name="Suspect Accounts").wait_for()
     assert "role=L2" in page.url
@@ -294,7 +301,8 @@ def test_dashboard_upload_analyses_a_file_and_switches_the_dataset(page, base):
     Dashboard's dataset switcher brings the official data back."""
     _open_upload(page, base)
     small = b"".join(SAMPLE_PATH.read_bytes().splitlines(keepends=True)[:2001])
-    page.locator("input[type=file]").set_input_files({"name": "small_case.csv", "mimeType": "text/csv", "buffer": small})
+    page.locator("input[type=file]").set_input_files({"name": "small_case.csv", "mimeType": "text/csv",
+                                                      "buffer": small})
     page.get_by_text("Analysis complete").wait_for(timeout=60_000)
     assert page.locator(".stages li.done").count() == 9
     page.get_by_role("button", name="Open this case").click()
@@ -305,20 +313,23 @@ def test_dashboard_upload_analyses_a_file_and_switches_the_dataset(page, base):
 
 def test_dashboard_upload_rejects_a_file_without_the_columns(page, base):
     _open_upload(page, base)
-    page.locator("input[type=file]").set_input_files({"name": "wrong.csv", "mimeType": "text/csv", "buffer": b"a,b\n1,2\n"})
+    page.locator("input[type=file]").set_input_files({"name": "wrong.csv", "mimeType": "text/csv",
+                                                      "buffer": b"a,b\n1,2\n"})
     page.get_by_text("missing column(s)").wait_for()
 
 
 def test_ring_isolates_one_trail_with_victim_switch_and_globe(page, base):
     """Expected: the network opens on the money flow around the chosen account, fitted to its panel; Trail shows one
-    victim's trail through it, laid out like the trace (victim, collector, distributors, cash-out), not the whole network; the account is marked; every victim whose money reached
-    it can be chosen; pointing at an account shows what it received and still holds; Go here moves the journey; the
-    Globe is a toggle away and back."""
+    victim's trail through it, laid out like the trace (victim, collector, distributors, cash-out), not the whole
+    network; the account is marked; every victim whose money reached it can be chosen; pointing at an account shows
+    what it received and still holds; Go here moves the journey; the Globe is a toggle away and back."""
     page.goto(f"{base}/#ring={L1}")
     page.get_by_text("1,373 accounts").wait_for(timeout=20_000)
     page.locator(f".netflow .tbox.center[data-acct={L1}]").wait_for(timeout=20_000)        # Money flow is the default
-    assert page.locator("[data-testid=ring-globe]").count() == 0 and page.get_by_role("button", name="Columns").count() == 0
-    fit = page.evaluate("(() => { const e = document.querySelector('.netflow'); return e.scrollWidth <= e.clientWidth + 1 && e.scrollHeight <= e.clientHeight + 1 })()")
+    assert page.locator("[data-testid=ring-globe]").count() == 0
+    assert page.get_by_role("button", name="Columns").count() == 0
+    fit = page.evaluate("(() => { const e = document.querySelector('.netflow');"
+                        " return e.scrollWidth <= e.clientWidth + 1 && e.scrollHeight <= e.clientHeight + 1 })()")
     assert fit, "the money flow must fit its panel without scrolling"
     page.locator(".netflow .tbox[data-role=L2]").first.hover()
     assert "Received in this network" in page.locator(".netflow .ttip").inner_text()
@@ -448,7 +459,8 @@ def test_fir_draft_and_complete_case_file(page, base):
     """Expected: the documents dialog adds an FIR draft (Section 173 BNSS) tab and a complete case file download."""
     _generate(page, base, use_llm=False)
     page.get_by_role("tab", name="FIR draft").click()
-    page.wait_for_function("(document.querySelector('.paper iframe') || {}).src && document.querySelector('.paper iframe').src.includes('fir.html')")
+    page.wait_for_function("(document.querySelector('.paper iframe') || {}).src"
+                           " && document.querySelector('.paper iframe').src.includes('fir.html')")
     href = page.get_by_role("link", name="Complete case file (ZIP)").get_attribute("href")
     assert href.endswith("/case_file.zip")
 
@@ -478,7 +490,8 @@ def test_freeze_notices_are_assigned_to_banks_and_export_in_a_batch(page, base):
     picks = page.locator(".fz-banks li")
     picks.first.wait_for()
     assert picks.count() >= 2                                       # "All notices" + one per bank
-    assert page.get_by_role("link", name="Download the notice to ICICI Bank").get_attribute("download").startswith("freeze_notice_ICIC_")
+    icici = page.get_by_role("link", name="Download the notice to ICICI Bank")
+    assert icici.get_attribute("download").startswith("freeze_notice_ICIC_")
     with page.expect_download() as dl:
         page.get_by_role("link", name="Download all notices (ZIP)").click()
     import zipfile
@@ -501,5 +514,6 @@ def test_laptop_at_100_percent_first_views_fit(page, base):
     assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")
     page.goto(f"{base}/#ring={L1}")
     page.locator(".netflow .tbox.center").wait_for(timeout=30_000)
-    assert page.evaluate("(() => { const e = document.querySelector('.netflow'); return e.scrollWidth <= e.clientWidth + 1 && e.scrollHeight <= e.clientHeight + 1 })()")
+    assert page.evaluate("(() => { const e = document.querySelector('.netflow');"
+                         " return e.scrollWidth <= e.clientWidth + 1 && e.scrollHeight <= e.clientHeight + 1 })()")
     assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")

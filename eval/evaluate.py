@@ -108,7 +108,8 @@ def evaluate(db: Path, truth_path: Path) -> tuple[str, dict]:
         "",
         f"- Lowest-scoring mule: {min_mule[1]} at {min_mule[0]}. Highest-scoring other (non-mule, non-victim) account: "
         f"{max_bg[1]} at {max_bg[0]}. **Score gap: {min_mule[0] - max_bg[0]} points.**",
-        f"- Victims by band: {bands_victims} (victims are not mules; they score MEDIUM because their money went to suspects).",
+        f"- Victims by band: {bands_victims} (victims are not mules; they score MEDIUM because their money went "
+        "to suspects).",
         f"- Statement says 1,500 mules; this file contains {len(mules):,}. If the jury scores against 1,500, maximum "
         f"achievable recall is {len(mules) / STATEMENT_MULTS:.3f}. We do not pad the list.",
         "",
@@ -117,7 +118,8 @@ def evaluate(db: Path, truth_path: Path) -> tuple[str, dict]:
         "",
         "| Half | Precision | Recall | TP | FP | FN |",
         "|---|---|---|---|---|---|",
-        *[f"| {h} | {x['precision']:.4f} | {x['recall']:.4f} | {x['tp']} | {x['fp']} | {x['fn']} |" for h, x in halves.items()],
+        *[f"| {h} | {x['precision']:.4f} | {x['recall']:.4f} | {x['tp']} | {x['fp']} | {x['fn']} |"
+          for h, x in halves.items()],
         "",
         "### Threshold sweep",
         "| Threshold | Flagged | Precision | Recall | F1 |",
@@ -136,7 +138,7 @@ def evaluate(db: Path, truth_path: Path) -> tuple[str, dict]:
         *([f"- {a}: {score[a]} ({info[a][3]})" for a in fns] or ["- none"]),
         "",
         "## 2. Blind-victim simulation (jury criterion: 40%)",
-        f"Every victim traced with `Engine.trace`; layers and transactions compared with the ground truth.",
+        "Every victim traced with `Engine.trace`; layers and transactions compared with the ground truth.",
         "",
         f"- Exact match (same L1, L2, L3 accounts and the same transactions): **{exact} / {len(gt['victims'])}**",
         "- Mean Jaccard overlap with the true layer: " + ", ".join(

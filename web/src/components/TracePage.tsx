@@ -24,7 +24,7 @@ export function TracePage({ account, seeds, reasons }: Props) {
   const [trace, setTrace] = useState<TraceResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [near, setNear] = useState<string[]>([])
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(Boolean(account))
   const [wallMs, setWallMs] = useState(0)
   const [hops, setHops] = useState(4)
   const [input, setInput] = useState(account ?? '')
@@ -41,11 +41,18 @@ export function TracePage({ account, seeds, reasons }: Props) {
       if (!account && v[0]) window.location.replace(`#trace=${v[0].account}`)   // open on the largest loss
     }).catch(() => setVictims([]))
   }, [account])
-  useEffect(() => setInput(account ?? ''), [account])
+  // a new request (account, chosen payments or depth) clears the previous result's details while it loads
+  const [asked, setAsked] = useState({ account, seeds, hops })
+  if (asked.account !== account || asked.seeds !== seeds || asked.hops !== hops) {
+    if (asked.account !== account) setInput(account ?? '')
+    setAsked({ account, seeds, hops })
+    setErr(null)
+    if (account) { setBusy(true); setNear([]); setSelected(null); setRows(new Map()) }
+    else setTrace(null)
+  }
   useEffect(() => {
-    if (!account) { setTrace(null); setErr(null); return }
+    if (!account) return
     let live = true
-    setBusy(true); setErr(null); setNear([]); setSelected(null); setRows(new Map())
     const t0 = performance.now()
     api.trace(account, seeds, hops).then((t) => {
       if (!live) return

@@ -16,7 +16,7 @@ const BANK: Record<string, { short: string; name: string }> = {
   AIRP: { short: 'Airtel', name: 'Airtel Payments Bank' },
 }
 
-export const bankOf = (prefixOrAccount: string) => prefixOrAccount.slice(0, 4).toUpperCase()
+const bankOf = (prefixOrAccount: string) => prefixOrAccount.slice(0, 4).toUpperCase()
 
 /** The bank's logo; with `label`, its short name beside it. */
 export function BankIcon({ bank, size = 'md', label = false }: { bank: string; size?: 'sm' | 'md'; label?: boolean }) {

@@ -1,5 +1,5 @@
 import { CaretLeft, CaretRight, Pause, Play } from '@phosphor-icons/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { fromEpoch, tPlus } from '../format'
 import { nextTime } from '../trail'
 
@@ -41,23 +41,23 @@ export function Timeline({ times, value, onChange, t0, fullRange, label = 'Show 
   }, [spanS, times.length, options])
   const [speed, setSpeed] = useState(auto)
   const [rate, setRate] = useState(1)
-  useEffect(() => setSpeed(auto), [auto])
+  const [autoWas, setAutoWas] = useState(auto)
+  if (auto !== autoWas) { setAutoWas(auto); setSpeed(auto) }      // a new span picks its own default step
   const lo = whole && fullRange ? fullRange[0] : first
   // whole-minute steps from lo; round the end UP so the last position includes the last transfer
   const hi = lo + Math.max(60, Math.ceil(((whole && fullRange ? fullRange[1] : last) - lo) / 60) * 60)
   const v = Math.min(Math.max(value, lo), hi)
-  const val = useRef(value)
-  val.current = value
+  const tick = useEffectEvent(() => {                // reads the latest cursor and step without restarting the timer
+    const next = speed === EVENT ? (nextTime(times, value, 1) ?? hi) : Math.min(hi, value + 60 * speed)
+    onChange(next)
+    if (next >= hi) setPlaying(false)
+  })
 
   useEffect(() => {
     if (!playing) return
-    const id = window.setInterval(() => {
-      const next = speed === EVENT ? (nextTime(times, val.current, 1) ?? hi) : Math.min(hi, val.current + 60 * speed)
-      onChange(next)
-      if (next >= hi) setPlaying(false)
-    }, TICK_MS / rate)
+    const id = window.setInterval(tick, TICK_MS / rate)
     return () => window.clearInterval(id)
-  }, [playing, speed, rate, hi, onChange, times])
+  }, [playing, rate])
 
   const shown = useMemo(() => {       // binary search: times are sorted
     let lo = 0, hi = times.length

@@ -77,12 +77,16 @@ class Gen:
             t = T0 + r.randrange(SPAN)
             kind = r.random()
             if kind < 0.55:
-                d, narr, amt = r.choice(merchants), r.choice(("UPI/Grocery/Store", "UPI/Swiggy/Food", "UPI/Merchant/QR",
-                                                              "UPI/AmazonPay/Shop", "UPI/PetrolPump/Fuel")), r.randint(50, 5000)
+                d, narr, amt = (r.choice(merchants),
+                                r.choice(("UPI/Grocery/Store", "UPI/Swiggy/Food", "UPI/Merchant/QR",
+                                          "UPI/AmazonPay/Shop", "UPI/PetrolPump/Fuel")),
+                                r.randint(50, 5000))
             elif kind < 0.75:
-                d, narr, amt = r.choice(people), r.choice(("IMPS/FriendSplit", "IMPS/Family/Transfer")), r.randint(100, 25000)
+                d, narr, amt = (r.choice(people), r.choice(("IMPS/FriendSplit", "IMPS/Family/Transfer")),
+                                r.randint(100, 25000))
             elif kind < 0.90:
-                d, narr, amt = r.choice(merchants), r.choice(("UPI/Bill/Electricity", "UPI/Recharge/Mobile")), r.randint(150, 4000)
+                d, narr, amt = (r.choice(merchants), r.choice(("UPI/Bill/Electricity", "UPI/Recharge/Mobile")),
+                                r.randint(150, 4000))
             elif kind < 0.97:
                 d, narr, amt = r.choice(people), "NEFT/RentPayment", r.randint(8000, 45000)
             else:
@@ -137,8 +141,8 @@ class Gen:
             c1 = r.uniform(0.0, 0.08) if hard else 0.02
             k = r.randint(3, 7)
             cuts = sorted(r.random() for _ in range(k - 1))
-            parts = [b - a for a, b in zip([0.0] + cuts, cuts + [1.0])]
-            for share, l2 in zip(parts, r.sample(L2, k)):
+            parts = [b - a for a, b in zip([0.0] + cuts, cuts + [1.0], strict=True)]
+            for share, l2 in zip(parts, r.sample(L2, k), strict=True):
                 late = hard and r.random() < 0.2
                 t1 = t0 + (r.randint(901, 2400) if late else r.randint(180, 900))
                 amt1 = loss * (1 - c1) * share
@@ -157,8 +161,8 @@ class Gen:
                 c2 = r.uniform(0.0, 0.08) if hard else 0.04
                 l3 = r.choice(L3)
                 cash = amt * (1 - c2)
-                narr = r.choices(("UPI/WALLET_LOAD/TOPUP", "CRYPTO-P2P/USDT", "WALLET TOPUP/PAYOUT", "P2P CRYPTO SETTLE",
-                                  "USDT/P2P/EXCHANGE"), (3, 2, 2, 2, 1 if hard else 0))[0]
+                narr = r.choices(("UPI/WALLET_LOAD/TOPUP", "CRYPTO-P2P/USDT", "WALLET TOPUP/PAYOUT",
+                                  "P2P CRYPTO SETTLE", "USDT/P2P/EXCHANGE"), (3, 2, 2, 2, 1 if hard else 0))[0]
                 odd = hard and r.random() < 0.3
                 t_cash = t + (r.randint(120, 3600) if hard else r.randint(120, 1800))
                 idxs.add(self.add(holder, l3, cash, t_cash, f"{narr}#{self.n()}", not odd, not odd))
@@ -177,7 +181,7 @@ class Gen:
             for _ in range(self.r.randint(2, 3)):
                 t = T0 + self.r.randrange(SPAN - 86_400)
                 amt = self.r.randint(40_000, 95_000) * 100
-                for a, b in zip(ring, ring[1:] + ring[:1]):
+                for a, b in zip(ring, ring[1:] + ring[:1], strict=True):
                     t += self.r.randint(1800, 5 * 3600)
                     amt *= self.r.uniform(0.95, 1.0)
                     self.add(a, b, amt, t, f"IMPS/P2A/TRANSFER#{self.n()}")

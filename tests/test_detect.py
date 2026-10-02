@@ -1,5 +1,4 @@
 import re
-from pathlib import Path
 
 import pytest
 
@@ -20,7 +19,7 @@ def feats(e, account: str) -> dict:
     cols = [c[0] for c in cur.execute("SELECT * FROM features LIMIT 0").description]
     r = cur.execute("SELECT f.* FROM features f JOIN account a USING (acct_id) WHERE a.account = ?",
                     [account]).fetchone()
-    return dict(zip(cols, r))
+    return dict(zip(cols, r, strict=True))
 
 
 def risk(e, account: str):
@@ -130,7 +129,8 @@ def test_no_generator_knowledge_in_engine():
 
 def test_cashout_sent_from_script_device_is_flagged(tmp_path):
     e = make_engine(tmp_path, [
-        row(1, "AXIS10000004", "PUNB10000007", "980.00", at(0), "UPI/WALLET_LOAD/X_1", "UPI", "103.1.1.1", "Linux_Script"),
+        row(1, "AXIS10000004", "PUNB10000007", "980.00", at(0), "UPI/WALLET_LOAD/X_1", "UPI", "103.1.1.1",
+            "Linux_Script"),
         row(2, "AXIS10000004", "PUNB10000008", "120.00", at(9000), "UPI/Grocery/Store#1", "UPI"),
         row(3, "AXIS10000004", "PUNB10000009", "120.00", at(19000), "UPI/Grocery/Store#2", "UPI"),
     ], detect=True)
@@ -141,7 +141,7 @@ def test_repeated_ring_is_smurfing_but_one_off_loops_are_not(tmp_path):
     ring = ["SBIN10000001", "HDFC10000002", "ICIC10000003"]
     rows, i = [], 0
     for day in (16, 19):                                   # the same ring twice -> smurfing
-        for h, (a, b) in enumerate(zip(ring, ring[1:] + ring[:1])):
+        for h, (a, b) in enumerate(zip(ring, ring[1:] + ring[:1], strict=True)):
             i += 1
             rows.append(row(i, a, b, f"{50000 - 500 * h}.00", f"2026-09-{day} {10 + 2 * h:02d}:00:00"))
     for day, other in ((17, "AXIS10000004"), (21, "PUNB10000005")):   # a busy account: two DIFFERENT loops
@@ -158,8 +158,10 @@ def test_repeated_ring_is_smurfing_but_one_off_loops_are_not(tmp_path):
 def test_two_account_back_and_forth_is_not_smurfing(tmp_path):
     rows = []
     for i, day in enumerate(range(16, 28, 2)):        # a couple moving the same money back and forth
-        rows.append(row(2 * i, "SBIN10000001", "HDFC10000002", "20000.00", f"2026-09-{day} 09:00:00", "UPI/Family/1", "UPI"))
-        rows.append(row(2 * i + 1, "HDFC10000002", "SBIN10000001", "19800.00", f"2026-09-{day} 13:00:00", "UPI/Family/2", "UPI"))
+        rows.append(row(2 * i, "SBIN10000001", "HDFC10000002", "20000.00", f"2026-09-{day} 09:00:00",
+                        "UPI/Family/1", "UPI"))
+        rows.append(row(2 * i + 1, "HDFC10000002", "SBIN10000001", "19800.00", f"2026-09-{day} 13:00:00",
+                        "UPI/Family/2", "UPI"))
     e = make_engine(tmp_path, rows, detect=True)
     for a in ("SBIN10000001", "HDFC10000002"):
         assert feats(e, a)["ring_cycles"] == 0 and risk(e, a).band == "LOW"
@@ -178,8 +180,9 @@ def test_one_off_anomalous_cashout_is_not_enough(tmp_path):
 
 
 def test_collector_drained_at_once_is_flagged(tmp_path):
-    rows = [row(i, f"SBIN1000{i:04d}", "HDFC10000077", "5000.00", at(300 * i)) for i in range(1, 7)]   # 6 senders, 30 min
-    rows.append(row(50, "HDFC10000077", "ICIC10000088", "29500.00", at(300 * 6 + 240)))               # emptied 4 min later
+    rows = [row(i, f"SBIN1000{i:04d}", "HDFC10000077", "5000.00", at(300 * i))
+            for i in range(1, 7)]                                                         # 6 senders, 30 min
+    rows.append(row(50, "HDFC10000077", "ICIC10000088", "29500.00", at(300 * 6 + 240)))   # emptied 4 min later
     e = make_engine(tmp_path, rows, detect=True)
     f = feats(e, "HDFC10000077")
     assert f["fanin_drains"] == 1

@@ -1,28 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { inr, inrShort } from '../format'
-import type { ringIndex } from '../ringJourney'
+import { victimsReaching, type ringIndex } from '../ringJourney'
 import type { TraceResult } from '../types'
 import { TrailTree } from './trace/TrailTree'
 
 type Ix = ReturnType<typeof ringIndex>
-interface Candidate { account: string; amount: number }
-
-/** Victims whose money can reach `acct` inside the network (walking payers back up to five steps), largest payment
- *  into the network first. A victim account is its own only candidate. */
-export function victimsReaching(ix: Ix, acct: string): Candidate[] {
-  if (ix.role.get(acct)?.role === 'VICTIM') return [{ account: acct, amount: (ix.out.get(acct) ?? []).reduce((s, e) => s + e.total_paise, 0) }]
-  const seen = new Set([acct])
-  let front = [acct]
-  for (let step = 0; step < 5 && front.length; step++) {
-    const next: string[] = []
-    for (const v of front) for (const e of ix.inn.get(v) ?? []) if (!seen.has(e.src)) { seen.add(e.src); next.push(e.src) }
-    front = next
-  }
-  return [...seen].filter((a) => ix.role.get(a)?.role === 'VICTIM')
-    .map((a) => ({ account: a, amount: (ix.out.get(a) ?? []).reduce((s, e) => s + e.total_paise, 0) }))
-    .sort((a, b) => b.amount - a.amount || a.account.localeCompare(b.account))
-}
 
 /** One victim's money trail through the isolated account, laid out like the trace screen (victim, collector,
  *  distributors, cash-out). The network's other victims are one choice away; the whole network is the Globe view. */
@@ -31,14 +14,16 @@ export function RingTrail({ ix, seed, mark, cursor, onSelect }: {
 }) {
   const victims = useMemo(() => victimsReaching(ix, seed), [ix, seed])
   const [victim, setVictim] = useState<string | null>(victims[0]?.account ?? null)
-  const [trace, setTrace] = useState<TraceResult | null>(null)
-  const [err, setErr] = useState<string | null>(null)
-  useEffect(() => { setVictim(victims[0]?.account ?? null) }, [victims])
+  const [victimsWas, setVictimsWas] = useState(victims)
+  if (victims !== victimsWas) { setVictimsWas(victims); setVictim(victims[0]?.account ?? null) }   // another account: its largest victim
+  // the latest trace result, tagged with its victim so a result for another victim never shows
+  const [result, setResult] = useState<{ victim: string; trace: TraceResult | null; err: string | null } | null>(null)
+  const { trace = null, err = null } = result?.victim === victim ? result : {}
   useEffect(() => {
     if (!victim) return
     let live = true
-    setTrace(null); setErr(null)
-    api.trace(victim).then((t) => live && setTrace(t)).catch((e) => live && setErr(String(e.message ?? e)))
+    api.trace(victim).then((t) => live && setResult({ victim, trace: t, err: null }))
+      .catch((e) => live && setResult({ victim, trace: null, err: String(e.message ?? e) }))
     return () => { live = false }
   }, [victim])
 

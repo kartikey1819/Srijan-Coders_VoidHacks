@@ -70,11 +70,13 @@ def main() -> None:
         f"({_processor(narrator.OLLAMA_URL, a.model)}) on {platform.processor() or platform.machine()}, "
         "temperature 0, bounded JSON schema output. The model writes summary, modus operandi and recommendation; "
         "layer and holding paragraphs come from templates.", "",
-        f"- Accepted by the validator: **{ok_n} / {len(rows)}** victims (the rest use the template narrative; facts are identical either way)",
+        f"- Accepted by the validator: **{ok_n} / {len(rows)}** victims "
+        "(the rest use the template narrative; facts are identical either way)",
         f"- First call (model load included): {rows[0][2]:.1f} s",
         f"- Later calls: median {warm[len(warm) // 2]:.1f} s, max {warm[-1]:.1f} s", "",
         "| Victim | Result | Seconds | Note |", "|---|---|---|---|",
-        *[f"| {v} | {'accepted' if ok else 'template fallback'} | {dt:.1f} | {reason or ''} |" for v, ok, dt, reason, _ in rows],
+        *[f"| {v} | {'accepted' if ok else 'template fallback'} | {dt:.1f} | {reason or ''} |"
+          for v, ok, dt, reason, _ in rows],
         "",
     ]
     if sample:

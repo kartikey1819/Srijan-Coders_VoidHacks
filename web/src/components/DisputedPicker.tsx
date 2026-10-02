@@ -12,8 +12,9 @@ export function DisputedPicker({ victim, seeds, auto = null, onApply }: Props) {
   const [rows, setRows] = useState<TxnRow[] | null>(null)
   const [pick, setPick] = useState<Set<number>>(new Set(seeds ?? []))
   const [err, setErr] = useState<string | null>(null)
+  const [seedsWas, setSeedsWas] = useState(seeds)
+  if (seeds !== seedsWas) { setSeedsWas(seeds); setPick(new Set(seeds ?? [])) }   // a new choice from the route resets the ticks
 
-  useEffect(() => { setPick(new Set(seeds ?? [])) }, [seeds])
   useEffect(() => {
     if (!open || rows) return
     api.txns(victim, 1000).then((t) => setRows(t.filter((x) => x.sender === victim)))

@@ -34,7 +34,8 @@ class DetectParams(BaseModel):
     floor_fanout: int = 60
     floor_term_in_anom: int = 70    # receives mainly cash-out transfers sent from script devices / foreign proxies
     floor_term_out_anom: int = 70   # sends mainly cash-out transfers from script devices / foreign proxies
-    anom_cashout_min_share: float = 0.5   # "mainly": share of the account's money in / out (one-off events do not count)
+    anom_cashout_min_share: float = 0.5   # "mainly": share of the account's money in / out
+                                          # (one-off events do not count)
     floor_fanin_drain: int = 70     # collector: many senders within an hour, then emptied within 15 minutes ...
     drain_min_share: float = 0.5    # ... for at least half of all the money it received (not a one-off coincidence)
     floor_term_linked: int = 70     # cash-out channel + at least half its money from/to suspects

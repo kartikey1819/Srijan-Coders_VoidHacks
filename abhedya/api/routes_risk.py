@@ -21,7 +21,7 @@ def _guard(fn):
     try:
         return fn()
     except duckdb.CatalogException:
-        raise HTTPException(status_code=503, detail=_NO_RISK)
+        raise HTTPException(status_code=503, detail=_NO_RISK) from None
 
 
 @router.get("/risk/top", response_model=list[RiskRow])
@@ -48,7 +48,8 @@ def _overview(cur) -> Overview:
     by_role = [CountRow(key=k or "none", label=roles.get(k, "No layer hint"), count=n) for k, n in cur.execute(
         "SELECT role_hint, count(*) FROM risk WHERE band = 'HIGH' GROUP BY 1 ORDER BY 1 NULLS LAST").fetchall()]
     by_bank = [CountRow(key=k, label=bank_name(k), count=n) for k, n in cur.execute(
-        "SELECT substr(account, 1, 4), count(*) FROM risk WHERE band = 'HIGH' GROUP BY 1 ORDER BY 2 DESC, 1").fetchall()]
+        "SELECT substr(account, 1, 4), count(*) FROM risk WHERE band = 'HIGH' GROUP BY 1 ORDER BY 2 DESC, 1"
+    ).fetchall()]
     reasons = [CountRow(key=k, label=detect.REASON_LABELS.get(k, k), count=n) for k, n in cur.execute(
         """SELECT split_part(r, ':', 1), count(*) FROM (SELECT unnest(reasons) AS r FROM risk WHERE band = 'HIGH')
            GROUP BY 1 ORDER BY 2 DESC, 1""").fetchall()]

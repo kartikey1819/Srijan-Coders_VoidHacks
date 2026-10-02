@@ -1,4 +1,4 @@
-# Abhedya-Chakra: shared context for Claude Code
+# Abhedya-Chakra: contributor guide
 
 Offline money-mule investigation workstation for Void Hacks 8.0. Stack: Python 3.12, DuckDB, NumPy and FastAPI; React (SVG views, optional 3D globe) in `web/`.
 Read `plan/00_OVERVIEW.md` (the contracts) and `DATA_HANDLING.md` before coding. A's progress is tracked in `A_TASKLIST.md`.
@@ -28,6 +28,8 @@ Files marked `STUB` were created by A only so imports work; their owner replaces
 - `python -m abhedya ingest --data data/VoidHacks8_MuleAccount_2M_Transactions.csv` (put the CSV in `data/`; it's gitignored)
 - `python -m abhedya serve`, then open http://127.0.0.1:8000 (API under `/api`)
 - `pytest`: tests run on the committed `data/sample.csv`
+- Lint: `ruff check $(git ls-files '*.py')` (config in `pyproject.toml`); web: `cd web && npm run lint` (oxlint) and `npx tsc -b`.
+  CI (`.github/workflows/ci.yml`) runs lint, tests, type check and the web build on every push.
 - Web (dev): `cd web && npm install && npm run dev` (proxy `/api` → 127.0.0.1:8000)
 - Web (demo): `cd web && npm run build`, then `python -m abhedya serve` serves the UI at http://127.0.0.1:8000
 - Optional AI narrative: install Ollama, `ollama pull qwen2.5:3b` (override with env `ABHEDYA_LLM_MODEL`). Without it, documents use the template narrative.

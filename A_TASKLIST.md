@@ -8,7 +8,7 @@ Updated as work proceeds. Brief: `plan/A_ENGINE.md`. B and C work in their own r
 - âœ… A0.2 `contracts/models.py` + fixture (now **real engine output** for KKBK10000000)
 - âœ… A0.3 Stubs for B (`detect/`, `routes_risk.py`) and C (`routes_docs.py`, `ai/narrator.py`)
 - âœ… A0.4 `data/sample.csv`: 50,000 rows incl. all 2,954 chain rows
-- âœ… A0.5 `CLAUDE.md`, plan files, `DATA_HANDLING.md` (dup-ID count corrected)
+- âœ… A0.5 `CONTRIBUTING.md`, plan files, `DATA_HANDLING.md` (dup-ID count corrected)
 - âœ… A0.6 Pushed to `kizz-code/Srijan-coders` (`main`)
 
 ## M1: Engine core âœ…
@@ -45,7 +45,7 @@ Tests: **38 passing** (`pytest`, runs on the committed sample). Latest full benc
   3. `amount_match` = one outflow carries â‰¥ 90% of an inflow's *original* amount (the statement's pass-through), not of a residue.
 - **Performance:** busiest-account trace went 1.99 s â†’ 0.44 s.
   - The lot-priority logic is now lazy.
-  - DuckDB list-parameter binding (1.1 s for 1,174 IDs) was replaced with inline integer lists (10 ms). Noted in `CLAUDE.md` so B and C avoid the same trap.
+  - DuckDB list-parameter binding (1.1 s for 1,174 IDs) was replaced with inline integer lists (10 ms). Noted in `CONTRIBUTING.md` so B and C avoid the same trap.
 - Attribution order: window-first and amount-first both give 300/300; window-first kept (the statement's 3â€“15 min rule).
 
 ## B: Detection, risk, evaluation (taken over here; brief: `plan/B_DETECTION.md`)

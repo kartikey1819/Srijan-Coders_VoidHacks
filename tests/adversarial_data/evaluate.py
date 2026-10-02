@@ -34,8 +34,9 @@ def run_world(seed: int, size: str, vocab: str, work: Path) -> dict:
     con = duckdb.connect(str(db), read_only=True)
     risk = {a: (s, b, r) for a, s, b, r in con.execute("SELECT account, score, band, role_hint FROM risk").fetchall()}
     con.close()
-    res: dict = {"seed": seed, "size": size, "vocab": vocab, "rows": info["rows"], "pipeline_s": round(t_pipeline, 2),
-                 "tiers": defaultdict(lambda: [0, 0]), "families": defaultdict(lambda: [0, 0]), "fp": [], "problems": []}
+    res: dict = {"seed": seed, "size": size, "vocab": vocab, "rows": info["rows"],
+                 "pipeline_s": round(t_pipeline, 2), "tiers": defaultdict(lambda: [0, 0]),
+                 "families": defaultdict(lambda: [0, 0]), "fp": [], "problems": []}
     for a, lab in truth["accounts"].items():
         score, band, _ = risk.get(a, (None, None, None))
         if score is None:
@@ -96,22 +97,26 @@ def summarize(results: list[dict]) -> str:
          "| Tier | Flagged HIGH | Meaning |", "|---|---|---|",
          f"| MUST_FLAG | {rate(*tiers['MUST_FLAG'])} | mules showing ≥ 2 statement indicators: higher is better |",
          f"| SHOULD_FLAG | {rate(*tiers['SHOULD_FLAG'])} | mules showing 1 indicator |",
-         f"| EXPECTED_MISS | {rate(*tiers['EXPECTED_MISS'])} | mules showing none (cannot be found from the statement's signals) |",
-         f"| MUST_NOT_FLAG | {rate(*tiers['MUST_NOT_FLAG'])} | legitimate accounts: **false positives**, lower is better |",
+         f"| EXPECTED_MISS | {rate(*tiers['EXPECTED_MISS'])} | "
+         "mules showing none (cannot be found from the statement's signals) |",
+         f"| MUST_NOT_FLAG | {rate(*tiers['MUST_NOT_FLAG'])} | "
+         "legitimate accounts: **false positives**, lower is better |",
          f"| AMBIGUOUS | {rate(*tiers['AMBIGUOUS'])} | legitimate accounts showing ≥ 2 statement indicators |", "",
          "| Family | Flagged HIGH |", "|---|---|",
          *[f"| {k} | {rate(a, b)} |" for k, (a, b) in sorted(fams.items())], "",
          f"False positives by family: {dict(fps) or 'none'}", "",
          "Victim traces (from the disputed transfer): " + "; ".join(
-             f"seed {r['seed']}: L1 {r['trace']['l1_found']}/{r['trace']['victims']}, recall {r['trace']['recall_mean']}, "
-             f"precision {r['trace']['precision_mean']}" for r in results[:5]) + (" …" if len(results) > 5 else ""),
+             f"seed {r['seed']}: L1 {r['trace']['l1_found']}/{r['trace']['victims']}, "
+             f"recall {r['trace']['recall_mean']}, precision {r['trace']['precision_mean']}"
+             for r in results[:5]) + (" …" if len(results) > 5 else ""),
          f"Mean trace recall {st.mean(r['trace']['recall_mean'] for r in results):.3f}, mean precision "
          f"{st.mean(r['trace']['precision_mean'] for r in results):.3f}, L1 found "
          f"{sum(r['trace']['l1_found'] for r in results)}/{sum(r['trace']['victims'] for r in results)}, "
          f"slowest trace {max(r['trace']['max_ms'] for r in results)} ms.",
          f"Pipeline time per world: median {st.median(r['pipeline_s'] for r in results):.1f} s, max "
          f"{max(r['pipeline_s'] for r in results):.1f} s.", "",
-         f"Invariant problems: {len(problems)}" + ("" if not problems else "\n" + "\n".join(f"- {p}" for p in problems[:20]))]
+         f"Invariant problems: {len(problems)}"
+         + ("" if not problems else "\n" + "\n".join(f"- {p}" for p in problems[:20]))]
     return "\n".join(L)
 
 
@@ -131,8 +136,8 @@ def main() -> None:
     for s in seeds:
         r = run_world(s, a.size, a.vocab, work)
         print(f"seed {s}: rows {r['rows']}, pipeline {r['pipeline_s']} s, tiers "
-              f"{ {k: f'{x}/{y}' for k, (x, y) in r['tiers'].items()} }, FP {len(r['fp'])}, problems {len(r['problems'])}",
-              flush=True)
+              f"{ {k: f'{x}/{y}' for k, (x, y) in r['tiers'].items()} }, "
+              f"FP {len(r['fp'])}, problems {len(r['problems'])}", flush=True)
         results.append(r)
     text = summarize(results)
     print(text)

@@ -1,19 +1,6 @@
 import { scaleBand, scaleLinear } from 'd3-scale'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-
-/** Width of an element, tracked (charts redraw to their container). */
-export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
-  const ref = useRef<T>(null)
-  const [w, setW] = useState(0)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const ro = new ResizeObserver(([e]) => setW(Math.floor(e.contentRect.width)))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  return [ref, w]
-}
+import { useState, type ReactNode } from 'react'
+import { useWidth } from './useWidth'
 
 interface TipState { x: number; y: number; body: ReactNode }
 

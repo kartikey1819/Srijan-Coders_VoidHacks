@@ -85,7 +85,8 @@ def run_ingest(csv_path: Path, db_path: Path = config.DB_PATH, run_detect: bool 
     con.executemany("INSERT INTO meta VALUES (?, ?)", [
         ("input_sha256", sha), ("input_file", csv_path.name), ("rows", str(raw["rows"])),
         ("accounts", str(n_acct)), ("timings_s", orjson.dumps(timings).decode()),
-        ("ingest_total_s", str(ingest_total)), ("cache_dir", str(cache_dir_for(db_path, sha))), ("input_path", str(csv_path)),
+        ("ingest_total_s", str(ingest_total)), ("cache_dir", str(cache_dir_for(db_path, sha))),
+        ("input_path", str(csv_path)),
     ])
     con.execute("CHECKPOINT")
     con.close()

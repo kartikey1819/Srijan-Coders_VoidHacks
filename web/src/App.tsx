@@ -1,5 +1,5 @@
 import { CaretDoubleLeft, CaretDoubleRight, ChartBar, Graph, MagnifyingGlass, Moon, Path, ShieldStar, Sun, UserFocus } from '@phosphor-icons/react'
-import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { api } from './api'
 import { FlaggedTable } from './components/FlaggedTable'
 import { MultiTrace } from './components/MultiTrace'
@@ -7,7 +7,7 @@ import { NetworkStart } from './components/NetworkStart'
 import { Overview } from './components/Overview'
 import { TracePage } from './components/TracePage'
 import { useTheme } from './look'
-import { useRoute, type Route } from './route'
+import { go, useRoute, type Route } from './route'
 import type { DatasetInfo, DQSummary } from './types'
 
 const RingView = lazy(() => import('./components/RingView').then((m) => ({ default: m.RingView })))
@@ -28,10 +28,11 @@ export default function App() {
   const [down, setDown] = useState(false)
   const [reasons, setReasons] = useState<Record<string, string>>({})
   const [sets, setSets] = useState<DatasetInfo[]>([])
-  const lastTrace = useRef<string | null>(null)
-  const lastRing = useRef<string | null>(null)
-  if (route.name === 'investigate' && route.account) lastTrace.current = route.account
-  if (route.name === 'ring' && route.account) lastRing.current = route.account
+  // The sidebar links reopen the last traced / last viewed account; remembered while rendering a new route.
+  const [lastTrace, setLastTrace] = useState<string | null>(null)
+  const [lastRing, setLastRing] = useState<string | null>(null)
+  if (route.name === 'investigate' && route.account && route.account !== lastTrace) setLastTrace(route.account)
+  if (route.name === 'ring' && route.account && route.account !== lastRing) setLastRing(route.account)
 
   useEffect(() => {
     api.stats().then(setStats).catch(() => setDown(true))
@@ -50,8 +51,8 @@ export default function App() {
 
   const switchTo = (id: string) => api.activate(id).then(() => { window.location.hash = '#overview'; window.location.reload() })
   const active = sets.find((d) => d.active)
-  const hrefOf = (n: Route['name']) => n === 'investigate' ? (lastTrace.current ? `#trace=${lastTrace.current}` : '#investigate')
-    : n === 'ring' ? (lastRing.current ? `#ring=${lastRing.current}` : '#ring') : `#${n}`
+  const hrefOf = (n: Route['name']) => n === 'investigate' ? (lastTrace ? `#trace=${lastTrace}` : '#investigate')
+    : n === 'ring' ? (lastRing ? `#ring=${lastRing}` : '#ring') : `#${n}`
 
   return (
     <div className={`gov${sideMin ? ' side-min' : ''}`}>
@@ -138,17 +139,18 @@ function MastSearch() {
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<string[]>([])
   const [open, setOpen] = useState(false)
+  const edit = (v: string) => { setQ(v); if (v.trim().length < 3) setHits([]) }
   useEffect(() => {
     const s = q.trim().toUpperCase()
-    if (s.length < 3) { setHits([]); return }
+    if (s.length < 3) return
     const id = window.setTimeout(() => api.search(s).then((h) => setHits(h.slice(0, 8))).catch(() => setHits([])), 150)
     return () => window.clearTimeout(id)
   }, [q])
-  const goTrace = (a: string) => { setQ(''); setHits([]); window.location.hash = `#trace=${a.trim().toUpperCase()}` }
+  const goTrace = (a: string) => { edit(''); go(`#trace=${a.trim().toUpperCase()}`) }
   return (
     <form className="msearch" role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim()) goTrace(q) }}>
       <MagnifyingGlass size={16} aria-hidden="true" />
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search account number" aria-label="Search account number"
+      <input value={q} onChange={(e) => edit(e.target.value)} placeholder="Search account number" aria-label="Search account number"
              onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 150)} spellCheck={false} autoComplete="off" />
       {open && hits.length > 0 && (
         <ul className="suggest" aria-label="Matching accounts">

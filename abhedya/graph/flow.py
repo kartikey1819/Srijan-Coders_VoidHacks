@@ -141,7 +141,8 @@ def flow_summary(g: Graph, victims: list[int], seeds_for, suspects: set[int]) ->
     banks = [FlowBank(bank=k, bank_name=bank_name(k), accounts=a, held_paise=h)
              for k, (a, h) in sorted(by_bank.items(), key=lambda kv: (-kv[1][1], kv[0]))]
     top = sorted(shared, key=lambda c: (-len(shared[c]), -coll_recv[c], name(c)))[:5]
-    collectors = [FlowCollector(account=name(c), victims=sorted(name(v) for v in shared[c]), received_paise=coll_recv[c])
+    collectors = [FlowCollector(account=name(c), victims=sorted(name(v) for v in shared[c]),
+                                received_paise=coll_recv[c])
                   for c in top]
     return FlowSummary(
         victims=len(losses), loss_paise=loss, avg_loss_paise=round(loss / len(losses)) if losses else 0,

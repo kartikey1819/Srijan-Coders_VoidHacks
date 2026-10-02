@@ -18,7 +18,7 @@ interface Result { account: string; trace: TraceResult | null; err: string | nul
 interface Shared { account: string; bank: string; roles: Set<string>; victims: string[]; received: number; held: number }
 
 /** Account numbers found in pasted text (any separator), upper-cased, without repeats, at most MAX. */
-export const parseAccounts = (text: string) => [...new Set(text.toUpperCase().match(ACCT) ?? [])].slice(0, MAX)
+const parseAccounts = (text: string) => [...new Set(text.toUpperCase().match(ACCT) ?? [])].slice(0, MAX)
 /** n different items in random order (Fisher-Yates on a copy). */
 const pickRandom = <T,>(xs: T[], n: number) => {
   const a = [...xs]
@@ -32,17 +32,22 @@ const heldOf = (t: TraceResult) => t.nodes.filter((n) => t.freeze_candidates.inc
 export function MultiTrace({ accounts }: { accounts: string[] }) {
   const [text, setText] = useState(accounts.join('\n'))
   const [results, setResults] = useState<Result[] | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(accounts.length > 0)
   const [wallMs, setWallMs] = useState(0)
   const [docsFor, setDocsFor] = useState<string | null>(null)
   const [pool, setPool] = useState<string[]>([])           // every identified victim, loaded on first use
   const key = accounts.join(',')
+  const [keyWas, setKeyWas] = useState(key)
+  if (key !== keyWas) {                                    // a new set of victims from the route: show it and trace it
+    setKeyWas(key)
+    setText(accounts.join('\n'))
+    if (accounts.length) setBusy(true)
+    else setResults(null)
+  }
 
   useEffect(() => {
-    setText(accounts.join('\n'))
-    if (!accounts.length) { setResults(null); return }
+    if (!accounts.length) return
     let live = true
-    setBusy(true)
     const t0 = performance.now()
     Promise.all(accounts.map((a) => api.trace(a)
       .then((trace): Result => ({ account: a, trace: trace.edges.length ? trace : null, err: trace.edges.length ? null : 'No money moved on from this account.' }))

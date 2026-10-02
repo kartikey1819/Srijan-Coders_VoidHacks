@@ -7,7 +7,7 @@
 ## Deliverables others depend on (don't be late on these)
 | When | What | Who needs it |
 |---|---|---|
-| h1 | Repo + skeleton + `contracts/models.py` + fixture + `sample.csv` + stubs + `CLAUDE.md` pushed | B, C |
+| h1 | Repo + skeleton + `contracts/models.py` + fixture + `sample.csv` + stubs + `CONTRIBUTING.md` pushed | B, C |
 | h6 | `Engine.trace` real + `/api/trace` live; fixture regenerated from real output | C |
 | h10 | `/api/search`, `/api/account`, `/api/account/{id}/txns`, `/api/dq/summary` | C |
 | h14 | `/api/ring` + export ZIP; FastAPI serves `web/dist` | C |
@@ -26,7 +26,7 @@
    - `ai/narrator.py`: `narrate` returns `None`.
    - `api/app.py`: includes `routes_trace`, `routes_risk`, `routes_docs` (each an empty `APIRouter(prefix="/api")`) and mounts `web/dist` if it exists.
 6. `tools/make_sample.py`: write `data/sample.csv` = header + every row whose narration contains `TASK_EARNING`, `SETTLEMENT` or `CRYPTO`, plus a seeded random 47,046 other rows, keeping the original order. Rows are copied byte-for-byte, never edited. This tool may use generator strings, because it's a test tool.
-7. `CLAUDE.md`, from the template at the end of this file.
+7. `CONTRIBUTING.md`, from the template at the end of this file.
 8. Post the official CSV's SHA-256 in the team chat. Push, then tell B and C "M0 is up".
 
 ## A1. Ingest: `ingest/load.py` (h1–2.5)
@@ -145,9 +145,9 @@ trace(victim, max_hops=4):
 
 ---
 
-## `CLAUDE.md` template (commit this at M0)
+## `CONTRIBUTING.md` template (commit this at M0)
 ```markdown
-# Abhedya-Chakra — shared context for Claude Code
+# Abhedya-Chakra — contributor guide
 Offline money-mule investigation workstation for Void Hacks 8.0. Python 3.12 + DuckDB + NumPy + FastAPI; React + Cytoscape in web/.
 Read plan/00_OVERVIEW.md (contracts) and DATA_HANDLING.md before coding.
 

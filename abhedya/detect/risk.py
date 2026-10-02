@@ -49,7 +49,8 @@ def _floors(score: np.ndarray, f: dict[str, np.ndarray], p: DetectParams, g4: np
         ((f["fanin_drains"] >= 1) & (f["fanin_drain_share"] >= p.drain_min_share), p.floor_fanin_drain),
     ]
     if g4 is not None:
-        rules.append((((f["term_out_n"] >= 1) | (f["term_in_n"] >= 1)) & (g4 >= p.term_linked_min), p.floor_term_linked))
+        rules.append((((f["term_out_n"] >= 1) | (f["term_in_n"] >= 1)) & (g4 >= p.term_linked_min),
+                      p.floor_term_linked))
     score = score.copy()
     for mask, floor in rules:
         score[mask] = np.maximum(score[mask], floor)

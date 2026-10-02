@@ -223,7 +223,8 @@ def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
     audit.log("documents", {"case_id": ev.case_id, "files": sorted(hashes), "used_llm": used_llm}, m_sha)
     return CaseOutput(case_id=ev.case_id, files=files, used_llm=used_llm, llm_fallback_reason=llm_fallback_reason,
                       manifest_sha256=m_sha, facts_sha256=ev.facts_sha256, diary_url=files["diary"],
-                      notices=[NoticeInfo(bank_prefix=p, bank_name=n, accounts=k, hold_paise=h, url=files[f"notice_{p}"])
+                      notices=[NoticeInfo(bank_prefix=p, bank_name=n, accounts=k, hold_paise=h,
+                                          url=files[f"notice_{p}"])
                                for p, n, k, h in notices],
                       verification=verification, narrative_source=narrative_source)
 
@@ -239,7 +240,8 @@ def notices_zip(case_dir: Path) -> bytes:
     for e in ev["freeze_eids"]:
         a = acc[e]
         banks.setdefault(a["bank_prefix"], []).append(a)
-    lines = [f"Freeze notices for victim {victim}, case {ev['case_id']}: one per bank, drafts for the officer's verification.", ""]
+    lines = [f"Freeze notices for victim {victim}, case {ev['case_id']}: "
+             "one per bank, drafts for the officer's verification.", ""]
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for prefix, rows in sorted(banks.items()):
@@ -247,7 +249,8 @@ def notices_zip(case_dir: Path) -> bytes:
             if not f.is_file():
                 continue
             z.write(f, f"freeze_notice_{prefix}_{victim}.html")
-            lines.append(f"{rows[0]['bank_name']} ({prefix}): {len(rows)} account(s), hold {inr(sum(r['held_paise'] for r in rows))}")
+            hold = inr(sum(r["held_paise"] for r in rows))
+            lines.append(f"{rows[0]['bank_name']} ({prefix}): {len(rows)} account(s), hold {hold}")
         z.writestr("README.txt", "\r\n".join(lines + ["", f"Facts fingerprint: {ev['facts_sha256']}", ""]))
     return buf.getvalue()
 
@@ -266,8 +269,9 @@ def case_file_zip(case_dir: Path) -> bytes:
                 "amount_rs", "victims_money_rs", "rule"])
     for t in ev["txns"]:
         s_, d_ = acc[t["src_eid"]], acc[t["dst_eid"]]
-        w.writerow([t["eid"], t["ts"], t["transaction_id"], s_["account"], s_["role"], d_["account"], d_["role"], t["mode"],
-                    f"{t['amount_paise'] / 100:.2f}", f"{t['attributed_paise'] / 100:.2f}", RULE_TEXT.get(t["rule"], t["rule"])])
+        w.writerow([t["eid"], t["ts"], t["transaction_id"], s_["account"], s_["role"], d_["account"], d_["role"],
+                    t["mode"], f"{t['amount_paise'] / 100:.2f}", f"{t['attributed_paise'] / 100:.2f}",
+                    RULE_TEXT.get(t["rule"], t["rule"])])
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(case_dir.iterdir()):
@@ -278,7 +282,8 @@ def case_file_zip(case_dir: Path) -> bytes:
             f"Case {ev['case_id']}: draft documents for the Investigating Officer's verification.",
             "fir.html: FIR draft (Section 173 BNSS). diary.html: case diary (Section 192 BNSS).",
             "notice_<BANK>.html: debit-hold notice per bank (Sections 94 and 106 BNSS).",
-            "evidence.json: every fact used; manifest.json: SHA-256 of each file; money_trail.csv: the traced transfers.",
+            "evidence.json: every fact used; manifest.json: SHA-256 of each file; "
+            "money_trail.csv: the traced transfers.",
             f"Source data SHA-256: {ev['data_sha256']}",
             f"Facts fingerprint: {ev['facts_sha256']}", ""]))
     return buf.getvalue()

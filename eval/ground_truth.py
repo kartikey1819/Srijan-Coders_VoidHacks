@@ -21,7 +21,7 @@ L2_COMMISSION = 0.96  # generator: an L2 forwards 96% of each settlement it rece
 
 def build(csv: Path) -> dict:
     con = duckdb.connect()
-    con.execute(f"""CREATE TABLE raw AS SELECT * FROM read_csv('{csv.as_posix()}', header = true, all_varchar = true)""")
+    con.execute(f"CREATE TABLE raw AS SELECT * FROM read_csv('{csv.as_posix()}', header = true, all_varchar = true)")
     rows = con.execute(f"""
         SELECT rowid AS txn_idx, Sender_Account, Receiver_Account,
                CAST(round(CAST(Amount AS DECIMAL(18,2)) * 100) AS BIGINT) AS paise,

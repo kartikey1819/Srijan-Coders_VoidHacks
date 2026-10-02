@@ -18,7 +18,7 @@ Three people work at the same time from hour 0. Nobody waits for anybody, becaus
 
 ```
 abhedya-chakra/
-├─ CLAUDE.md                     [A] shared context for every Claude Code session
+├─ CONTRIBUTING.md               [A] shared context for every contributor
 ├─ DATA_HANDLING.md              [A]
 ├─ plan/                         [A] these files
 ├─ pyproject.toml                [A] Python deps; others request additions
@@ -462,7 +462,7 @@ Invariant you can test against: **Σ held_paise over the non-victim nodes = loss
 
 | Window | A (main PC) | B | C |
 |---|---|---|---|
-| **0–1** | M0: repo, skeleton + stubs, `contracts/`, fixture, `sample.csv`, `CLAUDE.md`, push | Environment setup; scratch DuckDB with §5.1 SQL; start `eval/ground_truth.py` | Environment setup; start the Ollama model download; scaffold `web/`; save fixture locally |
+| **0–1** | M0: repo, skeleton + stubs, `contracts/`, fixture, `sample.csv`, `CONTRIBUTING.md`, push | Environment setup; scratch DuckDB with §5.1 SQL; start `eval/ground_truth.py` | Environment setup; start the Ollama model download; scaffold `web/`; save fixture locally |
 | 1–6 | Ingest → derive → validate → account → graph arrays | `ground_truth.json` (**needed by A at ~h3**); features v1 | Trace graph view on the fixture; Evidence builder; diary + notice templates on the fixture |
 | **M1 ≈ h6** | `/api/trace` live on the full file; fixture regenerated from real output | `detect.run` v1 on `sample.csv`; `get_risk_many` real | Graph renders the fixture; documents render the fixture |
 | 6–14 | Trace accuracy ≥ 299/300; account/txns/search/dq routes | Risk v1 on the full file; exports; `/api/risk/*`; candidate victims | Switch to the live API: search → trace → account panel; slider |
@@ -484,4 +484,4 @@ Invariant you can test against: **Σ held_paise over the non-victim nodes = loss
 - **Data:** copy the official ZIP from the team drive into `data/`, unzip it, and check its SHA-256 against the value A posts.
 - **Branches:** `a/…`, `b/…`, `c/…`. Keep PRs small, run `git pull --rebase origin main` first, and `pytest` must pass on `data/sample.csv`. A merges and runs on the full file after each batch of merges.
 - **`main` is protected:** PRs only, no force-push.
-- **Each Claude Code session starts with:** *"I am <A|B|C>. Read CLAUDE.md, plan/00_OVERVIEW.md, plan/<my file>.md and DATA_HANDLING.md. Only edit files I own."*
+- **Each work session starts with:** *"I am <A|B|C>. Read CONTRIBUTING.md, plan/00_OVERVIEW.md, plan/<my file>.md and DATA_HANDLING.md. Only edit files I own."*

@@ -39,7 +39,8 @@ export function NetFlow({ ix, center, hidden, cutoff, onPick }: {
   const [open, setOpen] = useState<Set<number>>(new Set())
   const [hover, setHover] = useState<string | null>(null)
   const [ref, width] = useSize<HTMLDivElement>()
-  useEffect(() => { setOpen(new Set()) }, [center])
+  const [centerWas, setCenterWas] = useState(center)
+  if (center !== centerWas) { setCenterWas(center); setOpen(new Set()) }   // a new centre folds every column again
   const flow = useMemo(() => buildFlow(ix, center, hidden), [ix, center, hidden])
   const fit = 7                                                          // accounts per column before "+N more"
   const cols: Col[] = useMemo(() => flow.steps.map((step) => {

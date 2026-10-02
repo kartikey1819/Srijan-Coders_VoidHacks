@@ -27,8 +27,9 @@ def fallback_narrative(ev: Evidence) -> Narrative:
 
     sec("summary",
         f"The complainant's account {ev.victim_eid} made {_n(len(seeds), 'disputed transfer')}. The money was followed "
-        f"forward in time through {_n(len(layer['L1']), 'first-layer account')}, {_n(len(layer['L2']), 'second-layer account')} "
-        f"and {_n(len(layer['L3']), 'cash-out account')}. The amounts are given in the tables of this diary.",
+        f"forward in time through {_n(len(layer['L1']), 'first-layer account')}, "
+        f"{_n(len(layer['L2']), 'second-layer account')} and {_n(len(layer['L3']), 'cash-out account')}. "
+        f"The amounts are given in the tables of this diary.",
         [ev.victim_eid] + [t.eid for t in seeds])
     sec("modus_operandi",
         f"Of the {_n(later, 'onward transfer')} on this trail, {fast} took place within fifteen minutes of the money "
@@ -49,8 +50,8 @@ def fallback_narrative(ev: Evidence) -> Narrative:
         f"{_ids(held)}." if held else "No account on the trail still holds the complainant's money.",
         held[:8])
     sec("recommendation",
-        "It is recommended that, after verification by the Investigating Officer, the banks concerned be asked to place "
-        "a debit hold limited to the amount shown against each holding account, and to furnish KYC, statements, "
+        "It is recommended that, after verification by the Investigating Officer, the banks concerned be asked to "
+        "place a debit hold limited to the amount shown against each holding account, and to furnish KYC, statements, "
         "device and IP logs and onward-transfer details." + (" The warnings in section 6 should be reviewed first."
                                                              if ev.warnings else ""),
         [])

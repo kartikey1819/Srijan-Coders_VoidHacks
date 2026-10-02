@@ -45,7 +45,8 @@ def test_validator_rejects(ev, text, refs):
 
 
 def test_validator_accepts_clean_text_and_fallback(ev):
-    assert validate_narrative(one("The money moved from E-ACC-001 to E-ACC-002 within minutes.", ["E-ACC-002"]), ev) == []
+    clean = one("The money moved from E-ACC-001 to E-ACC-002 within minutes.", ["E-ACC-002"])
+    assert validate_narrative(clean, ev) == []
     assert validate_narrative(fallback_narrative(ev), ev) == []
     dup = Narrative(sections=one("A.").sections * 2)
     assert any("twice" in e for e in validate_narrative(dup, ev))
@@ -115,6 +116,7 @@ def test_ai_prose_merged_with_template_lists(ev):
 
 def test_schema_limits_keep_generation_bounded():
     s = narrator.SCHEMA["properties"]["sections"]
-    assert s["maxItems"] == 3 and set(s["items"]["properties"]["section_id"]["enum"]) == {"summary", "modus_operandi", "recommendation"}
+    assert s["maxItems"] == 3
+    assert set(s["items"]["properties"]["section_id"]["enum"]) == {"summary", "modus_operandi", "recommendation"}
     assert s["items"]["properties"]["paragraphs"]["maxItems"] == 2
     assert narrator.OPTIONS["num_predict"] > 0 and narrator.OPTIONS["temperature"] == 0

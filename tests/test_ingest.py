@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import duckdb
 import pytest
 
@@ -21,7 +19,7 @@ def test_txn_idx_is_file_row_number(sample_con):
     got = sample_con.execute(
         "SELECT txn_idx, transaction_id, sender, amount_paise FROM txn WHERE txn_idx < 200 ORDER BY txn_idx"
     ).fetchall()
-    for (idx, tid, snd, paise), ln in zip(got, lines):
+    for (_, tid, snd, paise), ln in zip(got, lines, strict=True):
         assert tid == ln[0] and snd == ln[1]
         assert paise == round(float(ln[5]) * 100)
 

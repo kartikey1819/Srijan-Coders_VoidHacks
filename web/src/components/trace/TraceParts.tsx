@@ -21,9 +21,10 @@ function minutesText(m: number): string {
 /** A figure that counts up once when a trace opens (ease-out, 700 ms); the final text is always the exact value.
  *  Reduced motion shows the value at once. */
 export function CountUp({ value, format, ms = 700 }: { value: number; format: (n: number) => string; ms?: number }) {
-  const [shown, setShown] = useState(() => (prefersReducedMotion() ? value : 0))
+  const reduced = prefersReducedMotion()
+  const [shown, setShown] = useState(() => (reduced ? value : 0))
   useEffect(() => {
-    if (prefersReducedMotion()) { setShown(value); return }
+    if (reduced) return
     let raf = 0
     const start = performance.now()
     const tick = (now: number) => {
@@ -33,8 +34,9 @@ export function CountUp({ value, format, ms = 700 }: { value: number; format: (n
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [value, ms])
-  return <span aria-label={format(value)}>{format(shown === value ? value : Math.round(shown))}</span>
+  }, [value, ms, reduced])
+  const n = reduced ? value : shown
+  return <span aria-label={format(value)}>{format(n === value ? value : Math.round(n))}</span>
 }
 
 const delay = (i: number, step = 90): CSSProperties => ({ ['--d' as string]: `${i * step}ms` })
@@ -300,20 +302,17 @@ export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
 function Waterfall({ amount, at, pays, ct, left }: { amount: number; at: string; pays: TraceResult['edges']; ct: number; left: number }) {
   const w = (x: number) => `${(100 * x) / amount}%`
   const mmss = (s: number) => `+${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
-  let run = 0
+  const drained: number[] = []                              // running total paid out, after each payment
+  for (const e of pays) drained.push((drained.at(-1) ?? 0) + e.attributed_paise)
   return (
     <ol className="wf" aria-label="Money into and out of the collector account, payment by payment">
       <li className="wf-in"><span className="wf-t">{at.slice(11, 16)}</span><span className="wf-who">from the victim</span>
         <span className="wf-track"><i style={{ left: 0, width: '100%' }} /></span><b>{inr(amount)}</b></li>
-      {pays.map((e, i) => {
-        const x = run
-        run += e.attributed_paise
-        return (
-          <li key={e.txn_idx}><span className="wf-t">{mmss(toEpoch(e.ts) - ct)}</span><span className="wf-who mono">{e.dst}</span>
-            <span className="wf-track"><i style={{ left: w(x), width: w(e.attributed_paise), ...delay(i + 1, 70) }} /></span>
-            <b>{inr(e.attributed_paise)}<small>{inr(Math.max(0, amount - run))} left</small></b></li>
-        )
-      })}
+      {pays.map((e, i) => (
+        <li key={e.txn_idx}><span className="wf-t">{mmss(toEpoch(e.ts) - ct)}</span><span className="wf-who mono">{e.dst}</span>
+          <span className="wf-track"><i style={{ left: w(drained[i] - e.attributed_paise), width: w(e.attributed_paise), ...delay(i + 1, 70) }} /></span>
+          <b>{inr(e.attributed_paise)}<small>{inr(Math.max(0, amount - drained[i]))} left</small></b></li>
+      ))}
       <li className="wf-left"><span className="wf-t" /><span className="wf-who">still in the account</span>
         <span className="wf-track"><i style={{ left: w(amount - left), width: w(left), ...delay(pays.length + 1, 70) }} /></span><b>{inr(left)}</b></li>
     </ol>
@@ -327,6 +326,7 @@ export function TraceRecord({ t, v, hops, wallMs, signs, chosen }: {
   const of = (r: string) => v.mules.filter((n) => n.role === r).map((n) => n.account)
   const list = (a: string[]) => (a.length ? (a.length > 6 ? `${a.slice(0, 6).join(', ')} and ${a.length - 6} more` : a.join(', ')) : 'None found')
   const seedTotal = v.seeds.reduce((s, e) => s + e.attributed_paise, 0)
+  const warnings = t.warnings.length ? <ul>{t.warnings.map((w) => <li key={w}>{plainWarning(w)}</li>)}</ul> : 'None'
   const rows: [string, ReactNode][] = [
     ['Victim account', `${v.victim.account}, ${v.victim.bank_name} (${v.victim.ifsc})`],
     ['Payments followed', `${v.seeds.length} payment${v.seeds.length === 1 ? '' : 's'}${chosen ? ' chosen by the officer' : ''}, total ${inr(seedTotal)}, first on ${when(v.seeds[0]?.ts ?? '')}`],
@@ -336,7 +336,7 @@ export function TraceRecord({ t, v, hops, wallMs, signs, chosen }: {
     ['Layer 2 · Distributor', list(of('L2'))],
     ['Layer 3 · Cash-out', list(of('L3'))],
     ['Warning signs', signs ? `${signs.proxy} foreign proxy session${signs.proxy === 1 ? '' : 's'}, ${signs.script} automated session${signs.script === 1 ? '' : 's'}, ${signs.cashout} wallet or crypto cash-out${signs.cashout === 1 ? '' : 's'}` : '…'],
-    ['Points to check', t.warnings.length ? <ul>{t.warnings.map((w) => <li key={w}>{plainWarning(w)}</li>)}</ul> : 'None'],
+    ['Points to check', warnings],
     ['Time taken', `${t.elapsed_ms} ms on this computer, ${Math.round(wallMs)} ms to show (limit: 2 seconds)`],
   ]
   return (

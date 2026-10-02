@@ -79,10 +79,10 @@ def test_hostile_reply_rejected(ev, name):
 
 
 def test_hostile_structure_rejected(ev):
-    assert validate_narrative(one("The money moved quickly.", sid="layer_l1"), ev, AI_SECTIONS)        # unsupported section
+    assert validate_narrative(one("The money moved quickly.", sid="layer_l1"), ev, AI_SECTIONS)  # unsupported section
     two = Narrative(sections=one("A summary.").sections * 2)
     assert any("twice" in e for e in validate_narrative(two, ev, AI_SECTIONS))
-    assert validate_narrative(one("x " * 700), ev, AI_SECTIONS)                                       # too long
+    assert validate_narrative(one("x " * 700), ev, AI_SECTIONS)                                  # too long
     assert any("summary" in e for e in validate_narrative(one("Only a recommendation.", sid="recommendation"), ev))
 
 
@@ -140,7 +140,8 @@ def _client(reply):
     (httpx.ReadTimeout("slow"), "unavailable"),
     ('{"sections": [{"section_id": "summary", "paragraphs": [{"text": "trunc', "rejected"),
     ('{"sections": [{"section_id": "layer_l1", "paragraphs": [{"text": "x", "refs": []}]}]}', "rejected"),
-    (json.dumps({"sections": [{"section_id": "summary", "paragraphs": [{"text": "Paid to KKBK19999999.", "refs": []}]}]}),
+    (json.dumps({"sections": [{"section_id": "summary",
+                               "paragraphs": [{"text": "Paid to KKBK19999999.", "refs": []}]}]}),
      "rejected"),
 ])
 def test_model_failure_falls_back(ev, reply, reason):
@@ -181,7 +182,8 @@ def _table_hash(db, sql):
 
 
 def test_llm_on_off_changes_nothing_but_the_prose(sample_db, tmp_path, monkeypatch):
-    before = [_table_hash(sample_db, q) for q in ("SELECT * FROM risk ORDER BY acct_id", "SELECT * FROM features ORDER BY acct_id",
+    before = [_table_hash(sample_db, q) for q in ("SELECT * FROM risk ORDER BY acct_id",
+                                                  "SELECT * FROM features ORDER BY acct_id",
                                                   "SELECT txn_idx, dq_flags FROM txn ORDER BY txn_idx")]
     good = one("The complainant's money moved through the collector mule E-ACC-002 within minutes.", ["E-ACC-002"])
     monkeypatch.setattr(config, "CASES_DIR", tmp_path)
@@ -202,7 +204,8 @@ def test_llm_on_off_changes_nothing_but_the_prose(sample_db, tmp_path, monkeypat
             engine_mod._engine.cursor().execute("UPDATE risk SET score = 0")
     finally:
         engine_mod._engine = old
-    after = [_table_hash(sample_db, q) for q in ("SELECT * FROM risk ORDER BY acct_id", "SELECT * FROM features ORDER BY acct_id",
+    after = [_table_hash(sample_db, q) for q in ("SELECT * FROM risk ORDER BY acct_id",
+                                                 "SELECT * FROM features ORDER BY acct_id",
                                                  "SELECT txn_idx, dq_flags FROM txn ORDER BY txn_idx")]
     assert before == after
 

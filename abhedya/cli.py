@@ -38,7 +38,8 @@ def main(argv: list[str] | None = None) -> None:
     ing.add_argument("--db", type=Path, default=config.DB_PATH)
     ing.add_argument("--skip-detect", action="store_true")
     srv = sub.add_parser("serve", help="start the local web app on 127.0.0.1 (ingests --data first if needed)")
-    srv.add_argument("--data", type=Path, help="transaction CSV; ingested automatically when the database is missing or stale")
+    srv.add_argument("--data", type=Path,
+                     help="transaction CSV; ingested automatically when the database is missing or stale")
     srv.add_argument("--port", type=int, default=8000)
     srv.add_argument("--db", type=Path, default=config.DB_PATH)
     a = ap.parse_args(argv)
@@ -49,7 +50,7 @@ def main(argv: list[str] | None = None) -> None:
         try:
             run_ingest(a.data, a.db, run_detect=not a.skip_detect)
         except (IngestError, FileNotFoundError) as e:
-            raise SystemExit(f"ingest failed: {e}")
+            raise SystemExit(f"ingest failed: {e}") from e
     elif a.cmd == "serve":
         import os
 
@@ -62,7 +63,8 @@ def main(argv: list[str] | None = None) -> None:
             gone = removed_official_sha()
             if gone and gone == sha256_file(a.data):
                 reason = None
-                print(f"{a.data.name} was removed from Saved cases, so it is not rebuilt; upload it on Home to bring it back")
+                print(f"{a.data.name} was removed from Saved cases, so it is not rebuilt; "
+                      "upload it on Home to bring it back")
             else:
                 reason = _needs_ingest(a.data, a.db)
             if reason:
@@ -70,7 +72,7 @@ def main(argv: list[str] | None = None) -> None:
                 try:
                     run_ingest(a.data, a.db, run_detect=True)
                 except IngestError as e:
-                    raise SystemExit(f"ingest failed: {e}")
+                    raise SystemExit(f"ingest failed: {e}") from e
         elif not a.db.exists() and not any(config.DATA_DIR.glob("datasets/*/case.duckdb")):
             raise SystemExit(f"no database at {a.db}: run `python -m abhedya serve --data <file.csv>`")
         if not (config.WEB_DIST / "index.html").exists():

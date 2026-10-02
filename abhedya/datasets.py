@@ -165,7 +165,8 @@ class UploadWriter:
                 raise ValueError("The file is empty.")
             missing = check_header(self.first.split(b"\n", 1)[0])
             if missing:
-                raise ValueError(f"This does not look like a bank transaction export: missing column(s) {', '.join(missing)}. "
+                raise ValueError(f"This does not look like a bank transaction export: "
+                                 f"missing column(s) {', '.join(missing)}. "
                                  f"Required: {', '.join(REQUIRED_COLUMNS)}.")
             sha = self.h.hexdigest()
             if sha == _official_sha():                 # the official file itself: open it, never keep a second copy
@@ -205,7 +206,7 @@ def _work() -> None:
         meta = _read_meta(ds_id) or {}
         p.status, p.stage = "running", STAGES[0]
 
-        def cb(stage: str, seconds: float) -> None:
+        def cb(stage: str, seconds: float, p: DatasetProgress = p) -> None:
             p.stages_done[stage] = seconds
             i = STAGES.index(stage) if stage in STAGES else -1
             p.stage = STAGES[i + 1] if 0 <= i < len(STAGES) - 1 else None
@@ -235,7 +236,8 @@ def activate(ds_id: str) -> DatasetInfo:
         cur = engine_mod._engine
         if cur is None or Path(cur.db_path).resolve() != path.resolve():
             engine_mod._engine = engine_mod.Engine(path)
-        if ds_id != "official":                # uploads are stored as source.csv: exports keep the name the officer gave
+        # uploads are stored as source.csv: exports keep the name the officer gave
+        if ds_id != "official":
             engine_mod._engine.display_name = (_read_meta(ds_id) or {}).get("name")
         _active = ds_id
     try:                                   # remembered across restarts (startup reopens it)
@@ -287,8 +289,9 @@ def remove(ds_id: str) -> list[DatasetInfo]:
             if f.exists():
                 f.unlink()
         DIR.mkdir(parents=True, exist_ok=True)
-        _removed().write_text(json.dumps({"sha256": me.sha256, "name": me.name,
-                                          "removed_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}), encoding="utf-8")
+        removed_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        _removed().write_text(json.dumps({"sha256": me.sha256, "name": me.name, "removed_at": removed_at}),
+                              encoding="utf-8")
         if cache and Path(cache).is_dir() and config.DATA_DIR.resolve() in Path(cache).resolve().parents:
             shutil.rmtree(cache)
     else:

@@ -42,7 +42,7 @@ export function Panel({ title, note, actions, children, flush, id, className }: 
   )
 }
 
-export const ROLE_NAME: Record<string, string> = {
+const ROLE_NAME: Record<string, string> = {
   VICTIM: 'Victim', L1: 'Layer 1 · Collector', L2: 'Layer 2 · Distributor', L3: 'Layer 3 · Cash-out', UNKNOWN: 'Not on a layer',
 }
 export function RoleBadge({ role }: { role: string }) {

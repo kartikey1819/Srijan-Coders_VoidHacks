@@ -73,7 +73,8 @@ def verify_evidence(ev: Evidence) -> list[str]:
         if t.src_eid not in acc or t.dst_eid not in acc:
             errs.append(f"{t.eid} refers to an unknown account")
         if not 0 < t.attributed_paise <= t.amount_paise:
-            errs.append(f"{t.eid}: victim money {t.attributed_paise} is not within the transfer amount {t.amount_paise}")
+            errs.append(f"{t.eid}: victim money {t.attributed_paise} is not within the transfer amount "
+                        f"{t.amount_paise}")
     for a in ev.accounts:
         if a.eid != ev.victim_eid and not 0 <= a.held_paise <= a.received_paise:
             errs.append(f"{a.eid} holds {a.held_paise} but received {a.received_paise}")

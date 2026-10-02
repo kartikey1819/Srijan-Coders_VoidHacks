@@ -24,7 +24,9 @@ export function FlaggedTable({ reasons, role, bank, reason }: Props) {
   const [open, setOpen] = useState<string | null>(null)
 
   useEffect(() => { api.top('HIGH').then(setRows).catch((e) => setErr(String(e.message ?? e))) }, [])
-  useEffect(() => setLimit(200), [role, bank, reason, q])
+  const filters = JSON.stringify([role, bank, reason, q])
+  const [filtersWas, setFiltersWas] = useState(filters)
+  if (filters !== filtersWas) { setFiltersWas(filters); setLimit(200) }   // a new filter starts from the first 200 rows again
 
   const setFilter = (k: 'role' | 'bank' | 'reason', v: string | null) =>
     go({ name: 'flagged', role, bank, reason, [k]: v || null })

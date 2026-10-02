@@ -48,7 +48,8 @@ VOCAB = {
     },
 }
 LEGIT = {
-    "shop": ["UPI/Grocery/{n}", "UPI/Medical Store/{n}", "UPI/Fuel/{n}", "UPI/Restaurant/{n}", "UPI/Online Shopping/{n}"],
+    "shop": ["UPI/Grocery/{n}", "UPI/Medical Store/{n}", "UPI/Fuel/{n}", "UPI/Restaurant/{n}",
+             "UPI/Online Shopping/{n}"],
     "bill": ["UPI/Electricity Bill/{n}", "UPI/Mobile Recharge/{n}", "NEFT/Broadband/{n}"],
     "p2p": ["UPI/Family/{n}", "IMPS/Friend/{n}", "UPI/Split/{n}"],
     "salary": ["NEFT/SALARY/{n}", "NEFT/SAL CREDIT/{n}"],
@@ -171,9 +172,9 @@ class World:
         """Split `amount` (minus commission) across receivers; returns (row, receiver, amount, time)."""
         commission = self.r.uniform(0.0, 0.10)
         cuts = sorted(self.r.random() for _ in range(len(receivers) - 1))
-        shares = [b - a for a, b in zip([0.0] + cuts, cuts + [1.0])]
+        shares = [b - a for a, b in zip([0.0] + cuts, cuts + [1.0], strict=True)]
         out, t = [], t_in
-        for share, rcv in zip(shares, receivers):
+        for share, rcv in zip(shares, receivers, strict=True):
             gap = self.r.lognormvariate(math.log(240), 0.6) if fast else self.r.lognormvariate(math.log(5400), 1.0)
             t = int(t + max(30, gap))
             dev, ipk = self.channel(mule)
@@ -211,7 +212,7 @@ class World:
             k = self.r.randint(2, 8)
             l2s = [self.account("mule", family, "L2") for _ in range(k)]
             truth = {"seed_txn": seed, "L1": [l1], "L2": list(l2s), "L3": [], "family": family}
-            for idx, l2, amt, t in self._forward(l1, loss, t0, l2s, self.r.random() < fast, self.v["mule_move"]):
+            for _, l2, amt, t in self._forward(l1, loss, t0, l2s, self.r.random() < fast, self.v["mule_move"]):
                 holder, hold_amt, t_h = l2, amt, t
                 if depth >= 4 and self.r.random() < 0.5:          # an extra distributor hop
                     l2b = self.account("mule", family, "L2")
@@ -243,7 +244,7 @@ class World:
         for _ in range(repeats):
             t = self.t(0, self.span / 86_400 - 2)
             amt = self.r.lognormvariate(math.log(80_000 * 100), 0.4)
-            for a, b in zip(ring, ring[1:] + ring[:1]):
+            for a, b in zip(ring, ring[1:] + ring[:1], strict=True):
                 t += self.r.randint(1200, 4 * 3600)
                 amt *= self.r.uniform(0.93, 1.0)
                 dev, ipk = self.channel(self.r.random() < 0.3)
@@ -259,21 +260,22 @@ class World:
         amt = self.r.lognormvariate(math.log(300_000 * 100), 0.5)
         t0 = self.t(0, self.span / 86_400 - 2)
         seed = self.pay(v, src, amt, t0, self.r.choice(self.v["victim_pay"]))
-        for idx, m, a, t in self._forward(src, amt, t0, mids, True, self.v["mule_move"]):
+        for _, m, a, t in self._forward(src, amt, t0, mids, True, self.v["mule_move"]):
             self._cash_out(m, a, t, dst, plain=False)
         self.victims[v] = {"seed_txn": seed, "L1": [src], "L2": mids, "L3": [dst], "family": family}
 
     # ---- legitimate look-alikes ----
     def _normal_life(self, a: str, n: int) -> None:
-        shops = [x for x, l in self.labels.items() if l.family == "merchant"] or [a]
+        shops = [x for x, lab in self.labels.items() if lab.family == "merchant"] or [a]
         for _ in range(n):
             if self.r.random() < 0.6:
                 self.pay(a, self.r.choice(shops), self.r.lognormvariate(math.log(60_000), 1.0), self.t(),
                          self.r.choice(LEGIT["shop"]))
             else:
-                src = self.r.choice([x for x, l in self.labels.items() if l.family == "background"] or [a])
+                src = self.r.choice([x for x, lab in self.labels.items() if lab.family == "background"] or [a])
                 if src != a:
-                    self.pay(src, a, self.r.lognormvariate(math.log(250_000), 1.0), self.t(), self.r.choice(LEGIT["p2p"]))
+                    self.pay(src, a, self.r.lognormvariate(math.log(250_000), 1.0), self.t(),
+                             self.r.choice(LEGIT["p2p"]))
 
     def payroll(self, staff_pool: list[str], small: bool) -> None:
         emp = self.account("legit", "payroll_small" if small else "payroll_large")
@@ -283,7 +285,7 @@ class World:
             k = self.r.randint(3, 7) if small else self.r.randint(20, 60)
             pay = [self.r.lognormvariate(math.log(35_000 * 100), 0.4) for _ in range(k)]
             self.pay(client, emp, sum(pay) * self.r.uniform(1.0, 1.15), t, self.r.choice(LEGIT["biz"]))
-            for i, (p, s) in enumerate(zip(pay, self.r.sample(staff_pool, k))):
+            for i, (p, s) in enumerate(zip(pay, self.r.sample(staff_pool, k), strict=True)):
                 self.pay(emp, s, p, t + 300 + i * self.r.randint(20, 120), self.r.choice(LEGIT["salary"]))
             if small and k <= 7:
                 self.labels[emp].indicators.add("fan_out_3_7")
@@ -295,7 +297,8 @@ class World:
             t = self.t0 + day * 86_400 + 9 * 3600
             for _ in range(self.r.randint(20, 60)):
                 t += self.r.randint(30, 900)
-                self.pay(self.r.choice(payers), agg, self.r.lognormvariate(math.log(90_000), 1.0), t, self.r.choice(LEGIT["shop"]))
+                self.pay(self.r.choice(payers), agg, self.r.lognormvariate(math.log(90_000), 1.0), t,
+                         self.r.choice(LEGIT["shop"]))
             for m in self.r.sample(merchants, min(len(merchants), 4)):
                 self.pay(agg, m, self.r.lognormvariate(math.log(800_000), 0.8), t + self.r.randint(60, 600),
                          self.r.choice(LEGIT["settle"]))
@@ -308,7 +311,8 @@ class World:
             amt = self.r.lognormvariate(math.log(20_000 * 100), 0.3)
             t = self.t0 + day * 86_400 + 9 * 3600
             self.pay(a, b, amt, t, self.r.choice(LEGIT["p2p"]))
-            self.pay(b, a, amt * self.r.uniform(0.95, 1.0), t + self.r.randint(1800, 6 * 3600), self.r.choice(LEGIT["p2p"]))
+            self.pay(b, a, amt * self.r.uniform(0.95, 1.0), t + self.r.randint(1800, 6 * 3600),
+                     self.r.choice(LEGIT["p2p"]))
         for x in (a, b):
             self.labels[x].indicators.add("cycle")
             self._normal_life(x, 10)
@@ -324,7 +328,7 @@ class World:
     def traveller(self) -> None:
         tr = self.account("legit", "traveller_foreign_ip")
         self._normal_life(tr, 10)
-        shops = [x for x, l in self.labels.items() if l.family == "merchant"]
+        shops = [x for x, lab in self.labels.items() if lab.family == "merchant"]
         for _ in range(self.r.randint(4, 10)):
             self.pay(tr, self.r.choice(shops), self.r.lognormvariate(math.log(150_000), 0.8), self.t(),
                      self.r.choice(LEGIT["shop"]), None, "statement_foreign")
@@ -357,7 +361,8 @@ class World:
         for k in kids:
             t += self.r.randint(60, 1800)
             self.pay(k, parent, self.r.lognormvariate(math.log(10_000 * 100), 0.3), t, self.r.choice(LEGIT["p2p"]))
-        self.pay(parent, self.account("legit", "hospital"), 38_000 * 100, t + self.r.randint(600, 7200), "NEFT/HOSPITAL/{n}")
+        self.pay(parent, self.account("legit", "hospital"), 38_000 * 100, t + self.r.randint(600, 7200),
+                 "NEFT/HOSPITAL/{n}")
         self._normal_life(parent, 8)
 
     def refunds(self, people: list[str]) -> None:
@@ -378,8 +383,8 @@ class World:
         csv_path = out_dir / f"{stem}.csv"
         with open(csv_path, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f, lineterminator="\n")
-            w.writerow(["Transaction_ID", "Sender_Account", "Receiver_Account", "Sender_IFSC", "Receiver_IFSC", "Amount",
-                        "Timestamp", "Payment_Mode", "Narration", "IP_Address", "Device_Type"])
+            w.writerow(["Transaction_ID", "Sender_Account", "Receiver_Account", "Sender_IFSC", "Receiver_IFSC",
+                        "Amount", "Timestamp", "Payment_Mode", "Narration", "IP_Address", "Device_Type"])
             for i in order:
                 s, d, paise, t, m, narr, ip, dev = self.rows[i]
                 while (tid := f"T{self.r.randrange(10**11, 10**12)}") in ids:
@@ -389,8 +394,8 @@ class World:
                 w.writerow([tid, s, d, self.ifsc[s], self.ifsc[d], f"{paise / 100:.2f}", ts, m, narr, ip, dev])
         truth = {
             "seed": self.seed, "vocab": self.vocab_name, "rows": len(self.rows),
-            "accounts": {a: {"label": l.label, "family": l.family, "role": l.role, "tier": l.tier(),
-                             "indicators": sorted(l.indicators)} for a, l in self.labels.items()},
+            "accounts": {a: {"label": lab.label, "family": lab.family, "role": lab.role, "tier": lab.tier(),
+                             "indicators": sorted(lab.indicators)} for a, lab in self.labels.items()},
             "victims": {v: {**t, "seed_txn": pos[t["seed_txn"]]} for v, t in self.victims.items()},
         }
         truth_path = out_dir / f"{stem}.truth.json"
@@ -417,7 +422,7 @@ def build(seed: int, size: str = "small", vocab: str = "dev") -> World:
         w.scatter_gather()
         w.payroll(people, small=True)
         w.payroll(people, small=False)
-        w.aggregator([x for x, l in w.labels.items() if l.family == "merchant"], people)
+        w.aggregator([x for x, lab in w.labels.items() if lab.family == "merchant"], people)
         w.couple_transfers()
         w.crypto_investor()
         w.traveller()

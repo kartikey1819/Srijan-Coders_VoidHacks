@@ -32,16 +32,19 @@ def _detail(key: str, f: dict, s: dict) -> str:
         return (f"Passed on {_pct(v('pt_strict'))} of the money it received within 3-15 minutes"
                 if g("pt") > 0 else "Did not pass money on within 3-15 minutes")
     if key == "SHAPE":
-        opts = [(g("episodes"), f"Split an incoming amount to 3-7 accounts within 15 minutes {int(v('episodes_3_7'))} time(s)"),
+        opts = [(g("episodes"),
+                 f"Split an incoming amount to 3-7 accounts within 15 minutes {int(v('episodes_3_7'))} time(s)"),
                 (g("burst"), f"Received from {int(v('burst_senders_60m'))} different senders within one hour"),
                 (g("cycle"), f"Money went round the same ring {int(v('ring_cycles'))} time(s) within 24 hours"),
-                (g("drain"), f"Collected from many senders, then emptied {_pct(v('fanin_drain_share'))} of it within 15 minutes")]
+                (g("drain"),
+                 f"Collected from many senders, then emptied {_pct(v('fanin_drain_share'))} of it within 15 minutes")]
     elif key == "CHANNEL":
         opts = [(g("term_out"), f"Sent money to wallet / crypto channels {int(v('term_out_n'))} time(s)"),
                 (g("term_in_anom"), "Received wallet / crypto money sent from a script device or foreign proxy IP"),
                 (g("term_in"), f"Received wallet / crypto money {int(v('term_in_n'))} time(s) and kept most of it"),
                 (g("script"), f"{_pct(g('script'))} of its payments were sent from a script / emulator device"),
-                (g("foreign"), f"{_pct(g('foreign'))} of its payments were sent from a foreign proxy IP (185.x / 194.x)")]
+                (g("foreign"),
+                 f"{_pct(g('foreign'))} of its payments were sent from a foreign proxy IP (185.x / 194.x)")]
     else:
         return f"{_pct(g('G4'))} of its money came from or went to other suspect accounts"
     best = max(opts, key=lambda o: o[0])
@@ -60,7 +63,8 @@ def _floor_reason(f: dict, g4: float, p: DetectParams) -> tuple[int, str] | None
          "Mainly receives wallet / crypto money sent from script devices or foreign proxy IPs"),
         (v("term_out_anom_n") >= 1 and v("term_out_anom_share") >= p.anom_cashout_min_share, p.floor_term_out_anom,
          "Mainly sends wallet / crypto money from script devices or foreign proxy IPs"),
-        (v("ring_cycles") >= p.cycle_min_loops, p.floor_cycles, "Money went round the same ring of accounts repeatedly"),
+        (v("ring_cycles") >= p.cycle_min_loops, p.floor_cycles,
+         "Money went round the same ring of accounts repeatedly"),
         (v("fanin_drains") >= 1 and v("fanin_drain_share") >= p.drain_min_share, p.floor_fanin_drain,
          "Collected from many senders within an hour, then emptied within 15 minutes"),
         ((v("term_out_n") >= 1 or v("term_in_n") >= 1) and g4 >= p.term_linked_min, p.floor_term_linked,
@@ -78,7 +82,7 @@ def explain(con: duckdb.DuckDBPyConnection, account: str, p: DetectParams | None
     acct_id, stored = int(row[0]), int(row[1])
     cur = con.execute("SELECT * FROM features WHERE acct_id = ?", [acct_id])
     names = [d[0] for d in cur.description]
-    f = {k: np.asarray([val]) for k, val in zip(names, cur.fetchone())}
+    f = {k: np.asarray([val]) for k, val in zip(names, cur.fetchone(), strict=True)}
     s = _signals(f, p)
     s["G4"] = np.maximum(f.get("in_from_flagged", np.zeros(1)), f.get("out_to_flagged", np.zeros(1))).astype(float)
     parts = [(getattr(p, w), s[g]) for _, _, w, g in CHECKS]

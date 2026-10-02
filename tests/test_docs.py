@@ -12,9 +12,9 @@ from abhedya.evidence.build import build_evidence
 from contracts.models import CaseInfo, NarrParagraph, NarrSection, Narrative
 
 FACTS = re.compile(r"<!--FACTS-->(.*?)<!--/FACTS-->", re.S)
-DIARY_SECTIONS = ["1. Complainant (Victim) Account & Loss", "2. Investigation Narrative", "3. Chronological Money Trail",
-                  "4. Layer-wise Accounts Identified", "5. Accounts Recommended for Immediate Debit Freeze",
-                  "6. Further Action Proposed"]
+DIARY_SECTIONS = ["1. Complainant (Victim) Account & Loss", "2. Investigation Narrative",
+                  "3. Chronological Money Trail", "4. Layer-wise Accounts Identified",
+                  "5. Accounts Recommended for Immediate Debit Freeze", "6. Further Action Proposed"]
 
 
 @pytest.fixture(scope="module")
@@ -136,7 +136,8 @@ def test_document_api(sample_db, tmp_path, monkeypatch):
             assert c.get(n["url"]).status_code == 200
         assert c.get(f"/api/docs/{out['case_id']}/..%2F..%2Fpyproject.toml").status_code == 404
         assert c.get("/api/docs/not-a-case/diary.html").status_code == 404
-        # FIR draft (Section 173 BNSS): checked by the same firewall, names the victim, the loss and the accused accounts
+        # FIR draft (Section 173 BNSS): checked by the same firewall, names the victim, the loss and the
+        # accused accounts
         fir = c.get(out["files"]["fir"])
         assert fir.status_code == 200 and "Section 173 BNSS" in fir.text and "Draft format for the officer" in fir.text
         assert "KKBK10000000" in fir.text and "ICIC10000335" in fir.text and "₹4,55,541.61" in fir.text

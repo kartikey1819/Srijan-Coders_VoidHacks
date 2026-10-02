@@ -20,7 +20,8 @@ def ingest(tmp_path, text: str | bytes, name="x", detect=True):
 
 
 def txn_rows(e: Engine):
-    return e.cursor().execute("SELECT txn_idx, transaction_id, amount_paise, usable, dq_flags FROM txn ORDER BY 1").fetchall()
+    return e.cursor().execute(
+        "SELECT txn_idx, transaction_id, amount_paise, usable, dq_flags FROM txn ORDER BY 1").fetchall()
 
 
 GOOD = row(1, "SBIN10000001", "HDFC10000002", "1000.00", "2026-09-20 10:00:00")

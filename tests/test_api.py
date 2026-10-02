@@ -81,14 +81,14 @@ def test_flow_summary_traces_every_victim_and_adds_up(client):
     distributors, who pass 96% on within the hour to 385 cash-out accounts reached only by wallet / crypto; money
     moves forward only; every flagged account is in one linked group."""
     f = client.get("/api/flow").json()
-    lay = {l["role"]: l for l in f["layers"]}
+    lay = {layer["role"]: layer for layer in f["layers"]}
     assert f["victims"] == lay["VICTIM"]["accounts"] == 300 and f["loss_paise"] == 8_476_680_455
     assert [lay[r]["accounts"] for r in ("L1", "L2", "L3")] == [129, 559, 385]
     assert lay["L1"]["received_paise"] == f["loss_paise"] == lay["VICTIM"]["passed_on_paise"]
     assert lay["L2"]["received_paise"] == lay["L1"]["passed_on_paise"]
     assert lay["L3"]["received_paise"] == lay["L2"]["passed_on_paise"] == lay["L3"]["held_paise"]
     assert (lay["L1"]["fast_share"], lay["L2"]["fast_share"], lay["L3"]["wallet_share"]) == (0.98, 0.96, 1.0)
-    assert f["freezable_paise"] == sum(l["held_paise"] for l in f["layers"]) <= f["loss_paise"]
+    assert f["freezable_paise"] == sum(layer["held_paise"] for layer in f["layers"]) <= f["loss_paise"]
     assert f["to_l2_s"] < f["to_l3_s"] and f["sent_back"] == 0
     assert f["linked_groups"] == 1 and f["linked_largest"] == f["suspects"] == 1073
     assert client.get("/api/flow").json() == f            # cached, unchanged
@@ -112,7 +112,8 @@ def test_flow_summary_names_complaints_to_club(client):
     f = client.get("/api/flow").json()
     assert (f["club_victims"], f["club_collectors"], f["club_top_collector"]) == (262, 91, "HDFC10000336")
     assert len(f["club_top_victims"]) == 8 and f["club_top_victims"] == sorted(f["club_top_victims"])
-    # freezable money per bank adds up to the total; top collectors lead with the largest group; cash-out times per victim
+    # freezable money per bank adds up to the total; top collectors lead with the largest group;
+    # cash-out times per victim
     assert sum(b["held_paise"] for b in f["banks"]) == f["freezable_paise"] and len(f["banks"]) == 10
     assert [b["held_paise"] for b in f["banks"]] == sorted((b["held_paise"] for b in f["banks"]), reverse=True)
     assert f["top_collectors"][0]["account"] == "HDFC10000336" and len(f["top_collectors"][0]["victims"]) == 8
@@ -146,7 +147,8 @@ def test_upload_analyse_switch_and_back(client, tmp_path, monkeypatch):
     assert r.status_code == 202, r.text
     ds_id = r.json()["id"]
     p = _wait_done(client, ds_id)
-    assert p["status"] == "done" and p["rows"] == 3000 and "graph_arrays" in p["stages_done"] and "detect" in p["stages_done"]
+    assert p["status"] == "done" and p["rows"] == 3000
+    assert "graph_arrays" in p["stages_done"] and "detect" in p["stages_done"]
     assert (tmp_path / "datasets" / ds_id / "source.csv").read_bytes() == body      # stored byte for byte
     official = engine_mod._engine
     try:

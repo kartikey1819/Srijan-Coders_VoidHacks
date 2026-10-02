@@ -1,4 +1,5 @@
-"""REFERENCE ONLY (tests): the straightforward ledger replay that abhedya/graph/trace.py must reproduce exactly. Owner: A.
+"""REFERENCE ONLY (tests): the straightforward ledger replay that abhedya/graph/trace.py must reproduce exactly.
+Owner: A.
 
 Model: every account on the trail holds *lots*: the victim's (tainted) money it received, and
 its other (clean) inflows. All candidate out-edges are processed in one global time order
@@ -67,7 +68,7 @@ class TraceCore:
     ambiguous: int = 0   # outflows the rules could fund from this victim's money or from other money
 
     def held(self, u: int) -> int:
-        return sum(l.remaining for l in self.lots.get(u, ()) if l.tainted)
+        return sum(lot.remaining for lot in self.lots.get(u, ()) if lot.tainted)
 
     def role(self, u: int) -> str:
         if u == self.victim:
@@ -82,11 +83,11 @@ def _bundles(rule: str, live: list[Lot], amount: int, t: int) -> list[list[int]]
     amount_match judges a whole inflow transaction (its tainted and clean parts together)."""
     if rule == "window":
         lo, hi = config.PT_WINDOW_S
-        return [[i] for i, l in enumerate(live) if lo <= t - l.t <= hi]
+        return [[i] for i, lot in enumerate(live) if lo <= t - lot.t <= hi]
     if rule == "amount_match":
         groups: dict[int, list[int]] = {}
-        for i, l in enumerate(live):
-            key = l.src if l.src >= 0 else -1 - i
+        for i, lot in enumerate(live):
+            key = lot.src if lot.src >= 0 else -1 - i
             g = groups.get(key)
             if g is None:
                 groups[key] = [i]
@@ -96,8 +97,8 @@ def _bundles(rule: str, live: list[Lot], amount: int, t: int) -> list[list[int]]
         out = []
         for idxs in groups.values():
             if len(idxs) == 1:
-                l = live[idxs[0]]
-                orig, rem = l.original, l.remaining
+                lot = live[idxs[0]]
+                orig, rem = lot.original, lot.remaining
             else:
                 orig = rem = 0
                 for i in idxs:
@@ -109,12 +110,12 @@ def _bundles(rule: str, live: list[Lot], amount: int, t: int) -> list[list[int]]
                 out.append(idxs)
         return out
     # fallback (lowest-intermediate-balance presumption): the holder's own (clean) money is spent first
-    return [[i] for i, l in enumerate(live) if not l.tainted] + [[i] for i, l in enumerate(live) if l.tainted]
+    return [[i] for i, lot in enumerate(live) if not lot.tainted] + [[i] for i, lot in enumerate(live) if lot.tainted]
 
 
 def _split(total: int, lots: list[Lot]) -> list[int]:
     """Take `total` from a bundle pro rata to what each lot still holds (exact integer paise)."""
-    rem = [l.remaining for l in lots]
+    rem = [lot.remaining for lot in lots]
     avail = sum(rem)
     if total >= avail:
         return rem
@@ -152,7 +153,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
         if a <= 0 or d == u:
             return
         lots = core.lots[u]
-        live = [l for l in lots if l.remaining > 0 and l.t <= t and (l.spendable or not l.tainted)]
+        live = [lot for lot in lots if lot.remaining > 0 and lot.t <= t and (lot.spendable or not lot.tainted)]
         if not live:
             return
         need = a
@@ -174,7 +175,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
                     continue
                 used.update(fresh)
                 bundle = [live[i] for i in fresh]
-                for lot, take in zip(bundle, _split(need, bundle)):
+                for lot, take in zip(bundle, _split(need, bundle), strict=True):
                     if take <= 0:
                         continue
                     lot.remaining -= take
@@ -186,7 +187,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
             if need == 0:
                 break
         if len(lots) > 32 and len(lots) > 2 * len(live):
-            lots[:] = [l for l in lots if l.remaining > 0]   # drop spent lots (in place: callers hold this list)
+            lots[:] = [lot for lot in lots if lot.remaining > 0]   # drop spent lots (in place: callers hold this list)
         if not tparts:
             return
         attributed = sum(p[2] for p in tparts)
@@ -268,7 +269,7 @@ def trace_core(g: Graph, v: int, max_hops: int = config.MAX_HOPS,
             ocur[u] = k + 1
             process_out(u, k)
         nxt = ocur[u]
-        if nxt < int(ptr[u + 1]) and any(l.spendable and l.remaining > 0 for l in core.lots[u]):
+        if nxt < int(ptr[u + 1]) and any(lot.spendable and lot.remaining > 0 for lot in core.lots[u]):
             pending[u] = nxt
             heapq.heappush(heap, (int(ts[nxt]), int(txn[nxt]), u, nxt))
         else:

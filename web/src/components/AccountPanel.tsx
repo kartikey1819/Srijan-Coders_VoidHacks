@@ -20,7 +20,12 @@ function reasonText(r: string, labels: Record<string, string>) {
 
 const list = (o: Record<string, number>) => Object.entries(o).map(([k, v]) => `${k.replaceAll('_', ' ')} ${v}`).join(', ') || 'none'
 
-export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Props) {
+/** Keyed by account: another account starts from a clean panel (nothing of the previous one shows while it loads). */
+export function AccountPanel(props: Props) {
+  return <AccountDetails key={props.account} {...props} />
+}
+
+function AccountDetails({ account, reasons, onTrace, onRing, onSelect }: Props) {
   const [s, setS] = useState<AccountSummary | null>(null)
   const [txns, setTxns] = useState<TxnRow[]>([])
   const [err, setErr] = useState<string | null>(null)
@@ -28,7 +33,6 @@ export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Pr
 
   useEffect(() => {
     let live = true
-    setS(null); setTxns([]); setErr(null)
     Promise.all([api.account(account), api.txns(account, 50)])
       .then(([a, t]) => { if (live) { setS(a); setTxns(t) } })
       .catch((e) => live && setErr(String(e.message ?? e)))
@@ -61,7 +65,7 @@ export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Pr
         <button className="btn" onClick={() => onTrace(s.account)} title="Follow this account's outgoing money as if it were the victim"><Path /> Trace money from here</button>
         <button className="btn ghost" onClick={copy} aria-label="Copy account ID"><Copy /> {copied ? 'Copied' : 'Copy ID'}</button>
       </div>
-      {r && <ScoreBreakdown account={s.account} />}
+      {r && <ScoreBreakdown key={s.account} account={s.account} />}
       {r && r.reasons.length > 0 && (
         <>
           <h3 style={{ marginTop: 10 }}>Why it is flagged</h3>
@@ -120,7 +124,6 @@ function ScoreBreakdown({ account }: { account: string }) {
   const [x, setX] = useState<ScoreExplain | null>(null)
   useEffect(() => {
     let live = true
-    setX(null)
     api.explain(account).then((e) => live && setX(e)).catch(() => {})
     return () => { live = false }
   }, [account])

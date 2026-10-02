@@ -27,7 +27,8 @@ NOT_ENGLISH = re.compile(r"[^\x20-\x7E‘’“”–—]")   # ASCII + curly qu
 MAX_PARAGRAPH = 1200
 OTHER_BANKS = ("Canara Bank", "Union Bank of India", "Bank of India", "Indian Bank", "Yes Bank", "IDFC First Bank",
                "IndusInd Bank", "Federal Bank", "Central Bank of India", "Indian Overseas Bank", "UCO Bank",
-               "Bank of Maharashtra", "Punjab & Sind Bank", "IDBI Bank", "RBL Bank", "Bandhan Bank", "AU Small Finance Bank")
+               "Bank of Maharashtra", "Punjab & Sind Bank", "IDBI Bank", "RBL Bank", "Bandhan Bank",
+               "AU Small Finance Bank")
 BANK_NAMES = sorted(set(BANKS.values()) | set(OTHER_BANKS), key=len, reverse=True)
 BANK_RE = re.compile("|".join(re.escape(b) for b in BANK_NAMES), re.IGNORECASE)
 

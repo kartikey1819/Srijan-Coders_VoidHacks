@@ -1,7 +1,7 @@
 import { ArrowLeft } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { useWidth } from '../charts'
+import { useWidth } from '../useWidth'
 import { inr, inrShort, ROLE_TEXT, spanText, toEpoch } from '../format'
 import { prefersReducedMotion } from '../look'
 import type { ringIndex } from '../ringJourney'
@@ -35,9 +35,10 @@ export function EdgeFlow({ edge, ix, onBack, onGo }: Props) {
   const [rows, setRows] = useState<TxnRow[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [ref, w] = useWidth<HTMLDivElement>()
+  const [edgeWas, setEdgeWas] = useState(edge)
+  if (edge !== edgeWas) { setEdgeWas(edge); setRows(null); setErr(null) }   // another link: drop the old rows while it loads
   useEffect(() => {
     let live = true
-    setRows(null); setErr(null)
     api.byIndex(edge.txn_idxs).then((r) => live && setRows(r)).catch((e) => live && setErr(String((e as Error).message)))
     return () => { live = false }
   }, [edge])
