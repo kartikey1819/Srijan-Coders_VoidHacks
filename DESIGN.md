@@ -109,9 +109,15 @@ A large dialog:
   - top right, **Data in use for every report**: the open dataset (switchable), its transactions and
     accounts, and **Upload new file**, which opens the analyse dialog (drop zone, live stages, saved cases with Open /
     Remove);
-  - a headline sentence;
+  - first view, **Where the victims' money went** (`/api/flow`: every identified victim traced once with the trace
+    screen's rules, summed per layer): Victims → Collectors → Distributors → Cash-out stations with account counts,
+    amounts, and two facts each (average / largest loss; share passed on within 15 min and victims each; share passed
+    on within the hour and cash-outs each; share by wallet / crypto). Arrows carry the amount, a slow continuous flow
+    and the median time after the victim paid. Beside it, **Can still be frozen** (total, share of the loss, where it
+    is held by layer); under it, every account checked (donut: regular, victims, each layer) and three notes: banks to
+    notify, whether the suspects form one linked network, and whether any money was sent back to an earlier account.
+    Below 1360 px the freeze strip moves under the chain so the key figures stay in the first view;
   - the score distribution with the 70 line;
-  - suspect accounts by role (donut);
   - why accounts were flagged; suspects by bank; daily activity; victims found.
 
   Every chart opens the filtered list.

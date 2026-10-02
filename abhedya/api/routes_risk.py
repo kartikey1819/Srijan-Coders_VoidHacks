@@ -7,7 +7,7 @@ from abhedya import detect
 from abhedya.detect.export import csv_bytes
 from abhedya.engine import UnknownAccount, get_engine
 from abhedya.docs.banks import bank_name
-from contracts.models import CountRow, DayActivity, Overview, RiskRow, VictimCandidate
+from contracts.models import CountRow, DayActivity, FlowSummary, Overview, RiskRow, VictimCandidate
 
 router = APIRouter(prefix="/api")
 _NO_RISK = "Risk scores not computed: run `python -m abhedya ingest` without --skip-detect."
@@ -59,6 +59,12 @@ def _overview(cur) -> Overview:
            WHERE t.usable GROUP BY 1 ORDER BY 1""").fetchall()]
     return Overview(accounts=sum(hist), score_hist=hist, bands=bands, flagged_by_role=by_role,
                     flagged_by_bank=by_bank, flagged_reasons=reasons, activity=activity)
+
+
+@router.get("/flow", response_model=FlowSummary)
+def flow():
+    """Where the victims' money went: every identified victim traced once, summed per layer (Dashboard)."""
+    return _guard(lambda: get_engine().flow())
 
 
 @router.get("/risk/reasons")

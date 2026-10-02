@@ -19,6 +19,7 @@ __pycache__/
 # web
 web/node_modules/
 web/dist/
+web/dist_next/
 
 # editors / OS
 .vscode/

@@ -76,6 +76,24 @@ def test_overview_aggregates_agree_with_the_risk_table(client):
     assert client.get("/api/overview").json() == o        # cached, unchanged
 
 
+def test_flow_summary_traces_every_victim_and_adds_up(client):
+    """Expected (sample file): 300 victims lose Rs 8,47,66,804.55; 129 collectors pass 98% on within 15 minutes to 559
+    distributors, who pass 96% on within the hour to 385 cash-out accounts reached only by wallet / crypto; money
+    moves forward only; every flagged account is in one linked group."""
+    f = client.get("/api/flow").json()
+    lay = {l["role"]: l for l in f["layers"]}
+    assert f["victims"] == lay["VICTIM"]["accounts"] == 300 and f["loss_paise"] == 8_476_680_455
+    assert [lay[r]["accounts"] for r in ("L1", "L2", "L3")] == [129, 559, 385]
+    assert lay["L1"]["received_paise"] == f["loss_paise"] == lay["VICTIM"]["passed_on_paise"]
+    assert lay["L2"]["received_paise"] == lay["L1"]["passed_on_paise"]
+    assert lay["L3"]["received_paise"] == lay["L2"]["passed_on_paise"] == lay["L3"]["held_paise"]
+    assert (lay["L1"]["fast_share"], lay["L2"]["fast_share"], lay["L3"]["wallet_share"]) == (0.98, 0.96, 1.0)
+    assert f["freezable_paise"] == sum(l["held_paise"] for l in f["layers"]) <= f["loss_paise"]
+    assert f["to_l2_s"] < f["to_l3_s"] and f["sent_back"] == 0
+    assert f["linked_groups"] == 1 and f["linked_largest"] == f["suspects"] == 1073
+    assert client.get("/api/flow").json() == f            # cached, unchanged
+
+
 # ---- saved datasets: upload, live analysis, switch ----
 def _wait_done(client, ds_id, timeout=120):
     import time

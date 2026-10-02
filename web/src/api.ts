@@ -1,6 +1,4 @@
-import type {
-  AccountSummary, CaseInfo, CaseOutput, DatasetInfo, DatasetProgress, DQSummary, LlmStatus, Overview, RingResult, RiskRow, TraceResult, TxnRow, VictimCandidate,
-} from './types'
+import type { AccountSummary, CaseInfo, CaseOutput, DQSummary, DatasetInfo, DatasetProgress, FlowSummary, LlmStatus, Overview, RingResult, RiskRow, TraceResult, TxnRow, VictimCandidate } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(path, init)
@@ -17,6 +15,7 @@ const enc = encodeURIComponent
 export const api = {
   stats: () => req<DQSummary>('/api/stats'),
   overview: () => req<Overview>('/api/overview'),
+  flow: () => req<FlowSummary>('/api/flow'),
   datasets: () => req<DatasetInfo[]>('/api/datasets'),
   progress: (id: string) => req<DatasetProgress>(`/api/datasets/${enc(id)}/progress`),
   activate: (id: string) => req<DatasetInfo>(`/api/datasets/${enc(id)}/activate`, { method: 'POST' }),

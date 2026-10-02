@@ -264,3 +264,28 @@ class CaseOutput(BaseModel):
 class LlmStatus(BaseModel):          # GET /api/docs/llm
     available: bool                  # the local model answered within about a second and is installed
     model: str
+
+class FlowLayer(BaseModel):          # one station of "where the victims' money went" (victim money only)
+    role: str                        # VICTIM, L1, L2 or L3
+    accounts: int                    # accounts in this layer (each counted once, in the first layer it was reached)
+    received_paise: int              # victim money that arrived (0 for victims)
+    passed_on_paise: int             # victim money sent on (victims: the loss; cash-out: 0)
+    held_paise: int                  # can still be frozen (holdings of at least FREEZE_MIN_PAISE)
+    fast_share: Optional[float]      # collectors: share passed on within 15 min; distributors: within 1 hour
+    per_account: Optional[float]     # collectors: victims each; distributors: cash-out accounts each
+    wallet_share: Optional[float]    # cash-out: share that arrived through wallet / crypto channels
+
+class FlowSummary(BaseModel):        # GET /api/flow: every identified victim traced once, summed per layer
+    victims: int
+    loss_paise: int
+    avg_loss_paise: int
+    max_loss_paise: int
+    layers: list[FlowLayer]          # VICTIM, L1, L2, L3
+    to_l2_s: Optional[int]           # median seconds from the victim's payment to the first distributor
+    to_l3_s: Optional[int]           # ... to the first cash-out account
+    freezable_paise: int
+    traced_ms: int                   # time to trace every victim
+    suspects: int                    # flagged accounts
+    linked_largest: int              # flagged accounts in the largest group joined by money between them
+    linked_groups: int
+    sent_back: int                   # transfers that sent victim money back to an earlier layer or the victim

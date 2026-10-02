@@ -238,13 +238,34 @@ def test_one_click_network_from_the_trace(page, base):
 
 
 def test_overview_charts_render(page, base):
-    """Expected: the Dashboard's charts draw with data, and a donut role opens the filtered suspect list."""
+    """Expected: the Dashboard's charts draw with data, and a layer in the accounts donut opens the filtered list."""
     page.goto(f"{base}/#overview")
     page.get_by_text("accounts are flagged").first.wait_for()
-    assert page.locator(".chart svg").count() >= 2 and page.locator(".bars .b-bar").count() >= 3
-    page.locator(".donut-legend").get_by_role("button", name="Collector (Layer 1)").click()
+    assert page.locator(".chart svg").count() >= 1 and page.locator(".bars .b-bar").count() >= 3
+    page.locator(".cf-legend").get_by_role("button", name="Collectors").click()
     page.get_by_role("heading", name="Suspect Accounts").wait_for()
     assert "role=L1" in page.url
+
+
+def test_dashboard_first_view_shows_where_the_money_went(page, base):
+    """Expected: the Dashboard opens on the victims' money through the layers (counts, amounts, timings), what can
+    still be frozen, and the accounts behind it, all without scrolling at 1600 x 900; a station opens its accounts."""
+    page.set_viewport_size({"width": 1600, "height": 900})
+    page.goto(f"{base}/#overview")
+    flow = page.locator(".cflow")
+    flow.wait_for(timeout=30_000)
+    page.wait_for_function("document.querySelector('.cf-st.l3 .cf-big').innerText.startsWith('385')")
+    chain = page.locator(".cf-chain").inner_text()
+    for text in ("Victims", "300", "₹8.48 Cr", "Collectors", "129", "98% out in 15 min", "2.3 victims each",
+                 "Distributors", "559", "96% out in 1 hour", "Cash-out", "385", "100% crypto / wallet", "+5 min", "+18 min"):
+        assert text in chain, text
+    assert "₹8,47,66,804.55" in page.locator(".cf-freeze").inner_text()
+    assert "All 1,073 suspect accounts are connected" in page.locator(".cf-notes").inner_text()
+    box = flow.bounding_box()
+    assert box["y"] + box["height"] <= 900            # the whole panel is in the first view
+    page.locator(".cf-st.l2").click()
+    page.get_by_role("heading", name="Suspect Accounts").wait_for()
+    assert "role=L2" in page.url
 
 
 def test_mistyped_id_gets_a_format_hint(page, base):

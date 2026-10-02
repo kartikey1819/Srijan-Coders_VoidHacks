@@ -1,5 +1,4 @@
 import { scaleBand, scaleLinear } from 'd3-scale'
-import { arc, pie } from 'd3-shape'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 /** Width of an element, tracked (charts redraw to their container). */
@@ -129,53 +128,6 @@ export function ScoreSpread({ hist, bands, threshold = 70, onPick }: {
             <text x={w - m.r} y={h - 8} textAnchor="end">100</text>
           </svg>
         )}
-      </div>
-    </Chart>
-  )
-}
-
-/** Part-to-whole of the flagged accounts by layer: a donut with the total in the middle, a legend that is also the
- *  table (count and share), hover/focus lift, click-through to the filtered list. */
-export function LayerDonut({ rows, onPick, title, sub, source }: {
-  rows: { key: string; label: string; count: number }[]; onPick?: (key: string) => void
-  title: ReactNode; sub?: ReactNode; source?: string
-}) {
-  const [hot, setHot] = useState<string | null>(null)
-  const data = rows.filter((r) => r.count > 0)
-  const total = data.reduce((a, r) => a + r.count, 0) || 1
-  const size = 200, R = size / 2, inner = R * 0.6
-  const arcs = pie<{ key: string; label: string; count: number }>().value((d) => d.count).sort(null).padAngle(0.02)(data)
-  const mk = arc<(typeof arcs)[number]>().innerRadius(inner).outerRadius(R - 6).cornerRadius(3)
-  const color = (k: string) => (k === 'L1' || k === 'L2' || k === 'L3' ? `var(--${k.toLowerCase()})` : 'var(--unknown)')
-  const cur = data.find((d) => d.key === hot)
-  return (
-    <Chart title={title} sub={sub} source={source}>
-      <div className="donut">
-        <svg viewBox={`${-R} ${-R} ${size} ${size}`} width={size} height={size} role="img"
-             aria-label={data.map((d) => `${d.label}: ${d.count}`).join(', ')}>
-          {arcs.map((a, i) => {
-            const mid = (a.startAngle + a.endAngle) / 2, lift = hot === a.data.key ? 6 : 0
-            return (
-              <path key={a.data.key} d={mk(a) ?? ''} fill={color(a.data.key)} className="slice fade-in"
-                    style={{ transform: `translate(${Math.sin(mid) * lift}px, ${-Math.cos(mid) * lift}px)`, animationDelay: `${i * 60}ms`,
-                             opacity: hot && hot !== a.data.key ? 0.45 : 1, cursor: onPick ? 'pointer' : 'default' }}
-                    tabIndex={0} role="button" aria-label={`${a.data.label}: ${a.data.count} accounts, ${Math.round((100 * a.data.count) / total)}%`}
-                    onPointerEnter={() => setHot(a.data.key)} onPointerLeave={() => setHot(null)}
-                    onFocus={() => setHot(a.data.key)} onBlur={() => setHot(null)} onClick={() => onPick?.(a.data.key)} />
-            )
-          })}
-          <text textAnchor="middle" y={-4} className="donut-big">{(cur ? cur.count : total).toLocaleString('en-IN')}</text>
-          <text textAnchor="middle" y={16} className="donut-small">{cur ? `${Math.round((100 * cur.count) / total)}% · ${cur.label}` : 'flagged accounts'}</text>
-        </svg>
-        <ul className="donut-legend">
-          {data.map((d) => (
-            <li key={d.key} className={hot === d.key ? 'on' : ''} onPointerEnter={() => setHot(d.key)} onPointerLeave={() => setHot(null)}>
-              <i style={{ background: color(d.key) }} />
-              {onPick ? <button className="lbl" onClick={() => onPick(d.key)}>{d.label}</button> : <span>{d.label}</span>}
-              <b>{d.count.toLocaleString('en-IN')}</b><span className="muted">{Math.round((100 * d.count) / total)}%</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </Chart>
   )

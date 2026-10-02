@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { api } from '../api'
-import { BarList, DailyColumns, LayerDonut, ScoreSpread } from '../charts'
-import { inr, REASON_SHORT, ROLE_TEXT } from '../format'
+import { BarList, DailyColumns, ScoreSpread } from '../charts'
+import { inr, REASON_SHORT } from '../format'
 import { go } from '../route'
-import type { DQSummary, Overview as OverviewData, VictimCandidate } from '../types'
+import type { DQSummary, FlowSummary, Overview as OverviewData, VictimCandidate } from '../types'
+import { CaseFlow } from './CaseFlow'
 import { DataInUse } from './DataInUse'
 import { Page } from './Page'
 
@@ -19,10 +20,12 @@ const REASON_NAME: Record<string, string> = {
 export function Overview({ stats }: { stats: DQSummary | null }) {
   const [o, setO] = useState<OverviewData | null>(null)
   const [victims, setVictims] = useState<VictimCandidate[]>([])
+  const [flow, setFlow] = useState<FlowSummary | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
     api.overview().then(setO).catch((e) => setErr(String(e.message ?? e)))
     api.victims(300).then(setVictims).catch(() => setVictims([]))
+    api.flow().then(setFlow).catch(() => setFlow(null))
   }, [])
   const head = (body: ReactNode) => (
     <Page title="Dashboard" hi="डैशबोर्ड" desc="What this transaction file contains: suspect mule accounts, victims and where the money went."
@@ -30,25 +33,14 @@ export function Overview({ stats }: { stats: DQSummary | null }) {
   if (err) return head(<div className="banner bad"><b>{err}</b></div>)
   if (!o) return head(<p className="muted">Loading the summary…</p>)
   const flagged = o.bands.HIGH ?? 0
-  const totalToFlagged = victims.reduce((s, v) => s + v.out_paise_to_flagged, 0)
   return (
     <Page title="Dashboard" hi="डैशबोर्ड" desc="What this transaction file contains: suspect mule accounts, victims and where the money went."
           actions={<DataInUse stats={stats} />}>
-      <section className="gpanel gpanel-b">
-        <p className="headline">
-          {stats ? <>{stats.rows.toLocaleString('en-IN')} transactions between {o.accounts.toLocaleString('en-IN')} accounts were checked. </> : null}
-          <b>{flagged.toLocaleString('en-IN')}</b> accounts behave like money mules, and <b>{victims.length.toLocaleString('en-IN')}</b> victims
-          sent <b>{inr(totalToFlagged)}</b> straight to them. Click any chart to see the accounts behind it.
-        </p>
-      </section>
+      {flow ? <CaseFlow f={flow} stats={stats} days={o.activity.map((d) => d.day)} banks={o.flagged_by_bank} />
+        : <section className="gpanel cflow-wait" aria-busy="true"><p className="muted">Tracing every victim's money…</p></section>}
       <div className="overview">
-        <section className="sheet sheet-body w8">
+        <section className="sheet sheet-body w12">
           <ScoreSpread hist={o.score_hist} bands={o.bands} onPick={() => go({ name: 'flagged', role: null, bank: null, reason: null })} />
-        </section>
-        <section className="sheet sheet-body w4">
-          <LayerDonut title="Suspect accounts by role" sub="Collectors take the victim's money, distributors split it, cash-out accounts withdraw it. Click a slice for the list."
-                      source="risk table" rows={o.flagged_by_role.map((r) => ({ ...r, label: ROLE_TEXT[r.key] ?? r.label }))}
-                      onPick={(k) => go({ name: 'flagged', role: k === 'none' ? null : k, bank: null, reason: null })} />
         </section>
         <section className="sheet sheet-body w6">
           <BarList title="Why accounts were flagged" sub="The behaviour behind each flag. One account usually shows several."

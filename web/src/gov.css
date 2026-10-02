@@ -63,7 +63,7 @@ body { font-size: var(--fs); line-height: 1.5; }
 /* ---------- page ---------- */
 .gpage { padding: 18px 28px 0; display: flex; flex-direction: column; min-height: 100%; }
 .phead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; padding-bottom: 16px; }
-.phead-text { min-width: 0; max-width: 80ch; }
+.phead-text { min-width: 0; max-width: 80ch; flex: 1 1 320px; }
 .pcrumbs { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
 .phead h1 { font-size: 24px; font-weight: 700; color: var(--ink); display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
 .phead h1 .hi { font-size: 15px; font-weight: 600; color: var(--muted); }
@@ -485,3 +485,106 @@ body { font-size: var(--fs); line-height: 1.5; }
 .sign.none .sg-ic { color: var(--muted); background: var(--grid); }
 .sign.none .sg-label { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .sg-track i { animation: none !important; } }
+
+/* Dashboard: where the victims' money went (CaseFlow) */
+.cflow { display: grid; grid-template-columns: minmax(0, 1fr) 330px; overflow: hidden; }
+.cflow-wait { padding: 40px 22px; min-height: 220px; display: grid; place-items: center; }
+.cf-main { padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cf-head h2 { font-size: 17px; font-weight: 700; margin: 0 0 2px; }
+.cf-head p { margin: 0; }
+.cf-chain { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 1.42fr)); align-items: stretch; }
+.cf-step { display: flex; align-items: stretch; min-width: 0; }
+.cf-st {
+  flex: 1; min-width: 0; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
+  display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 11px; border-radius: 10px;
+  border: 1.5px solid var(--c); background: var(--cb);
+  animation: rise 320ms var(--ease) both; animation-delay: var(--d, 0ms);
+  transition: transform 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+.cf-st.victim { --c: var(--victim); --cb: var(--victim-bg); }
+.cf-st.l1 { --c: var(--l1); --cb: var(--l1-bg); }
+.cf-st.l2 { --c: var(--l2); --cb: var(--l2-bg); }
+.cf-st.l3 { --c: var(--l3); --cb: var(--l3-bg); }
+.cf-st:active { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) { .cf-st:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent); } }
+.cf-st:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+.cf-st-h { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13.5px; color: var(--c); }
+.cf-big { font-size: 22px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 5px; }
+.cf-big small { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.cf-money { font-size: 13px; color: var(--ink-2); padding-bottom: 6px; border-bottom: 1px solid color-mix(in srgb, var(--c) 30%, transparent); }
+.cf-money b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.cf-st ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--ink-2); }
+.cf-st li::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 1px; background: var(--c); margin: 0 7px 2px 0; }
+.cf-arrow { width: 74px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 5px;
+  animation: rise 320ms var(--ease) both; animation-delay: calc(var(--d, 0ms) - 50ms); }
+.cf-arrow b { font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cf-arrow svg { width: 100%; height: 14px; display: block; overflow: visible; }
+.cf-arrow span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.cf-flow { stroke: var(--sheet); stroke-width: 1.6; stroke-dasharray: 3 13; fill: none; opacity: 0.85;
+  animation: flow-on 2.8s linear infinite; animation-delay: calc(var(--d, 0ms) + 480ms); }
+.cf-lower { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; padding-top: 14px; border-top: 1px dashed var(--rule-2); }
+.cf-accts { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.cf-accts svg { flex: none; }
+.cf-accts path { transition: opacity 160ms var(--ease); }
+.cf-accts path.click { cursor: pointer; }
+.cf-dn-c { font-size: 20px; font-weight: 700; fill: var(--ink); font-variant-numeric: tabular-nums; }
+.cf-dn-s { font-size: 10.5px; fill: var(--muted); }
+.cf-legend { flex: 1; min-width: 0; }
+.cf-legend h3, .cf-freeze h3 { font-size: 13.5px; font-weight: 700; margin: 0 0 6px; color: var(--ink); }
+.cf-legend ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cf-legend li { display: grid; grid-template-columns: minmax(0, 1fr) 46px 64px; align-items: center; gap: 8px; font-size: 13px; padding: 3px 4px; border-radius: 4px; }
+.cf-legend li.on { background: var(--grid); }
+.cf-legend li > button, .cf-legend li > span { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font: inherit; background: none; border: 0; padding: 0; text-align: left; min-width: 0; }
+.cf-legend li > button { cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 3px; }
+.cf-legend li i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.cf-legend li small { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.cf-legend li b { text-align: right; font-variant-numeric: tabular-nums; }
+.cf-legend p { margin: 6px 0 0; }
+.cf-notes { margin: 0; display: grid; gap: 2px; align-content: start; padding-left: 18px; border-left: 1px solid var(--rule); }
+.cf-notes dt { font-weight: 700; font-size: 13.5px; margin-top: 6px; }
+.cf-notes dt:first-child { margin-top: 0; }
+.cf-notes dd { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.cf-freeze { padding: 18px 20px; background: color-mix(in srgb, var(--ok) 7%, var(--sheet)); border-left: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; }
+.cf-fz-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.cf-fz-ic { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--ok); border: 2px solid var(--ok); }
+.cf-fz-l { display: block; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.cf-fz-amt { display: block; font-size: 28px; line-height: 1.1; color: var(--ok); font-variant-numeric: tabular-nums; }
+.cf-fz-pct { font-size: 18px; color: var(--ok); font-variant-numeric: tabular-nums; align-self: start; margin-top: 4px; }
+.cf-fz-bar { display: block; height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; }
+.cf-fz-bar i { display: block; height: 100%; background: var(--ok); border-radius: 4px; transform-origin: 0 50%; animation: grow-x-once 700ms var(--ease) both 200ms; }
+.cf-freeze p { margin: 0; color: var(--ink-2); line-height: 1.5; }
+.cf-freeze h3 { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.cf-held { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.cf-held li { display: grid; grid-template-columns: 128px minmax(0, 1fr) 72px; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.cf-held b { text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.cf-held-t { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; display: block; }
+.cf-held-t i { display: block; height: 100%; border-radius: 3px; transform-origin: 0 50%; animation: grow-x-once 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 300ms); }
+@media (max-width: 1360px) {
+  /* the freeze strip moves up, straight under the money chain, so the key figures stay in the first view */
+  .cflow { display: flex; flex-direction: column; }
+  .cf-main { display: contents; }
+  .cf-head { order: 1; padding: 16px 20px 0; }
+  .cf-chain { order: 2; padding: 12px 20px 16px; }
+  .cf-freeze { order: 3; border-left: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 14px 20px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 32px; row-gap: 8px; align-content: start; }
+  .cf-freeze > * { grid-column: 1; }
+  .cf-freeze > h3, .cf-freeze > .cf-held { grid-column: 2; }
+  .cf-freeze > h3 { grid-row: 1; margin-top: 0; padding-top: 0; border-top: 0; }
+  .cf-freeze > .cf-held { grid-row: 2 / span 3; align-self: start; }
+  .cf-lower { order: 4; margin: 0 20px 18px; border-top: 0; padding-top: 16px; }
+}
+@media (max-width: 980px) {
+  .cf-chain { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .cf-step { flex-direction: column; }
+  .cf-arrow { width: 100%; flex-direction: row; justify-content: flex-start; padding: 0 0 4px; gap: 8px; }
+  .cf-arrow svg { width: 40px; }
+  .cf-lower { grid-template-columns: minmax(0, 1fr); }
+  .cf-notes { padding-left: 0; border-left: 0; }
+  .cf-freeze { display: flex; }
+}
+@media (max-width: 560px) { .cf-chain { grid-template-columns: minmax(0, 1fr); } .cf-accts { flex-direction: column; align-items: stretch; } }
+@media (prefers-reduced-motion: reduce) {
+  .cf-st, .cf-arrow, .cf-fz-bar i, .cf-held-t i { animation: none !important; }
+  .cf-flow { display: none; }
+}
+@media (max-width: 600px) { .diu { min-width: 0; width: 100%; } }

@@ -468,7 +468,7 @@ masthead and sidebar stay put.
 
 | Screen | Address | What it shows |
 |---|---|---|
-| Dashboard (डैशबोर्ड) | `#overview` (default; old `#home` / `#data` go here) | data in use for every report, with Upload new file; headline sentence; score distribution with the 70 line; suspect accounts by role (donut); why accounts were flagged; suspects by bank; daily activity; victims found |
+| Dashboard (डैशबोर्ड) | `#overview` (default; old `#home` / `#data` go here) | data in use for every report, with Upload new file; **Where the victims' money went** (victims → collectors → distributors → cash-out with amounts and timings, can still be frozen by layer, accounts checked, banks / linked network / circular routing); score distribution with the 70 line; why accounts were flagged; suspects by bank; daily activity; victims found |
 | Trace Victim Funds (पीड़ित राशि का पता लगाएँ) | `#trace=ACCOUNT` | one scrolling report: select the victim; summary sentence and journey strip (collector, distributors, cash-out, can still be frozen); four insight cards; **How the money moved** (money-trail tree; pointing at a box shows received / passed on / still holds; timeline whose steps fit the trail, with Transfer by transfer; Replay); collector's first minutes and the trace record; accounts to freeze; transactions in the trail |
 | Suspect Accounts (संदिग्ध खाते) | `#flagged?role=&bank=&reason=` | the flagged list with role badges and reasons in words, filters, account panel, CSV downloads |
 | Fraud Networks (धोखाधड़ी नेटवर्क) | `#ring` / `#ring=ACCOUNT` | start list of collectors; then **Money flow** (default: who paid into the account and where its money went, step by step; point at an account for received / passed on / kept; click to re-centre) or the optional 3D globe; layer filters, time slider, ZIP export |
@@ -503,6 +503,7 @@ All routes are under `/api`. Money is integer paise in JSON. Unknown accounts gi
 | GET | `/api/health` | liveness and data SHA-256 |
 | GET | `/api/stats`, `/api/dq/summary` | rows, accounts, flag counts, source hash, stage timings |
 | GET | `/api/overview` | aggregates for the Overview screen (cached) |
+| GET | `/api/flow` | where the victims' money went: every identified victim traced once, summed per layer, with what can still be frozen (cached; ~0.3 s on the official file) |
 | GET | `/api/search?q=` | account prefix search |
 | GET | `/api/trace/{victim}?max_hops=&seed_txn=` | the trace (`seed_txn` repeatable = disputed transfers) |
 | GET | `/api/account/{acct}` | totals, counterparties, mode / device / IP histograms, flags, risk |

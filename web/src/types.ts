@@ -64,3 +64,13 @@ export interface DatasetProgress {
   id: string; status: string; stage: string | null; stages_done: Record<string, number>; rows: number; accounts: number
   flagged: number; error: string | null
 }
+
+export interface FlowLayer {
+  role: 'VICTIM' | 'L1' | 'L2' | 'L3'; accounts: number; received_paise: number; passed_on_paise: number; held_paise: number
+  fast_share: number | null; per_account: number | null; wallet_share: number | null
+}
+export interface FlowSummary {
+  victims: number; loss_paise: number; avg_loss_paise: number; max_loss_paise: number; layers: FlowLayer[]
+  to_l2_s: number | null; to_l3_s: number | null; freezable_paise: number; traced_ms: number
+  suspects: number; linked_largest: number; linked_groups: number; sent_back: number
+}

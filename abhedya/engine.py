@@ -12,8 +12,8 @@ from abhedya import config
 from abhedya.docs.banks import bank_name
 from abhedya.graph.build import Graph
 from abhedya.graph.trace import fmt_ts, trace_core
-from contracts.models import (AccountSummary, Counterparty, DQSummary, RingResult, RiskRow, TraceEdge,
-                              TraceNode, TraceResult, TxnRow)
+from contracts.models import (AccountSummary, Counterparty, DQSummary, FlowSummary, RingResult, RiskRow,
+                              TraceEdge, TraceNode, TraceResult, TxnRow)
 
 # flagged rows may lack values; the API shows them as empty / 0 together with their data-quality flags
 _TXN_COLS = """txn_idx, coalesce(transaction_id, ''), coalesce(sender, ''), coalesce(receiver, ''),
@@ -198,6 +198,16 @@ class Engine:
                     UNION SELECT DISTINCT dst_id FROM txn WHERE narr_category IN ({cats})""").fetchall()
             self._fallback_suspects = {r[0] for r in rows}
         return self._fallback_suspects, {}
+
+    def flow(self) -> FlowSummary:
+        """Where the victims' money went, case-wide (computed once per engine: the data never changes)."""
+        if getattr(self, "_flow", None) is None:
+            from abhedya import detect
+            from abhedya.graph.flow import flow_summary
+            vics = [self.g.index[c.account] for c in detect.candidate_victims(self.cursor(), 100_000)
+                    if c.account in self.g.index]
+            self._flow = flow_summary(self.g, vics, lambda v: self.default_seeds(v)[0], self.suspects()[0])
+        return self._flow
 
     def ring(self, seed: str, t_from: str | None = None, t_to: str | None = None) -> RingResult:
         from abhedya.graph.ring import isolate_ring

@@ -1,4 +1,5 @@
 """Engine constants. Owner: A. Every threshold here comes from the problem statement or DATA_HANDLING.md."""
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -10,7 +11,7 @@ AUDIT_LOG = DATA_DIR / "audit.jsonl"
 MANIFEST_PATH = DATA_DIR / "case_manifest.json"
 CASES_DIR = ROOT / "cases"
 FIXTURE_DIR = ROOT / "contracts" / "fixtures"
-WEB_DIST = ROOT / "web" / "dist"
+WEB_DIST = Path(os.environ.get("ABHEDYA_WEB_DIST", ROOT / "web" / "dist"))   # a staged build can be served or tested
 DEFAULT_CSV = DATA_DIR / "VoidHacks8_MuleAccount_2M_Transactions.csv"
 
 # ---- trace ----
