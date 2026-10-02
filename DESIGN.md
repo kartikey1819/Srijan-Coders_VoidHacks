@@ -80,9 +80,8 @@ The first screen shows the selector, the summary and the insight cards together,
      transfer to the next (the default for trails longer than two hours).
    - Solid lines mean money moved within the hour, dashed means later. More than six accounts paid by one account
      fold into "+N more", which expands on a click.
-5. **Collector account: first minutes after the victim's payment**, as **Over time** (credit up, debits down, balance
-   draining) or **Payment by payment** (a waterfall: each payment out starts where the last one ended, ending with what
-   is still in the account), next to
+5. **Collector account: first minutes after the victim's payment**: four figures, then each payment out as a
+   waterfall (each bar starts where the last one ended, ending with what is still in the account), next to
    the **Trace record**:
    - victim and payments followed;
    - how far, and the method in plain words (3-15 minute window, at least 90 % amount match, own money first);

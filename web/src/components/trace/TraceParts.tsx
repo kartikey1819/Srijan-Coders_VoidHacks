@@ -258,10 +258,9 @@ export function Insights({ t, v, signs }: { t: TraceResult; v: TraceView; signs:
   )
 }
 
-/** The collector's own ledger right after the victim's money arrived: the facts as four figures, then a plain chart
- *  (money in above the line, each payment out below it, the balance stepping down). */
+/** The collector's own ledger right after the victim's money arrived: the facts as four figures, then each payment out
+ *  as a waterfall (each bar starts where the last ended, ending with what is still in the account). */
 export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
-  const [mode, setMode] = useState<'chart' | 'payments'>('chart')
   const c = v.collector
   if (!c) return <p className="muted">There is no collector account on this trail.</p>
   const credit = t.edges.filter((e) => e.dst === c.account && e.rule === 'seed').sort((a, b) => toEpoch(a.ts) - toEpoch(b.ts))[0]
@@ -281,14 +280,6 @@ export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
   const first = Math.max(0, (toEpoch(debits[0].ts) - ct))
   const firstText = first < 60 ? `${first} s` : `${Math.floor(first / 60)} min ${String(first % 60).padStart(2, '0')} s`
 
-  const W = 720, H = 190, AX = 92, L = 44, R = 16, UP = 70, DOWN = 70
-  const x = (m: number) => L + (Math.min(Math.max(m, 0), win) / win) * (W - L - R)
-  const yb = (val: number) => AX - (UP * val) / amount
-  let bal = amount, path = `M${x(0)},${yb(bal)}`
-  for (const e of inWin) { path += ` H${x(off(e.ts))}`; bal = Math.max(0, bal - e.attributed_paise); path += ` V${yb(bal)}` }
-  path += ` H${x(win)}`
-  const step = win <= 15 ? 5 : win <= 30 ? 5 : 10
-
   return (
     <div className="pw">
       <dl className="pw-figs">
@@ -298,35 +289,8 @@ export function PassWindow({ t, v }: { t: TraceResult; v: TraceView }) {
           <span>{pct(outSum)}% · {inWin.length} payment{inWin.length === 1 ? '' : 's'} to {receivers} account{receivers === 1 ? '' : 's'}</span></div>
         <div><dt>Left in the account</dt><dd className="ok-fig">{inr(left)}</dd><span>{pct(left)}% of what arrived</span></div>
       </dl>
-      <div className="seg pw-mode" role="group" aria-label="Show the collector's money as">
-        <button aria-pressed={mode === 'chart'} onClick={() => setMode('chart')}>Over time</button>
-        <button aria-pressed={mode === 'payments'} onClick={() => setMode('payments')}>Payment by payment</button>
-      </div>
-      {mode === 'payments' ? <Waterfall amount={amount} at={credit.ts} pays={inWin} ct={ct} left={left} /> : <>
-      <svg className="win" viewBox={`0 0 ${W} ${H}`} role="img"
-           aria-label={`${inr(amount)} arrived; ${inWin.length} payments out to ${receivers} accounts within ${win} minutes; ${pct(outSum)}% passed on`}>
-        {Array.from({ length: win / step + 1 }, (_, i) => (
-          <g key={i}>
-            <line x1={x(i * step)} x2={x(i * step)} y1={AX - UP - 4} y2={AX + DOWN} className="w-grid" />
-            <text x={x(i * step)} y={H - 4} textAnchor={i === win / step ? 'end' : i === 0 ? 'start' : 'middle'} className="w-tick">{i * step}{i === win / step ? ' min' : ''}</text>
-          </g>
-        ))}
-        <text x={L - 8} y={AX - UP / 2} textAnchor="end" className="w-side">in</text>
-        <text x={L - 8} y={AX + DOWN / 2} textAnchor="end" className="w-side">out</text>
-        <path d={`${path} V${AX} H${x(0)} Z`} style={{ fill: 'var(--victim)', opacity: 0.08 }} />
-        <path d={path} fill="none" strokeWidth="1.6" style={{ stroke: 'var(--victim)', opacity: 0.55 }} />
-        <rect x={x(0) - 5} y={AX - UP} width={10} height={UP} rx="2" style={{ fill: 'var(--victim)' }}>
-          <title>{`${credit.ts.slice(11)} · ${inr(amount)} from the victim`}</title></rect>
-        {inWin.map((e, i) => (
-          <rect key={i} x={x(off(e.ts)) - 5} y={AX + 1} width={10} height={Math.max(4, (e.attributed_paise / amount) * DOWN)} rx="2"
-                style={{ fill: 'var(--l1)' }}><title>{`${e.ts.slice(11)} · ${inr(e.attributed_paise)} to ${e.dst}`}</title></rect>
-        ))}
-        <line x1={L} x2={W - R} y1={AX} y2={AX} className="w-axis" />
-      </svg>
-      <p className="pw-key"><span><b style={{ background: 'var(--victim)' }} />money in</span>
-        <span><b style={{ background: 'var(--l1)' }} />money out</span>
-        <span><i />balance</span>{later > 0 && <span className="muted">{later} later payment{later === 1 ? '' : 's'} not shown</span>}</p>
-      </>}
+      <Waterfall amount={amount} at={credit.ts} pays={inWin} ct={ct} left={left} />
+      {later > 0 && <p className="small muted">{later} later payment{later === 1 ? '' : 's'} not shown</p>}
     </div>
   )
 }

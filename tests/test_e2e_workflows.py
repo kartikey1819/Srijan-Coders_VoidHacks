@@ -346,13 +346,11 @@ def test_collector_panel_has_a_payment_by_payment_view(page, base):
     """Expected: the collector panel switches from the chart to a waterfall of each payment out, ending with what is
     still in the account."""
     open_trace(page, base)
-    page.get_by_role("button", name="Payment by payment").click()
     rows = page.locator(".wf li")
     rows.first.wait_for()
     assert rows.count() >= 3
     assert "from the victim" in rows.first.inner_text() and "still in the account" in rows.last.inner_text()
-    page.get_by_role("button", name="Over time").click()
-    page.locator(".pw svg.win").wait_for()
+    assert page.get_by_role("button", name="Over time").count() == 0 and page.locator(".pw svg.win").count() == 0
 
 
 def test_panel_size_persists_across_reload(page, base):

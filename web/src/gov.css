@@ -199,12 +199,6 @@ body { font-size: var(--fs); line-height: 1.5; }
 .two-col { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .two-col.wide-right { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
 @media (max-width: 1280px) { .two-col, .two-col.wide-right { grid-template-columns: minmax(0, 1fr); } }
-.win { display: block; width: 100%; height: auto; }
-.w-cap { font-size: 13px; font-weight: 600; fill: var(--muted); }
-.w-grid { stroke: var(--grid); stroke-dasharray: 3 5; }
-.w-tick { font-size: 12px; fill: var(--muted); }
-.w-axis { stroke: var(--rule-2); }
-.w-bal { font-size: 12.5px; font-weight: 700; fill: var(--victim); }
 .w-big { font-size: 16px; font-weight: 700; fill: var(--ink); }
 .w-note { font-size: 12.5px; fill: var(--muted); }
 .record { margin: 0; }
@@ -303,10 +297,6 @@ body { font-size: var(--fs); line-height: 1.5; }
 .pw-figs span { font-size: 12.5px; color: var(--muted); }
 .pw-figs .ok-fig { color: var(--ok); }
 @media (max-width: 1700px) { .pw-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.w-side { font-size: 12px; font-weight: 600; fill: var(--muted); }
-.pw-key { margin: 0; display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
-.pw-key b { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-.pw-key i { display: inline-block; width: 16px; border-top: 2px solid var(--victim); opacity: 0.6; margin-right: 6px; vertical-align: 3px; }
 
 /* ---------- trace: summary strip, money now, insight cards (motion: transform / opacity only, once per trace) ---------- */
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -591,7 +581,6 @@ body { font-size: var(--fs); line-height: 1.5; }
 @media (max-width: 600px) { .diu { min-width: 0; width: 100%; } }
 
 /* Collector panel: "Payment by payment" waterfall */
-.pw-mode { align-self: flex-start; margin: 2px 0 4px; }
 .wf { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .wf li { display: grid; grid-template-columns: 50px minmax(0, 132px) minmax(0, 1fr) 128px; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
 .wf-t { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
