@@ -299,8 +299,9 @@ def test_ring_transfer_flow_panel(page, base):
     page.get_by_role("heading", name="Money came from (4)").wait_for(timeout=20_000)
     page.get_by_role("button", name=f"Transfer flow with {VICTIM}").click()
     page.get_by_role("heading", name="Transfer flow").first.wait_for()
-    page.get_by_text("moved on this link").wait_for()
-    page.locator(".flow table.tbl tbody tr").first.wait_for()
-    assert page.locator(".flow table.tbl tbody tr").count() >= 1
+    page.locator(".edge-flow .ef-svg").wait_for()
+    assert page.locator(".edge-flow .ef-node").count() >= 2
+    page.locator(".edge-flow table.tbl tbody tr").first.wait_for()
+    assert page.locator(".edge-flow table.tbl tbody tr").count() >= 1
     page.get_by_role("button", name="Back to the journey").click()
     page.get_by_role("heading", name="Money came from (4)").wait_for()

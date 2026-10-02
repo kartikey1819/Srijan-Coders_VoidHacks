@@ -2,7 +2,8 @@ import { ArrowCounterClockwise, ArrowsInSimple, Minus, Pause, Play, Plus } from 
 import { forceRadial } from 'd3-force-3d'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import ForceGraph3D from 'react-force-graph-3d'
-import { inrShort, toEpoch } from '../format'
+import * as THREE from 'three'
+import { toEpoch } from '../format'
 import { cssVar, prefersReducedMotion, useLookName } from '../look'
 import type { Journey } from '../ringJourney'
 import type { GraphEdge, RingResult } from '../types'
@@ -23,37 +24,46 @@ interface Props {
   onOpenLink: (e: GraphEdge) => void
 }
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 const ROLE_NAME: Record<string, string> = { VICTIM: 'victim', L1: 'L1 collector', L2: 'L2 distributor', L3: 'L3 cash-out', UNKNOWN: 'account' }
+const FAR = 1e7                                             // hidden points/segments are parked out of view
 
-/** Blend a hex colour toward the background: keeps the hue (layer stays recognisable) while receding. */
-function fade(hex: string, bg: string, k: number): string {
-  const p = (h: string) => {
-    let v = h.trim().replace('#', '')
-    if (v.length === 3) v = v.split('').map((c) => c + c).join('')      // the build shortens #ffffff to #fff
-    return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16))
-  }
-  try {
-    const a = p(hex), b = p(bg)
-    if ([...a, ...b].some((x) => Number.isNaN(x))) return hex
-    return '#' + a.map((x, i) => Math.round(x * (1 - k) + b[i] * k).toString(16).padStart(2, '0')).join('')
-  } catch { return hex }
+function hexRgb(h: string): [number, number, number] {
+  let v = h.trim().replace('#', '')
+  if (v.length === 3) v = v.split('').map((c) => c + c).join('')   // the build shortens #ffffff to #fff
+  const n = [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16) / 255)
+  return n.some(Number.isNaN) ? [0.5, 0.5, 0.5] : [n[0], n[1], n[2]]
+}
+const mix = (a: [number, number, number], b: [number, number, number], k: number): [number, number, number] =>
+  [a[0] * (1 - k) + b[0] * k, a[1] * (1 - k) + b[1] * k, a[2] * (1 - k) + b[2] * k]
+const toHex = (c: [number, number, number]) => '#' + c.map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')
+
+function dotTexture(): THREE.Texture {
+  const c = document.createElement('canvas')
+  c.width = c.height = 64
+  const g = c.getContext('2d')!
+  g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill()
+  const t = new THREE.CanvasTexture(c)
+  t.needsUpdate = true
+  return t
 }
 
-/** The syndicate as a slowly turning globe: every account pulled onto one sphere, coloured by layer.
- *  Click a dot: its money journey lights up and flows. Hover: its direct links. Double-click a link: the transfer
- *  flow behind it. The camera never zooms out on its own once the user has moved it. */
+/** The syndicate as a slowly turning globe. For speed, the whole ring is drawn as two batched objects (one point
+ *  cloud, one line set) that never rebuild on hover; only the selected journey uses individual, interactive objects.
+ *  Hover and click on the cloud use one cheap ray test; double-clicking any line opens its transfer flow. */
 export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journey, selected, hotLink, hidden, cutoff, onPick, onOpenLink }, ref) {
   const box = useRef<HTMLDivElement>(null)
+  const tipEl = useRef<HTMLDivElement>(null)
   const fg = useRef<any>(undefined)                       // eslint-disable-line @typescript-eslint/no-explicit-any
   const [size, setSize] = useState({ w: 600, h: 400 })
-  const [hover, setHover] = useState<string | null>(null)
   const [spin, setSpin] = useState(true)
-  const touched = useRef(false)                            // user moved the camera: no more automatic fitting
-  const lastClick = useRef<{ key: string; t: number } | null>(null)
+  const [recent, setRecent] = useState<Set<string>>(new Set())
+  const touched = useRef(false)
   const prevCut = useRef(cutoff)
   const look = useLookName()
   const reduced = prefersReducedMotion()
+  const objs = useRef<{ points: THREE.Points; lines: THREE.LineSegments; hover: THREE.LineSegments } | null>(null)
+  const pickRef = useRef(onPick); pickRef.current = onPick
+  const openRef = useRef(onOpenLink); openRef.current = onOpenLink
 
   useEffect(() => {
     const el = box.current
@@ -71,7 +81,10 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
     }
     const nodes: GNode[] = ring.nodes.map((n) => ({ id: n.account, role: n.role, seed: n.account === ring.seed, first: first.get(n.account) ?? 0 }))
     const links: GLink[] = ring.edges.map((e) => ({ source: e.src, target: e.dst, key: `${e.src}>${e.dst}`, t: toEpoch(e.first_ts), edge: e }))
-    return { nodes, links }
+    const index = new Map(nodes.map((n, i) => [n.id, i]))
+    const adj = new Map<string, number[]>()
+    links.forEach((l, i) => { for (const a of [l.edge.src, l.edge.dst]) (adj.get(a) ?? adj.set(a, []).get(a)!).push(i) })
+    return { nodes, links, index, adj }
   }, [ring])
 
   const colors = useMemo(() => {
@@ -79,12 +92,74 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
     const role: Record<string, string> = {
       VICTIM: genz ? '#e8ecf4' : '#1d3a8a', L1: cssVar('--l1'), L2: cssVar('--l2'), L3: cssVar('--l3'), UNKNOWN: cssVar('--unknown'),
     }
-    const faded: Record<string, string> = Object.fromEntries(Object.entries(role).map(([k, v]) => [k, fade(v, bg, genz ? 0.62 : 0.55)]))
-    return { role, faded, bg, hot: genz ? cssVar('--accent') : '#e0a100', link: genz ? 'rgba(160,170,200,0.18)' : 'rgba(40,52,72,0.16)',
-             ink: cssVar('--ink'), rule: cssVar('--rule-2') }
+    return { role, bg, genz, hot: genz ? cssVar('--accent') : '#e0a100', ink: cssVar('--ink'), rule: cssVar('--rule-2') }
   }, [look])
 
-  // forces: pull every account onto one shell; start outside it; never auto-fit after the user has moved
+  // ---- the batched ring: one point cloud + one line set, added to the scene once ----
+  useEffect(() => {
+    const g = fg.current
+    if (!g) return
+    const scene: THREE.Scene = g.scene()
+    const pGeo = new THREE.BufferGeometry()
+    pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(data.nodes.length * 3), 3))
+    pGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(data.nodes.length * 3), 3))
+    const tex = dotTexture()
+    const points = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 10, sizeAttenuation: true, vertexColors: true, map: tex, alphaTest: 0.5, transparent: true }))
+    const lGeo = new THREE.BufferGeometry()
+    lGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(data.links.length * 6), 3))
+    const lines = new THREE.LineSegments(lGeo, new THREE.LineBasicMaterial({ transparent: true, opacity: 0.09, depthWrite: false }))
+    const hGeo = new THREE.BufferGeometry()
+    hGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(600 * 6), 3))
+    hGeo.setDrawRange(0, 0)
+    const hover = new THREE.LineSegments(hGeo, new THREE.LineBasicMaterial({ transparent: true, opacity: 0.95 }))
+    points.renderOrder = 1; hover.renderOrder = 2
+    scene.add(lines); scene.add(points); scene.add(hover)
+    objs.current = { points, lines, hover }
+    return () => {
+      scene.remove(lines); scene.remove(points); scene.remove(hover)
+      pGeo.dispose(); lGeo.dispose(); hGeo.dispose(); tex.dispose()
+      ;(points.material as THREE.Material).dispose(); (lines.material as THREE.Material).dispose(); (hover.material as THREE.Material).dispose()
+      objs.current = null
+    }
+  }, [data])
+
+  const visibleNode = useCallback((n: GNode) => !hidden.has(n.role) && n.first <= cutoff, [hidden, cutoff])
+  const lit = journey?.nodes
+
+  /** Write positions (and colours) of the batched objects from the current layout. Cheap: plain typed arrays. */
+  const sync = useCallback((withColors = false) => {
+    const o = objs.current
+    if (!o) return
+    const pp = o.points.geometry.getAttribute('position') as THREE.BufferAttribute
+    const pc = o.points.geometry.getAttribute('color') as THREE.BufferAttribute
+    const bg = hexRgb(colors.bg)
+    data.nodes.forEach((n, i) => {
+      const show = visibleNode(n) && !(lit && lit.has(n.id)) && n.id !== selected
+      pp.setXYZ(i, show ? n.x ?? 0 : FAR, show ? n.y ?? 0 : FAR, show ? n.z ?? 0 : FAR)
+      if (withColors) {
+        const c = mix(hexRgb(colors.role[n.role] ?? colors.role.UNKNOWN), bg, lit ? (colors.genz ? 0.42 : 0.32) : 0)
+        pc.setXYZ(i, c[0], c[1], c[2])
+      }
+    })
+    pp.needsUpdate = true
+    if (withColors) pc.needsUpdate = true
+    o.points.geometry.computeBoundingSphere()
+    const lp = o.lines.geometry.getAttribute('position') as THREE.BufferAttribute
+    data.links.forEach((l, i) => {
+      const s = l.source as GNode, t = l.target as GNode
+      const show = l.t <= cutoff && !hidden.has(s.role) && !hidden.has(t.role)
+      lp.setXYZ(2 * i, show ? s.x ?? 0 : FAR, show ? s.y ?? 0 : FAR, show ? s.z ?? 0 : FAR)
+      lp.setXYZ(2 * i + 1, show ? t.x ?? 0 : FAR, show ? t.y ?? 0 : FAR, show ? t.z ?? 0 : FAR)
+    })
+    lp.needsUpdate = true
+    o.lines.geometry.computeBoundingSphere()
+    ;(o.lines.material as THREE.LineBasicMaterial).color.set(colors.genz ? '#9aa6c6' : '#7d8aa3')
+    ;(o.hover.material as THREE.LineBasicMaterial).color.set(colors.hot)
+  }, [data, colors, visibleNode, lit, selected, cutoff, hidden])
+
+  useEffect(() => { sync(true) }, [sync])
+
+  // ---- forces, camera, rotation ----
   useEffect(() => {
     const g = fg.current
     if (!g) return
@@ -95,19 +170,19 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
     const c = g.controls()
     if (!c) return
     c.autoRotateSpeed = 0.6
+    c.enableDamping = true
+    c.dampingFactor = 0.12
     const stop = () => { touched.current = true; c.autoRotate = false; setSpin(false) }
     c.addEventListener?.('start', stop)
     return () => c.removeEventListener?.('start', stop)
   }, [data])
   useEffect(() => { const c = fg.current?.controls(); if (c) c.autoRotate = spin && !reduced }, [spin, reduced, data])
 
-  /** Bring a node to the centre, keeping the current zoom (distance), approaching from outside the globe. */
   const focus = useCallback((id: string) => {
     const g = fg.current
-    const n = data.nodes.find((x) => x.id === id)
+    const n = data.nodes[data.index.get(id) ?? -1]
     if (!g || !n || n.x === undefined) return
-    const cam = g.camera().position, c = g.controls()
-    const tgt = c?.target ?? { x: 0, y: 0, z: 0 }
+    const cam = g.camera().position, tgt = g.controls()?.target ?? { x: 0, y: 0, z: 0 }
     const dist = Math.min(900, Math.max(80, Math.hypot(cam.x - tgt.x, cam.y - tgt.y, cam.z - tgt.z)))
     const len = Math.hypot(n.x, n.y ?? 0, n.z ?? 0) || 1
     const u = { x: n.x / len, y: (n.y ?? 0) / len, z: (n.z ?? 0) / len }
@@ -125,49 +200,84 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
     if (selected) { touched.current = true; focus(selected) }
   }, [selected, focus])
 
-  // playback: money visibly travels along each newly revealed transfer
+  // ---- playback: transfers revealed in this step light up and carry moving money ----
   useEffect(() => {
-    const g = fg.current, prev = prevCut.current
+    const prev = prevCut.current
     prevCut.current = cutoff
-    if (!g || reduced || !(cutoff > prev) || !Number.isFinite(prev)) return
-    let n = 0
-    for (const l of data.links) {
-      if (l.t > prev && l.t <= cutoff && n < 80) { g.emitParticle(l); n++ }
-    }
+    if (reduced || !(cutoff > prev) || !Number.isFinite(prev)) { setRecent(new Set()); return }
+    const s = new Set<string>()
+    for (const l of data.links) if (l.t > prev && l.t <= cutoff && s.size < 120) s.add(l.key)
+    setRecent(s)
   }, [cutoff, data, reduced])
 
-  const hoverSet = useMemo(() => {
-    if (!hover) return null
-    const s = new Set<string>([hover])
-    for (const l of data.links) {
-      const a = typeof l.source === 'object' ? l.source.id : l.source, b = typeof l.target === 'object' ? l.target.id : l.target
-      if (a === hover) s.add(b)
-      if (b === hover) s.add(a)
-    }
-    return s
-  }, [hover, data])
-
-  const lit = journey?.nodes
-  const nodeColor = useCallback((n: GNode) => {
-    const on = hoverSet ? hoverSet.has(n.id) : !lit || lit.has(n.id)
-    return on ? colors.role[n.role] ?? colors.role.UNKNOWN : colors.faded[n.role] ?? colors.faded.UNKNOWN
-  }, [lit, hoverSet, colors])
-  const nodeVal = useCallback((n: GNode) => (n.id === selected ? 14 : n.id === hover ? 6 : n.seed ? 8 : n.role === 'VICTIM' ? 0.7 : 1.3), [selected, hover])
-  const linkOn = useCallback((l: GLink) => {
-    if (l.key === hotLink) return true
-    if (hover) { const a = (l.source as GNode).id, b = (l.target as GNode).id; return a === hover || b === hover }
-    return !!journey?.links.has(l.key)
-  }, [journey, hover, hotLink])
-  const linkColor = useCallback((l: GLink) => (linkOn(l) ? colors.hot : colors.link), [linkOn, colors])
-  const linkWidth = useCallback((l: GLink) => (l.key === hotLink ? 3 : linkOn(l) ? 1.4 : 0), [linkOn, hotLink])
-  const particles = useCallback((l: GLink) => (!reduced && linkOn(l) ? (look === 'genz' ? 3 : 2) : 0), [linkOn, look, reduced])
-  const nodeVis = useCallback((n: GNode) => !hidden.has(n.role) && n.first <= cutoff, [hidden, cutoff])
-  const linkVis = useCallback((l: GLink) => {
+  // ---- the interactive layer: only the journey, the selection and live transfers ----
+  const activeNode = useCallback((n: GNode) => visibleNode(n) && (n.id === selected || !!lit?.has(n.id)), [visibleNode, selected, lit])
+  const activeLink = useCallback((l: GLink) => {
     const s = l.source as GNode, t = l.target as GNode
-    return l.t <= cutoff && !hidden.has(s.role ?? '') && !hidden.has(t.role ?? '')
-  }, [hidden, cutoff])
+    if (!(l.t <= cutoff && !hidden.has(s.role ?? '') && !hidden.has(t.role ?? ''))) return false
+    return l.key === hotLink || recent.has(l.key) || !!journey?.links.has(l.key)
+  }, [journey, hotLink, recent, cutoff, hidden])
+  const nodeColor = useCallback((n: GNode) => colors.role[n.role] ?? colors.role.UNKNOWN, [colors])
+  const nodeVal = useCallback((n: GNode) => (n.id === selected ? 14 : n.seed ? 6 : 2.2), [selected])
+  const linkColor = useCallback(() => colors.hot, [colors])
+  const linkWidth = useCallback((l: GLink) => (l.key === hotLink ? 3 : 1.3), [hotLink])
 
-  const tip = (html: string) => `<div style="font:12px/1.4 var(--font);padding:6px 8px;background:${colors.bg};color:${colors.ink};border:1px solid ${colors.rule};border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.18)">${html}</div>`
+  // ---- hover / click / double-click on the batched ring (one ray test, throttled to the frame) ----
+  const ray = useMemo(() => { const r = new THREE.Raycaster(); r.params.Points = { threshold: 5 }; r.params.Line = { threshold: 2.5 }; return r }, [])
+  const hit = useCallback((ev: { clientX: number; clientY: number }, what: 'points' | 'lines') => {
+    const g = fg.current, o = objs.current, el = box.current
+    if (!g || !o || !el) return null
+    const r = el.getBoundingClientRect()
+    ray.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), g.camera())
+    const h = ray.intersectObject(what === 'points' ? o.points : o.lines, false)[0]
+    if (!h) return null
+    return what === 'points' ? (h.index ?? null) : h.index !== undefined ? Math.floor(h.index / 2) : null
+  }, [ray])
+
+  const showHover = useCallback((i: number | null, ev?: { clientX: number; clientY: number }) => {
+    const o = objs.current, tip = tipEl.current, el = box.current
+    if (!o || !tip || !el) return
+    const hp = o.hover.geometry.getAttribute('position') as THREE.BufferAttribute
+    if (i === null) { o.hover.geometry.setDrawRange(0, 0); tip.style.opacity = '0'; el.style.cursor = 'grab'; return }
+    const n = data.nodes[i]
+    let k = 0
+    for (const li of (data.adj.get(n.id) ?? []).slice(0, 600)) {
+      const l = data.links[li], s = l.source as GNode, t = l.target as GNode
+      if (l.t > cutoff) continue
+      hp.setXYZ(2 * k, s.x ?? 0, s.y ?? 0, s.z ?? 0); hp.setXYZ(2 * k + 1, t.x ?? 0, t.y ?? 0, t.z ?? 0); k++
+    }
+    hp.needsUpdate = true
+    o.hover.geometry.setDrawRange(0, k * 2)
+    o.hover.geometry.computeBoundingSphere()
+    const r = el.getBoundingClientRect()
+    tip.textContent = ''
+    const b = document.createElement('b'); b.textContent = n.id; tip.appendChild(b)
+    tip.appendChild(document.createTextNode(` · ${ROLE_NAME[n.role] ?? n.role} · ${k} link${k === 1 ? '' : 's'} · click to follow`))
+    tip.style.transform = `translate(${Math.min((ev?.clientX ?? 0) - r.left + 14, r.width - 260)}px, ${(ev?.clientY ?? 0) - r.top + 14}px)`
+    tip.style.opacity = '1'
+    el.style.cursor = 'pointer'
+  }, [data, cutoff])
+
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    let raf = 0, last: PointerEvent | null = null
+    const onMove = (e: PointerEvent) => {
+      last = e
+      if (raf || e.buttons) return                          // never hit-test while dragging
+      raf = requestAnimationFrame(() => { raf = 0; if (last) showHover(hit(last, 'points'), last) })
+    }
+    const onLeave = () => showHover(null)
+    const onDbl = (e: MouseEvent) => {
+      const li = hit(e, 'lines')
+      if (li !== null) openRef.current(data.links[li].edge)
+    }
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerleave', onLeave)
+    el.addEventListener('dblclick', onDbl)
+    return () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave); el.removeEventListener('dblclick', onDbl); cancelAnimationFrame(raf) }
+  }, [hit, showHover, data])
+
   const zoom = (k: number) => {
     const g = fg.current
     if (!g) return
@@ -186,41 +296,39 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
         backgroundColor={colors.bg}
         showNavInfo={false}
         controlType="orbit"
-        rendererConfig={{ preserveDrawingBuffer: true, antialias: true }}
+        rendererConfig={{ preserveDrawingBuffer: true, antialias: true, powerPreference: 'high-performance' }}
         nodeRelSize={3.4}
-        nodeResolution={10}
+        nodeResolution={12}
         nodeVal={nodeVal}
         nodeColor={nodeColor}
         nodeOpacity={1}
-        nodeLabel={(n: GNode) => tip(`<b style="font-family:var(--mono)">${esc(n.id)}</b><br>${esc(ROLE_NAME[n.role] ?? n.role)}<br><span style="opacity:.7">click to follow its money</span>`)}
-        nodeVisibility={nodeVis}
-        linkVisibility={linkVis}
+        nodeVisibility={activeNode}
+        nodeLabel={(n: GNode) => `${n.id} · ${ROLE_NAME[n.role] ?? n.role}`}
+        linkVisibility={activeLink}
         linkColor={linkColor}
         linkWidth={linkWidth}
-        linkOpacity={0.6}
-        linkHoverPrecision={6}
-        linkLabel={(l: GLink) => tip(`<b style="font-family:var(--mono)">${esc(l.edge.src)} → ${esc(l.edge.dst)}</b><br>${esc(inrShort(l.edge.total_paise))} in ${l.edge.n_txn} transfer${l.edge.n_txn === 1 ? '' : 's'} · first ${esc(l.edge.first_ts.slice(5, 16))}<br><span style="opacity:.7">double-click for the full flow</span>`)}
-        linkDirectionalParticles={particles}
+        linkOpacity={0.85}
+        linkDirectionalParticles={(l: GLink) => (reduced ? 0 : recent.has(l.key) ? 2 : colors.genz ? 3 : 2)}
         linkDirectionalParticleWidth={2.6}
         linkDirectionalParticleSpeed={0.009}
-        linkDirectionalParticleColor={() => colors.hot}
-        linkDirectionalArrowLength={(l: GLink) => (linkOn(l) ? 4 : 0)}
+        linkDirectionalParticleColor={linkColor}
+        linkDirectionalArrowLength={4}
         linkDirectionalArrowRelPos={0.92}
-        linkDirectionalArrowColor={() => colors.hot}
+        linkDirectionalArrowColor={linkColor}
         enableNodeDrag={false}
         warmupTicks={140}
         cooldownTicks={60}
-        onEngineStop={() => { if (!touched.current) fg.current?.zoomToFit(reduced ? 0 : 500, 12) }}
-        onNodeHover={(n: GNode | null) => { setHover(n ? n.id : null); if (box.current) box.current.style.cursor = n ? 'pointer' : 'grab' }}
-        onLinkHover={(l: GLink | null) => { if (box.current) box.current.style.cursor = l ? 'pointer' : 'grab' }}
+        onEngineTick={() => sync(false)}
+        onEngineStop={() => { sync(false); if (!touched.current) fg.current?.zoomToFit(reduced ? 0 : 500, 12) }}
         onNodeClick={(n: GNode) => onPick(n.id)}
-        onLinkClick={(l: GLink) => {
-          const now = performance.now(), prev = lastClick.current
-          lastClick.current = { key: l.key, t: now }
-          if (prev && prev.key === l.key && now - prev.t < 400) { lastClick.current = null; onOpenLink(l.edge) }
+        onLinkClick={(l: GLink) => onOpenLink(l.edge)}
+        onBackgroundClick={(e: MouseEvent) => {
+          const i = hit(e, 'points')
+          if (i !== null) onPick(data.nodes[i].id)
+          else if (hit(e, 'lines') === null) onPick(null)     // a click on a line is half of a double-click: keep the selection
         }}
-        onBackgroundClick={() => onPick(null)}
       />
+      <div ref={tipEl} className="globe-tip" aria-hidden="true" />
       <div className="graph-tools">
         <button className="icon-btn" onClick={() => zoom(0.75)} aria-label="Zoom in" title="Zoom in"><Plus /></button>
         <button className="icon-btn" onClick={() => zoom(1.3)} aria-label="Zoom out" title="Zoom out"><Minus /></button>
@@ -229,8 +337,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe({ ring, journ
         <button className="icon-btn" onClick={() => { touched.current = false; onPick(null); fg.current?.zoomToFit(reduced ? 0 : 500, 12) }} aria-label="Reset view" title="Reset"><ArrowCounterClockwise /></button>
       </div>
       <div className="globe-legend" aria-hidden="true">
-        {(['VICTIM', 'L1', 'L2', 'L3'] as const).map((r) => <span key={r}><i style={{ background: colors.role[r] }} />{ROLE_NAME[r]}</span>)}
-        <span><i style={{ background: colors.hot }} />selected journey</span>
+        {(['VICTIM', 'L1', 'L2', 'L3'] as const).map((r) => <span key={r}><i style={{ background: toHex(hexRgb(colors.role[r])) }} />{ROLE_NAME[r]}</span>)}
+        <span><i style={{ background: colors.hot }} />journey / live money</span>
+        <span className="muted">double-click a line for its flow</span>
       </div>
     </div>
   )
