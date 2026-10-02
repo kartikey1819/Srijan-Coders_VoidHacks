@@ -693,7 +693,7 @@ test set; traces on generated data used samples of 15-100 victims.
    - Show the collector's first 15 minutes and the trace record (the method in plain words).
    - If the judges give several IDs: Trace Victim Funds, **Several victims**, paste them all (or **Paste 5 random victims** for a demo), **Trace all**. Show the
      columns side by side, the accounts they share ("these complaints may be clubbed") and the combined CSV.
-3. **Prepare FIR, case diary and freeze notices** (drafts for the officer's verification):
+3. **Police reports & freeze notices** (top right on the trace, also on Fraud Networks; drafts for the officer's verification):
    - fill FIR / IO / rank;
    - show the Verification passed box (figures checked, fingerprint);
    - open the diary and one bank's notice; Print / PDF.

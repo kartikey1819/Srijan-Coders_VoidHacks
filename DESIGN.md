@@ -88,7 +88,9 @@ The first screen shows the selector, the summary and the insight cards together,
    - accounts per layer, warning signs, points to check, and time taken.
 6. **Accounts to freeze** next to **Transactions in the trail** (mode and device, with foreign proxies in red).
 
-Summary actions: Download trail (CSV), View fraud network, and **Prepare case diary and freeze notices**.
+Summary actions: Download trail (CSV) and View fraud network. **Police reports & freeze notices** (FIR draft, case diary,
+a notice per bank, complete case file) is the page's main action, top right, and also sits on Accounts to freeze
+and on Fraud Networks (for the victim being looked at).
 
 ## Case documents
 A large dialog:

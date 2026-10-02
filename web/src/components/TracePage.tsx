@@ -103,7 +103,6 @@ export function TracePage({ account, seeds, reasons }: Props) {
     <>
       <button className="btn sm" onClick={downloadCsv}><DownloadSimple size={15} /> Download trail (CSV)</button>
       <button className="btn sm" disabled={!collector} onClick={() => collector && go({ name: 'ring', account: collector })}><Graph size={15} /> View fraud network</button>
-      <button className="btn cta" onClick={() => setDocs(true)}><FileText size={16} /> Prepare FIR, case diary and freeze notices</button>
     </>
   )
   const nSeeds = trace?.edges.filter((e) => e.rule === 'seed').length ?? 0
@@ -111,7 +110,10 @@ export function TracePage({ account, seeds, reasons }: Props) {
 
   return (
     <Page title="Trace Victim Funds" hi="पीड़ित राशि का पता लगाएँ"
-          desc="Follow a victim's money through mule accounts and see where it can still be frozen.">
+          desc="Follow a victim's money through mule accounts and see where it can still be frozen."
+          actions={trace && view ? <button className="btn cta big" onClick={() => setDocs(true)}
+                                           title="FIR draft, case diary and one debit-hold notice per bank, for this victim">
+            <FileText size={17} /> Police reports &amp; freeze notices</button> : undefined}>
       <Panel className="pick-panel">
         <form className="pick-row" onSubmit={(e) => { e.preventDefault(); submit(input) }}>
           <label className="gfield acct-field"><span>Victim account number</span>
@@ -191,7 +193,8 @@ export function TracePage({ account, seeds, reasons }: Props) {
           </div>
 
           <div className="two-col wide-right">
-            <Panel title="Accounts to freeze" note={`${view.freeze.length} accounts · ${inr(view.freezeTotal)}`} flush>
+            <Panel title="Accounts to freeze" note={`${view.freeze.length} accounts · ${inr(view.freezeTotal)}`} flush
+                   actions={<button className="btn sm" onClick={() => setDocs(true)}><FileText size={14} /> Freeze notices</button>}>
               <FreezeTable v={view} onOpen={setSelected} />
             </Panel>
             <Panel title="Transactions in the trail" note={`${trace.edges.length} transactions, in time order`} flush>

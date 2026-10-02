@@ -181,7 +181,7 @@ function VictimColumn({ t, shared, onDocs }: { t: TraceResult; shared: Set<strin
         <span className="ok">{inr(held)} <small>can be frozen in {t.freeze_candidates.length} account{t.freeze_candidates.length === 1 ? '' : 's'}</small></span>
         <div className="row gap">
           <a className="btn sm" href={`#trace=${t.victim}`}><ArrowSquareOut size={14} /> Open trace</a>
-          <button className="btn sm" onClick={onDocs}><FileText size={14} /> Documents</button>
+          <button className="btn sm" onClick={onDocs}><FileText size={14} /> Reports &amp; notices</button>
         </div>
       </footer>
     </section>

@@ -128,7 +128,7 @@ def test_w4_time_slider_reveals_money_step_by_step(page, base):
 
 def _generate(page, base, use_llm: bool) -> str:
     open_trace(page, base)
-    page.get_by_role("button", name="Prepare FIR, case diary and freeze notices").click()
+    page.get_by_role("button", name="Police reports & freeze notices").click()
     page.locator(".verify").wait_for(timeout=60_000)              # the first draft is prepared on opening
     page.get_by_label("FIR / Case No.").fill("0123/2026")
     box = page.get_by_role("checkbox", name="Draft the narrative with the local language model", exact=False)
@@ -414,7 +414,7 @@ def test_several_victims_traced_together_with_shared_accounts(page, base):
         page.get_by_role("button", name="Combined trails (CSV)").click()
     rows = open(dl.value.path(), encoding="utf-8").read().splitlines()
     assert rows[0].startswith("victim,time,transaction_id") and {r.split(",")[0] for r in rows[1:]} == set(vs)
-    page.locator(".vcol").first.get_by_role("button", name="Documents").click()
+    page.locator(".vcol").first.get_by_role("button", name="Reports & notices").click()
     page.get_by_role("dialog", name="Case documents").wait_for()
 
 

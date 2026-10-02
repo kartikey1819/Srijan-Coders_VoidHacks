@@ -1,4 +1,4 @@
-import { DownloadSimple, FlowArrow, Globe as GlobeIcon, TreeStructure } from '@phosphor-icons/react'
+import { DownloadSimple, FileText, FlowArrow, Globe as GlobeIcon, TreeStructure } from '@phosphor-icons/react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { api } from '../api'
@@ -13,9 +13,10 @@ import { Globe, type GlobeHandle } from './Globe'
 import { NetFlow } from './NetFlow'
 import { Page } from './Page'
 import { PanelFrame } from './PanelFrame'
-import { RingTrail } from './RingTrail'
+import { RingTrail, victimsReaching } from './RingTrail'
 import { Timeline } from './Timeline'
 import { BankIcon } from './BankIcon'
+import { DocsModal } from './DocsModal'
 
 interface Props { seed: string; reasons: Record<string, string> }
 type View = 'flow' | 'trail' | 'globe'
@@ -36,6 +37,7 @@ export function RingView({ seed, reasons }: Props) {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [view, setView] = useState<View>(() => { const v = safeStorage.getItem('abhedya.ringView2'); return v === 'trail' || v === 'globe' ? v : 'flow' })
   const [edge, setEdge] = useState<GraphEdge | null>(null)
+  const [docs, setDocs] = useState(false)
   const globe = useRef<GlobeHandle>(null)
   const layout = useDefaultLayout({ id: 'ring-h2', storage: safeStorage })
   // the network panels and the time slider under them fill the window from where they start, so the whole picture
@@ -72,6 +74,8 @@ export function RingView({ seed, reasons }: Props) {
 
   const ix = useMemo(() => (ring ? ringIndex(ring) : null), [ring])
   const journey = useMemo(() => (ix && selected ? journeyOf(ix, selected) : null), [ix, selected])
+  // documents are per complainant: the selected victim, else the largest victim whose money reached this account
+  const docVictim = useMemo(() => (ix ? victimsReaching(ix, selected ?? seed)[0]?.account ?? null : null), [ix, selected, seed])
   const times = useMemo(() => (ring ? [...new Set(ring.edges.map((e) => toEpoch(e.first_ts)))].sort((a, b) => a - b) : []), [ring])
   const counts = useMemo(() => {
     const m: Record<string, number> = {}
@@ -97,7 +101,10 @@ export function RingView({ seed, reasons }: Props) {
               <button aria-pressed={view === 'trail'} onClick={() => setView('trail')}><TreeStructure /> Trail</button>
               <button aria-pressed={view === 'globe'} onClick={() => setView('globe')}><GlobeIcon /> Globe</button>
             </div>
-            {ring && <a className="btn primary" href={api.ringExportUrl(seed)}><DownloadSimple /> Export network data (ZIP)</a>}
+            {ring && <a className="btn" href={api.ringExportUrl(seed)}><DownloadSimple /> Export network data (ZIP)</a>}
+            {docVictim && <button className="btn cta" onClick={() => setDocs(true)}
+                                  title={`FIR draft, case diary and one debit-hold notice per bank, for victim ${docVictim}`}>
+              <FileText /> Police reports &amp; freeze notices</button>}
           </>}>
       <section className="gpanel">
         {ring && (
@@ -168,6 +175,7 @@ export function RingView({ seed, reasons }: Props) {
       )}
       {ring && times.length > 0 && <Timeline times={times} value={cut} onChange={setCutoff} fullRange={WINDOW}
                                              label="Show the network's transfers up to this minute" />}
+      {docs && docVictim && <DocsModal victim={docVictim} seeds={null} onClose={() => setDocs(false)} />}
     </Page>
   )
 }

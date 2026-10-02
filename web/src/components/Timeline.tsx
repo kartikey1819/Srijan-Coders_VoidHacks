@@ -24,8 +24,14 @@ export function Timeline({ times, value, onChange, t0, fullRange, label = 'Show 
   const [whole, setWhole] = useState(false)
   const first = times[0] ?? 0, last = times[times.length - 1] ?? 0
   const spanS = (whole && fullRange ? fullRange[1] - fullRange[0] : last - first)
-  // only step sizes that suit this span: at least 4 steps from start to end (1 min is always offered)
-  const options = useMemo(() => SPEEDS.filter(([s], i) => i === 0 || s * 60 * 4 <= spanS), [spanS])
+  // only step sizes that suit this span: 8 to 300 steps from start to end, at most four (those nearest ~60 steps);
+  // a very short span still gets the 1 minute step
+  const options = useMemo(() => {
+    const frames = (s: number) => spanS / (60 * s)
+    const fit = SPEEDS.filter(([s]) => frames(s) >= 8 && frames(s) <= 300)
+    const near = [...fit].sort((a, b) => Math.abs(Math.log(frames(a[0]) / 60)) - Math.abs(Math.log(frames(b[0]) / 60))).slice(0, 4)
+    return near.length ? SPEEDS.filter((x) => near.includes(x)) : [SPEEDS[0]]
+  }, [spanS])
   // default: a long trail whose transfers bunch up (most minutes empty) plays transfer by transfer; otherwise the
   // minute step that replays the whole span in about 20 s
   const auto = useMemo(() => {
