@@ -1,4 +1,5 @@
-"""Case documents: police case diary (Section 192 BNSS) + one Sections 94 & 106 BNSS notice per bank. Owner: C.
+"""Case documents: FIR draft (Section 173 BNSS), police case diary (Section 192 BNSS) and one Sections 94 & 106 BNSS
+notice per bank, plus the complete case file (ZIP). Owner: C.
 
 Every account number, IFSC, transaction ID and amount is inserted here, from the Evidence, by the
 renderer. The LLM (if used) only supplies narrative paragraphs that the validator has checked.
@@ -172,7 +173,8 @@ def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
     amounts: set[str] = set()
     env = _env(amounts)
     ctx = _context(ev, narrative, narrative_source)
-    docs: dict[str, tuple[str, str]] = {"diary": ("diary.html", env.get_template("case_diary.html.j2").render(**ctx))}
+    docs: dict[str, tuple[str, str]] = {"diary": ("diary.html", env.get_template("case_diary.html.j2").render(**ctx)),
+                                        "fir": ("fir.html", env.get_template("fir.html.j2").render(**ctx))}
 
     banks: dict[str, list] = {}
     for a in ctx["freeze"]:
@@ -224,3 +226,35 @@ def render_case(ev: Evidence, narrative: Narrative | None, out_dir: Path,
                       notices=[NoticeInfo(bank_prefix=p, bank_name=n, accounts=k, hold_paise=h, url=files[f"notice_{p}"])
                                for p, n, k, h in notices],
                       verification=verification, narrative_source=narrative_source)
+
+
+def case_file_zip(case_dir: Path) -> bytes:
+    """Everything prepared for one case in one file: FIR draft, case diary, every bank notice, the evidence, the
+    narrative, the manifest with each file's SHA-256, and the money trail as CSV (from the evidence)."""
+    import csv
+    import io
+    import zipfile
+    ev = orjson.loads((case_dir / "evidence.json").read_bytes())
+    acc = {a["eid"]: a for a in ev["accounts"]}
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["ref", "date_time", "transaction_id", "from_account", "from_role", "to_account", "to_role", "mode",
+                "amount_rs", "victims_money_rs", "rule"])
+    for t in ev["txns"]:
+        s_, d_ = acc[t["src_eid"]], acc[t["dst_eid"]]
+        w.writerow([t["eid"], t["ts"], t["transaction_id"], s_["account"], s_["role"], d_["account"], d_["role"], t["mode"],
+                    f"{t['amount_paise'] / 100:.2f}", f"{t['attributed_paise'] / 100:.2f}", RULE_TEXT.get(t["rule"], t["rule"])])
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted(case_dir.iterdir()):
+            if f.is_file() and f.suffix in (".html", ".json"):
+                z.write(f, f.name)
+        z.writestr("money_trail.csv", out.getvalue().encode("utf-8-sig"))
+        z.writestr("README.txt", "\r\n".join([
+            f"Case {ev['case_id']}: draft documents for the Investigating Officer's verification.",
+            "fir.html: FIR draft (Section 173 BNSS). diary.html: case diary (Section 192 BNSS).",
+            "notice_<BANK>.html: debit-hold notice per bank (Sections 94 and 106 BNSS).",
+            "evidence.json: every fact used; manifest.json: SHA-256 of each file; money_trail.csv: the traced transfers.",
+            f"Source data SHA-256: {ev['data_sha256']}",
+            f"Facts fingerprint: {ev['facts_sha256']}", ""]))
+    return buf.getvalue()

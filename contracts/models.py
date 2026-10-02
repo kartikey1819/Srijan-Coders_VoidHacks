@@ -289,3 +289,23 @@ class FlowSummary(BaseModel):        # GET /api/flow: every identified victim tr
     linked_largest: int              # flagged accounts in the largest group joined by money between them
     linked_groups: int
     sent_back: int                   # transfers that sent victim money back to an earlier layer or the victim
+    club_victims: int                # victims who paid a collector that another victim also paid (complaints to club)
+    club_collectors: int             # collectors paid by two or more victims
+    club_top_collector: Optional[str]  # the collector paid by the most victims
+    club_top_victims: list[str]      # ... and those victims
+
+class ScoreCheck(BaseModel):         # one of the four checks behind the Mule Risk Index
+    key: str                         # SPEED, SHAPE, CHANNEL, NETWORK
+    label: str
+    max_points: int                  # what this check alone gives at full strength (its weight x 100)
+    points: int                      # what it gives for this account on its own
+    detail: str                      # the strongest signal inside the check, in plain words
+
+class ScoreExplain(BaseModel):       # GET /api/risk/{acct}/explain
+    account: str
+    score: int                       # the stored Mule Risk Index
+    combined: int                    # the four checks combined (overlap not counted twice)
+    floor: Optional[int]             # minimum set by a named pattern, when it is above the combined value
+    floor_reason: Optional[str]
+    checks: list[ScoreCheck]
+    matches_stored: bool             # the recomputation equals the stored score

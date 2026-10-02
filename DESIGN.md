@@ -99,12 +99,28 @@ A large dialog:
   - Prepare documents;
   - a **Verification passed / failed** box. It says how many accounts, IFSCs, transaction IDs and amounts the output
     firewall checked against the data, how many failed, and shows the evidence fingerprint.
-- **Right side:** tabs for Case diary, All freeze notices (N), and one per bank with its hold amount; Save HTML;
-  Print / PDF; the document on paper.
+- **Right side:** tabs for Case diary, FIR draft, All freeze notices (N), and one per bank with its hold amount;
+  Complete case file (ZIP); Save HTML; Print / PDF; the document on paper.
 - **The documents:**
+  - the FIR draft follows the Section 173 BNSS FIR layout (acts and sections, occurrence, complainant, suspected
+    accounts by layer, property stolen, first information, action taken), marked as a draft format for the
+    officer's verification; its figures pass the same output firewall;
   - the case diary follows Section 192 BNSS with six numbered sections;
   - each bank's notice cites Sections 94 and 106 BNSS (91 and 102 CrPC) and asks for a debit hold limited to the
     amount shown.
+  - the complete case file is one ZIP: every document, the evidence, the manifest (SHA-256 of each file), the money
+    trail as CSV and a README.
+
+## Trace several victims (`#traceall=A,B,C`)
+For the blind test: paste the complainants' account numbers (any separator, up to 20) and Trace all. Reached from
+Trace Victim Funds ("Several victims") and the Dashboard's third recommended action.
+- **Totals:** victims traced (each in milliseconds), total taken, can still be frozen, mule accounts, accounts
+  shared by two or more victims.
+- **These complaints may be clubbed:** groups of complainants joined by shared mule accounts, and each shared
+  account with its role, the complainants, their money received and still held.
+- **Side by side:** one column per victim with its collectors, distributors and cash-out accounts (largest first,
+  shared ones marked), the amount that can be frozen, Open trace and Documents.
+- **Combined trails (CSV):** every victim's trail in one file, with the victim on each row.
 
 ## Other screens
 - **Dashboard:**
@@ -118,10 +134,18 @@ A large dialog:
     and the median time after the victim paid. Beside it, **Can still be frozen** (total, share of the loss, where it
     is held by layer); under it, every account checked (donut: regular, victims, each layer) and three notes: banks to
     notify, whether the suspects form one linked network, and whether any money was sent back to an earlier account.
-    Below 1360 px the freeze strip moves under the chain so the key figures stay in the first view;
+    Below 1360 px the freeze strip moves under the chain so the key figures stay in the first view. The freeze
+    panel ends with **Recommended actions**: freeze the largest pool first, send notices to the banks (the one with
+    the most suspect accounts named), and club the complaints that share a collector, with the largest group traced
+    together in one click;
   - why accounts were flagged; suspects by bank; daily activity; victims found.
 
   Every chart opens the filtered list.
+- **Account panel** (everywhere an account opens): **How the score of N was reached**, the four checks (passes money
+  on fast; splits, gathers or circles money; cash-out channel, script device or foreign IP; money from or to other
+  suspects), each with its points on its own out of its maximum and the reason in words, then how they combine (overlap
+  is not counted twice) or the named pattern that set a minimum. It is recomputed from the stored features and always
+  equals the stored score.
 - **Suspect Accounts:** the list with role badges and reasons in words, filters, the account panel beside it (the
   divider is resizable and remembered), and CSV downloads.
 - **Fraud Networks:**

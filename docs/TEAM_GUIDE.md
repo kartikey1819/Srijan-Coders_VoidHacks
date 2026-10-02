@@ -470,6 +470,7 @@ masthead and sidebar stay put.
 |---|---|---|
 | Dashboard (डैशबोर्ड) | `#overview` (default; old `#home` / `#data` go here) | data in use for every report, with Upload new file; **Where the victims' money went** (victims → collectors → distributors → cash-out with amounts and timings, can still be frozen by layer, accounts checked, banks / linked network / circular routing); why accounts were flagged; suspects by bank; daily activity; victims found |
 | Trace Victim Funds (पीड़ित राशि का पता लगाएँ) | `#trace=ACCOUNT` | one scrolling report: select the victim; summary sentence and journey strip (collector, distributors, cash-out, can still be frozen); four insight cards; **How the money moved** (money-trail tree; pointing at a box shows received / passed on / still holds; timeline whose steps fit the trail, with Transfer by transfer; Replay); collector's first minutes (over time, or payment by payment) and the trace record; accounts to freeze; transactions in the trail |
+| (several victims) | `#traceall=A,B,C` | paste the complainants' IDs and Trace all: totals, complaints that may be clubbed (shared mule accounts), one column per victim by layer, combined CSV, documents per victim |
 | Suspect Accounts (संदिग्ध खाते) | `#flagged?role=&bank=&reason=` | the flagged list with role badges and reasons in words, filters, account panel, CSV downloads |
 | Fraud Networks (धोखाधड़ी नेटवर्क) | `#ring` / `#ring=ACCOUNT` | start list of collectors; then **Money flow** (default: who paid in and where the money went, step by step, sized to fit the window; point at an account for received / passed on / kept; click to re-centre), **Trail** (one victim's money through the account, drawn like the trace tree; a picker for every victim whose money reached it; point at a box for received / passed on / still holds) or the **Globe** toggle for the whole network; layer filters, time slider, ZIP export |
 
@@ -511,10 +512,12 @@ All routes are under `/api`. Money is integer paise in JSON. Unknown accounts gi
 | GET | `/api/txns?idx=` | transactions by row number (up to 500) |
 | GET | `/api/ring/{acct}?t_from=&t_to=` | the ring; `/export.zip` for the ZIP |
 | GET | `/api/risk/top`, `/api/risk/{acct}`, `/api/risk/reasons` | scores and reason labels |
+| GET | `/api/risk/{acct}/explain` | the score check by check: points per check, how they combine, any named-pattern minimum |
 | GET | `/api/victims` | candidate victims (paid flagged L1 accounts) |
 | GET | `/api/export/flagged.csv`, `/api/export/ranked.csv` | exports |
 | POST | `/api/docs/{victim}` | build evidence and documents; body has FIR / NCRP numbers, station, IO, AI on/off, disputed transfers |
-| GET | `/api/docs/{case_id}/{file}` | a written document |
+| GET | `/api/docs/{case_id}/{file}` | a written document (FIR draft, case diary, notices, evidence, manifest) |
+| GET | `/api/docs/{case_id}/case_file.zip` | the complete case file: every document, evidence, manifest, money trail CSV |
 | GET / POST / DELETE | `/api/datasets`, `/api/datasets/{id}/progress`, `/activate` | saved cases (upload is a raw POST body) |
 | GET | `/api/docs/llm` | whether the local AI model is installed |
 
@@ -688,7 +691,9 @@ test set; traces on generated data used samples of 15-100 victims.
    - Walk the four insight cards, then **How the money moved**: press Replay, or Play on the timeline, to show the money
      moving transfer by transfer. Point at a box to follow its path, and click it for the account.
    - Show the collector's first 15 minutes and the trace record (the method in plain words).
-3. **Prepare case diary and freeze notices:**
+   - If the judges give several IDs: Trace Victim Funds, **Several victims**, paste them all, **Trace all**. Show the
+     columns side by side, the accounts they share ("these complaints may be clubbed") and the combined CSV.
+3. **Prepare FIR, case diary and freeze notices** (drafts for the officer's verification):
    - fill FIR / IO / rank;
    - show the Verification passed box (figures checked, fingerprint);
    - open the diary and one bank's notice; Print / PDF.

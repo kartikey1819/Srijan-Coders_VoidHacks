@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 
 /** Hash routes are the single source of truth, so Back / Forward and pasted links always work.
- *  #overview (Dashboard, default) · #trace=ACCOUNT[&seeds=1,2] · #flagged[?role=L1&bank=SBIN&reason=CODE] ·
+ *  #overview (Dashboard, default) · #trace=ACCOUNT[&seeds=1,2] · #traceall=A,B,C (several victims) ·
+ *  #flagged[?role=L1&bank=SBIN&reason=CODE] ·
  *  #ring[=ACCOUNT] (Fraud Networks). Old #data / #home links open the Dashboard (upload and cases live there). */
 export type Route =
   | { name: 'overview' }
   | { name: 'investigate'; account: string | null; seeds: number[] | null }
+  | { name: 'multi'; accounts: string[] }
   | { name: 'ring'; account: string | null }
   | { name: 'flagged'; role: string | null; bank: string | null; reason: string | null }
 
@@ -21,6 +23,7 @@ export function parse(hash: string): Route {
     return { name: 'investigate', account: acct ? acct.toUpperCase() : null, seeds: seeds?.length ? seeds : null }
   }
   if (k === 'investigate') return { name: 'investigate', account: null, seeds: null }
+  if (k === 'traceall') return { name: 'multi', accounts: [...new Set((rest ?? '').toUpperCase().split(/[,\s]+/).filter((a) => /^[A-Z]{4}\d{8}$/.test(a)))].slice(0, 20) }
   if (k === 'ring') return { name: 'ring', account: rest ? rest.toUpperCase() : null }
   if (k === 'flagged') return { name: 'flagged', role: q.get('role'), bank: q.get('bank'), reason: q.get('reason') }
   return { name: 'overview' }
@@ -31,6 +34,7 @@ export function href(r: Route): string {
     case 'overview': return '#overview'
     case 'investigate': return r.account ? `#trace=${r.account}${r.seeds?.length ? `&seeds=${r.seeds.join(',')}` : ''}` : '#investigate'
     case 'ring': return r.account ? `#ring=${r.account}` : '#ring'
+    case 'multi': return r.accounts.length ? `#traceall=${r.accounts.join(',')}` : '#traceall'
     case 'flagged': {
       const q = new URLSearchParams()
       if (r.role) q.set('role', r.role)

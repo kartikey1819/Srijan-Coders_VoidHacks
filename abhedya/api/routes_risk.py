@@ -7,7 +7,7 @@ from abhedya import detect
 from abhedya.detect.export import csv_bytes
 from abhedya.engine import UnknownAccount, get_engine
 from abhedya.docs.banks import bank_name
-from contracts.models import CountRow, DayActivity, FlowSummary, Overview, RiskRow, VictimCandidate
+from contracts.models import CountRow, DayActivity, FlowSummary, Overview, RiskRow, ScoreExplain, VictimCandidate
 
 router = APIRouter(prefix="/api")
 _NO_RISK = "Risk scores not computed: run `python -m abhedya ingest` without --skip-detect."
@@ -79,6 +79,16 @@ def risk_one(acct: str):
     if a not in found:
         raise UnknownAccount(f"Unknown account: {acct}")
     return found[a]
+
+
+@router.get("/risk/{acct}/explain", response_model=ScoreExplain)
+def risk_explain(acct: str):
+    """The score check by check: each check's points on its own, and the named pattern that set a minimum."""
+    from abhedya.detect.explain import explain
+    found = _guard(lambda: explain(_cur(), acct.strip().upper()))
+    if found is None:
+        raise UnknownAccount(f"Unknown account: {acct}")
+    return found
 
 
 @router.get("/victims", response_model=list[VictimCandidate])

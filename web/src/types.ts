@@ -73,4 +73,10 @@ export interface FlowSummary {
   victims: number; loss_paise: number; avg_loss_paise: number; max_loss_paise: number; layers: FlowLayer[]
   to_l2_s: number | null; to_l3_s: number | null; freezable_paise: number; traced_ms: number
   suspects: number; linked_largest: number; linked_groups: number; sent_back: number
+  club_victims: number; club_collectors: number; club_top_collector: string | null; club_top_victims: string[]
+}
+export interface ScoreCheck { key: string; label: string; max_points: number; points: number; detail: string }
+export interface ScoreExplain {
+  account: string; score: number; combined: number; floor: number | null; floor_reason: string | null
+  checks: ScoreCheck[]; matches_stored: boolean
 }

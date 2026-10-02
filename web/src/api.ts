@@ -1,4 +1,4 @@
-import type { AccountSummary, CaseInfo, CaseOutput, DQSummary, DatasetInfo, DatasetProgress, FlowSummary, LlmStatus, Overview, RingResult, RiskRow, TraceResult, TxnRow, VictimCandidate } from './types'
+import type { AccountSummary, CaseInfo, CaseOutput, DQSummary, DatasetInfo, DatasetProgress, FlowSummary, LlmStatus, Overview, RingResult, RiskRow, ScoreExplain, TraceResult, TxnRow, VictimCandidate } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(path, init)
@@ -34,6 +34,7 @@ export const api = {
   byIndex: (idx: number[]) => req<TxnRow[]>(`/api/txns?${idx.slice(0, 500).map((i) => `idx=${i}`).join('&')}`),
   txns: (a: string, limit = 50, offset = 0) => req<TxnRow[]>(`/api/account/${enc(a)}/txns?limit=${limit}&offset=${offset}`),
   reasons: () => req<Record<string, string>>('/api/risk/reasons'),
+  explain: (a: string) => req<ScoreExplain>(`/api/risk/${enc(a)}/explain`),
   top: (band: string, limit = 5000) => req<RiskRow[]>(`/api/risk/top?band=${band}&limit=${limit}`),
   ring: (a: string) => req<RingResult>(`/api/ring/${enc(a)}`),
   ringExportUrl: (a: string) => `/api/ring/${enc(a)}/export.zip`,

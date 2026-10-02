@@ -2,7 +2,7 @@ import { Copy, Graph, Path } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { inr } from '../format'
-import type { AccountSummary, TxnRow } from '../types'
+import type { AccountSummary, ScoreExplain, TxnRow } from '../types'
 
 interface Props {
   account: string
@@ -60,6 +60,7 @@ export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Pr
         <button className="btn" onClick={() => onTrace(s.account)} title="Follow this account's outgoing money as if it were the victim"><Path /> Trace money from here</button>
         <button className="btn ghost" onClick={copy} aria-label="Copy account ID"><Copy /> {copied ? 'Copied' : 'Copy ID'}</button>
       </div>
+      {r && <ScoreBreakdown account={s.account} />}
       {r && r.reasons.length > 0 && (
         <>
           <h3 style={{ marginTop: 10 }}>Why it is flagged</h3>
@@ -108,5 +109,41 @@ export function AccountPanel({ account, reasons, onTrace, onRing, onSelect }: Pr
         {txns.length < s.n_in + s.n_out && <button className="btn ghost" onClick={more}>Load 200 more</button>}
       </details>
     </div>
+  )
+}
+
+/** How the Mule Risk Index was reached: each of the four checks with its points on its own (out of its maximum) and the
+ *  reason in words, then how they combine, or the named pattern that set a minimum. Recomputed by the engine from the
+ *  stored features, so it always adds up to the score shown. */
+function ScoreBreakdown({ account }: { account: string }) {
+  const [x, setX] = useState<ScoreExplain | null>(null)
+  useEffect(() => {
+    let live = true
+    setX(null)
+    api.explain(account).then((e) => live && setX(e)).catch(() => {})
+    return () => { live = false }
+  }, [account])
+  if (!x) return null
+  return (
+    <section className="score-why" aria-label={`How the score of ${x.score} was reached`}>
+      <h3>How the score of {x.score} was reached</h3>
+      <ul>
+        {x.checks.map((c) => (
+          <li key={c.key} className={c.points ? '' : 'none'}>
+            <span className="sw-l">{c.label}</span>
+            <span className="sw-t"><i style={{ transform: `scaleX(${c.max_points ? c.points / c.max_points : 0})` }} /></span>
+            <b>{c.points}<small> / {c.max_points}</small></b>
+            <span className="sw-d">{c.detail}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="small muted">
+        {x.floor !== null
+          ? <>Combined, the checks give {x.combined}. The score is raised to <b>{x.floor}</b> because the account shows a pattern
+              the problem statement names outright: {x.floor_reason}.</>
+          : <>Combined, the checks give <b>{x.combined}</b>. Overlapping evidence is not counted twice, so the points do not
+              simply add up. Accounts at 70 or more are flagged.</>}
+      </p>
+    </section>
   )
 }

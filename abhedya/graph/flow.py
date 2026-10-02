@@ -123,10 +123,17 @@ def flow_summary(g: Graph, victims: list[int], seeds_for, suspects: set[int]) ->
                   fast_share=None, per_account=None, wallet_share=share(landed_term, landed)),
     ]
     groups = linked_groups(g, suspects)
+    # complaints that may be clubbed: victims who paid a collector that another victim also paid
+    shared = {c: vs for c, vs in victims_of.items() if len(vs) > 1}
+    top_c = max(shared, key=lambda c: (len(shared[c]), -c), default=None)
+    name = lambda u: str(g.accounts[u])  # noqa: E731
     return FlowSummary(
         victims=len(losses), loss_paise=loss, avg_loss_paise=round(loss / len(losses)) if losses else 0,
         max_loss_paise=max(losses, default=0), layers=layers,
         to_l2_s=round(statistics.median(to_l2)) if to_l2 else None,
         to_l3_s=round(statistics.median(to_l3)) if to_l3 else None,
         freezable_paise=sum(held.values()), traced_ms=traced_ms, suspects=len(suspects),
-        linked_largest=groups[0] if groups else 0, linked_groups=len(groups), sent_back=backwards)
+        linked_largest=groups[0] if groups else 0, linked_groups=len(groups), sent_back=backwards,
+        club_victims=len(set().union(*shared.values())) if shared else 0, club_collectors=len(shared),
+        club_top_collector=name(top_c) if top_c is not None else None,
+        club_top_victims=sorted(name(v) for v in shared[top_c]) if top_c is not None else [])

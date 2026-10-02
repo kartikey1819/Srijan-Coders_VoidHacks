@@ -3,12 +3,12 @@ import re
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from abhedya import config
 from abhedya.ai import narrator
 from abhedya.ai.fallback import fallback_narrative, with_template_sections
-from abhedya.docs.render import FirewallError, render_case
+from abhedya.docs.render import FirewallError, case_file_zip, render_case
 from abhedya.engine import get_engine
 from abhedya.evidence.build import build_evidence
 from contracts.models import CaseInfo, CaseOutput, LlmStatus
@@ -56,6 +56,16 @@ def make_documents(victim: str, case: CaseInfo):
                            None if used_llm else reason, url_prefix=f"/api/docs/{ev.case_id}/")
     except FirewallError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/docs/{case_id}/case_file.zip")
+def get_case_file(case_id: str):
+    """The complete case file: every document, the evidence, the manifest and the money trail as CSV."""
+    case_dir = (config.CASES_DIR / case_id).resolve() if CASE_ID.match(case_id) else None
+    if case_dir is None or config.CASES_DIR.resolve() not in case_dir.parents or not (case_dir / "evidence.json").is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return Response(case_file_zip(case_dir), media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="case_file_{case_id}.zip"'})
 
 
 @router.get("/docs/{case_id}/{fname}")

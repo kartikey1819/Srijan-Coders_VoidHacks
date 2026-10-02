@@ -2,10 +2,14 @@
 
 Offline money-mule investigation workstation (Void Hacks 8.0, Indore Police problem statement).
 Load a bank transaction CSV, see every account's mule risk (0–100, with reasons), trace a complainant's
-money through up to 4 hops, isolate the whole ring, and produce a police case diary plus one
+money through up to 4 hops (or several complainants at once, with the accounts they share), isolate the whole ring,
+and produce draft documents for the officer's verification: an FIR draft (Section 173 BNSS), a police case diary plus one
 Sections 94 & 106 BNSS (91 & 102 CrPC) freeze notice per bank. Everything runs on one machine; nothing is uploaded.
 
 ## Start (one command)
+
+On Windows, double-click **`start_server.bat`**: it sets up Python packages the first time, starts the engine on the
+official file (or `data/sample.csv`) and opens the browser. By hand:
 
 ```
 python -m venv .venv && .venv\Scripts\activate        # Linux/macOS: source .venv/bin/activate

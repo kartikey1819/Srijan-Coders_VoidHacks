@@ -2,6 +2,7 @@ import { ChartBar, Graph, MagnifyingGlass, Moon, Path, ShieldStar, Sun, UserFocu
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { api } from './api'
 import { FlaggedTable } from './components/FlaggedTable'
+import { MultiTrace } from './components/MultiTrace'
 import { NetworkStart } from './components/NetworkStart'
 import { Overview } from './components/Overview'
 import { TracePage } from './components/TracePage'
@@ -76,7 +77,7 @@ export default function App() {
         <nav className="side" aria-label="Main menu">
           <div className="side-sec">MENU</div>
           {NAV.map((n) => (
-            <a key={n.name} href={hrefOf(n.name)} className="side-btn" aria-current={route.name === n.name ? 'page' : undefined}>
+            <a key={n.name} href={hrefOf(n.name)} className="side-btn" aria-current={route.name === n.name || (route.name === 'multi' && n.name === 'investigate') ? 'page' : undefined}>
               <n.icon size={20} /><span>{n.label}<small lang="hi">{n.hi}</small></span>
             </a>
           ))}
@@ -102,6 +103,7 @@ export default function App() {
           <div className="screen" key={route.name}>
             {route.name === 'overview' && <Overview stats={stats} />}
             {route.name === 'investigate' && <TracePage account={route.account} seeds={route.seeds} reasons={reasons} />}
+            {route.name === 'multi' && <MultiTrace accounts={route.accounts} />}
             {route.name === 'flagged' && <FlaggedTable reasons={reasons} role={route.role} bank={route.bank} reason={route.reason} />}
             {route.name === 'ring' && (route.account ? (
               <Suspense fallback={<div className="gpage"><p className="muted">Loading the network view…</p></div>}>

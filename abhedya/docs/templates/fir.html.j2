@@ -1,0 +1,81 @@
+{% extends "base.html.j2" %}
+{% macro field(v) %}{% if v %}{{ v }}{% else %}<span class="blank">&nbsp;</span>{% endif %}{% endmacro %}
+{% block title %}FIR draft {{ ev.case_id }}{% endblock %}
+{% block content %}
+<h1>FIRST INFORMATION REPORT (Section 173 BNSS, 2023)
+  <span class="sub">Draft format for the officer's verification: not registered until entered and signed by the officer in charge</span></h1>
+
+<table class="meta">
+  <tr><td>1. District / Police Station</td><td>Indore / {{ ps }}</td></tr>
+  <tr><td>&nbsp;&nbsp;&nbsp;FIR No. / Year</td><td>{{ field(ev.case.fir_no) }}</td></tr>
+  <tr><td>&nbsp;&nbsp;&nbsp;Date and time of FIR</td><td><span class="blank">&nbsp;</span></td></tr>
+  <tr><td>2. Acts and sections</td><td>{{ law }}</td></tr>
+  <tr><td>3. Occurrence of offence</td><td>{{ first_ts }} to {{ last_ts }}{% if duration %} ({{ duration }}){% endif %}</td></tr>
+  <tr><td>&nbsp;&nbsp;&nbsp;Information received at PS</td><td><span class="blank">&nbsp;</span> &nbsp; General Diary ref. <span class="blank">&nbsp;</span></td></tr>
+  <tr><td>4. Type of information</td><td>Written / online complaint{% if ev.case.ncrp_ack %} (NCRP / 1930 acknowledgement {{ ev.case.ncrp_ack }}){% else %} (NCRP / 1930 acknowledgement <span class="blank">&nbsp;</span>){% endif %}</td></tr>
+  <tr><td>5. Place of occurrence</td><td>Online: transfers out of the complainant's bank account (cyberspace); beat / direction from PS not applicable</td></tr>
+</table>
+
+<!--FACTS-->
+<h2>6. Complainant / Informant</h2>
+<table class="meta">
+  <tr><td>Name</td><td><span class="blank">&nbsp;</span> (to be filled from the complaint)</td></tr>
+  <tr><td>Account</td><td><span class="mono">{{ victim.account }}</span>, {{ victim.bank_name }}, IFSC <span class="mono">{{ victim.ifsc }}</span></td></tr>
+  <tr><td>Address / phone</td><td><span class="blank">&nbsp;</span></td></tr>
+</table>
+
+<h2>7. Details of known / suspected / unknown accused</h2>
+<p>Unknown persons operating the following bank accounts, which received and moved the complainant's money (account
+holders to be identified from the banks' KYC records):</p>
+<table>
+  <tr><th>#</th><th>Account</th><th>Bank</th><th>IFSC</th><th>Role in the trail</th><th class="num">Complainant's money received</th></tr>
+  {% for key in ("L1", "L2", "L3") %}{% for a in layers[key] %}
+  <tr><td>{{ loop.index }}</td><td class="mono">{{ a.account }}</td><td>{{ a.bank_name }}</td><td class="mono">{{ a.ifsc }}</td>
+      <td>{{ layer_name[key] }}</td><td class="num">{{ a.received_paise|inr }}</td></tr>
+  {% endfor %}{% endfor %}
+</table>
+
+<h2>8. Reasons for delay in reporting</h2>
+<p><span class="blank">&nbsp;</span></p>
+
+<h2>9. Particulars of property stolen</h2>
+<table>
+  <tr><th>Transaction ID</th><th>Date-time</th><th>From (complainant)</th><th>To</th><th>Mode</th><th class="num">Amount</th></tr>
+  {% for t in seed %}
+  <tr><td class="mono">{{ t.transaction_id }}</td><td class="nw">{{ t.ts }}</td><td class="mono">{{ victim.account }}</td>
+      <td class="mono">{{ acc[t.dst_eid].account }}</td><td>{{ t.mode }}</td><td class="num">{{ t.amount_paise|inr }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2>10. Total value of property stolen</h2>
+<p><b>{{ ev.loss_paise|inr }}</b>, of which <b>{{ total_held|inr }}</b> is still held in {{ freeze|length }} account(s)
+  and can be frozen (section 13).</p>
+
+<h2>11. Inquest report / unnatural death case no.</h2>
+<p>Not applicable.</p>
+
+<h2>12. First information contents</h2>
+<p>The complainant reports that money was taken from bank account <span class="mono">{{ victim.account }}</span>
+  ({{ victim.bank_name }}) without authority by way of {{ seed|length }} transfer(s)
+  {% for t in seed %}(<span class="mono">{{ t.transaction_id }}</span>, {{ t.ts }}, {{ t.amount_paise|inr }}){% if not loop.last %}, {% endif %}{% endfor %},
+  totalling {{ ev.loss_paise|inr }}. Analysis of the bank transaction data shows the money was received by
+  {{ layers.L1|length }} collector account(s), split onward to {{ layers.L2|length }} distributor account(s) and moved
+  out through {{ layers.L3|length }} cash-out account(s) using wallet / crypto P2P channels, in the period
+  {{ first_ts }} to {{ last_ts }}. The pattern (rapid pass-through, splitting into several accounts, cash-out through
+  wallet channels) is that of a money-mule network. The facts above are taken from the bank data and must be
+  verified against the complaint and the bank records before registration.</p>
+
+<h2>13. Action taken</h2>
+<p>Since the above information reveals commission of cognizable offence(s) under the sections at item 2, the case is
+  registered and investigation is taken up. Notices under Sections 94 &amp; 106 BNSS, 2023 are proposed to the nodal
+  officers of {{ freeze_banks|length }} bank(s) ({{ freeze_banks|join(", ") }}) for an immediate debit hold of
+  {{ total_held|inr }} in {{ freeze|length }} account(s), limited to the complainant's money in each account.</p>
+<!--/FACTS-->
+
+<p>Read over to the complainant / informant, admitted to be correctly recorded, and a copy given free of cost.</p>
+<div class="sig"><div>Signature / thumb impression of the complainant<br><br><span class="blank">&nbsp;</span></div>
+  <div class="right">Signature of the officer in charge<br><br>{{ field(ev.case.io_name) }}<br>{{ rank }}<br>{{ ps }}</div></div>
+<p class="small muted">14. Date and time of despatch to the court: <span class="blank">&nbsp;</span></p>
+<p class="small muted">Record integrity: source data SHA-256 <span class="mono">{{ ev.data_sha256 }}</span>; facts fingerprint
+<span class="mono">{{ ev.facts_sha256 }}</span>; case reference {{ ev.case_id }}.</p>
+{% endblock %}

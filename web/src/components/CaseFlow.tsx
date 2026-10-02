@@ -81,7 +81,7 @@ export function CaseFlow({ f, stats, days, banks }: { f: FlowSummary; stats: DQS
           </dl>
         </div>
       </div>
-      <Freeze f={f} layers={[L3, L2, L1]} />
+      <Freeze f={f} layers={[L3, L2, L1]} banks={banks} onOpen={open} />
     </section>
   )
 }
@@ -103,7 +103,7 @@ function Arrow({ amt, when, from, to, i }: { amt: number; when: string; from: st
   )
 }
 
-function Freeze({ f, layers }: { f: FlowSummary; layers: FlowLayer[] }) {
+function Freeze({ f, layers, banks, onOpen }: { f: FlowSummary; layers: FlowLayer[]; banks: CountRow[]; onOpen: (role: string) => void }) {
   const share = f.loss_paise ? f.freezable_paise / f.loss_paise : 0
   const top = Math.max(1, ...layers.map((l) => l.held_paise))
   const NAME: Record<string, string> = { L1: 'Collector accounts', L2: 'Distributor accounts', L3: 'Cash-out accounts' }
@@ -126,6 +126,7 @@ function Freeze({ f, layers }: { f: FlowSummary; layers: FlowLayer[] }) {
             <b>{inrShort(l.held_paise)}</b></li>
         ))}
       </ul>
+      <Actions f={f} layers={layers} banks={banks} onOpen={onOpen} />
     </aside>
   )
 }
@@ -178,5 +179,35 @@ function AccountsDonut({ accounts, f, onOpen }: { accounts: number; f: FlowSumma
         <p className="small muted">Point at a slice for details; click a mule layer to open its accounts.</p>
       </div>
     </div>
+  )
+}
+
+/** Three things to do today, worked out from the figures above: freeze the biggest pool, notify the banks, and club the
+ *  complaints that share a collector (traced together in one click). */
+function Actions({ f, layers, banks, onOpen }: { f: FlowSummary; layers: FlowLayer[]; banks: CountRow[]; onOpen: (role: string) => void }) {
+  const NAME: Record<string, string> = { L1: 'collector', L2: 'distributor', L3: 'cash-out' }
+  const top = [...layers].sort((a, b) => b.held_paise - a.held_paise)[0]
+  const group = f.club_top_victims
+  return (
+    <>
+      <h3 className="cf-acts-h">Recommended actions</h3>
+      <ol className="cf-acts">
+        {top && top.held_paise > 0 && (
+          <li><b>Freeze {inrShort(top.held_paise)} in {n(top.accounts)} {NAME[top.role]} accounts first</b>
+            <span>the largest amount still in place</span>
+            <button className="btn ghost sm" onClick={() => onOpen(top.role)}>Open these accounts</button></li>
+        )}
+        {banks.length > 0 && (
+          <li><b>Send debit-hold notices to {banks.length} bank{banks.length === 1 ? '' : 's'}</b>
+            <span>{banks[0].label} holds the most suspect accounts ({n(banks[0].count)})</span>
+            <a className="btn ghost sm" href={`#flagged?bank=${banks[0].key}`}>Open {banks[0].key} accounts</a></li>
+        )}
+        {f.club_victims > 0 && (
+          <li><b>Club {n(f.club_victims)} complaints that share a collector</b>
+            <span>{n(f.club_collectors)} collectors were paid by two or more victims{group.length > 1 ? `; ${f.club_top_collector} by ${group.length}` : ''}</span>
+            {group.length > 1 && <a className="btn ghost sm" href={`#traceall=${group.join(',')}`}>Trace these {group.length} together</a>}</li>
+        )}
+      </ol>
+    </>
   )
 }

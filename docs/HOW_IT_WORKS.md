@@ -1126,7 +1126,10 @@ clock) and a left sidebar with four screens, in English and Hindi:
 
 The Dashboard names the dataset in use and uploads new files (there is no separate data page).
 
-Case documents open in a dialog with the case particulars, the firewall's verification counts and one tab per document.
+Trace several victims (`#traceall=A,B,C`) traces pasted complainants together, side by side, and lists the mule
+accounts they share so complaints can be clubbed. Case documents open in a dialog with the case particulars, the
+firewall's verification counts and one tab per document (FIR draft under Section 173 BNSS, case diary, a notice per
+bank), plus the complete case file as one ZIP.
 `DESIGN.md` and `docs/TEAM_GUIDE.md` (section 13) describe every screen.
 
 `web/src/types.ts` mirrors the pydantic models by hand. `tests/test_contract.py` checks that they agree, field by field.

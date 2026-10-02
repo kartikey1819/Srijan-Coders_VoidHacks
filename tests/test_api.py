@@ -94,6 +94,26 @@ def test_flow_summary_traces_every_victim_and_adds_up(client):
     assert client.get("/api/flow").json() == f            # cached, unchanged
 
 
+def test_score_explanation_adds_up_to_the_stored_score(client):
+    """Expected: the four checks, each with points out of its maximum and a reason in words, recomputed from the stored
+    features, give exactly the stored score; unknown accounts are 404."""
+    for acct in ("ICIC10000335", "KKBK10000000"):
+        x = client.get(f"/api/risk/{acct}/explain").json()
+        assert x["matches_stored"] and x["score"] == client.get(f"/api/risk/{acct}").json()["score"]
+        assert [c["key"] for c in x["checks"]] == ["SPEED", "SHAPE", "CHANNEL", "NETWORK"]
+        assert all(0 <= c["points"] <= c["max_points"] and c["detail"] for c in x["checks"])
+        assert x["score"] == (x["floor"] if x["floor"] is not None else x["combined"])
+    assert client.get("/api/risk/ZZZZ00000000/explain").status_code == 404
+
+
+def test_flow_summary_names_complaints_to_club(client):
+    """Expected (sample file): 262 of 300 victims paid a collector that another victim also paid (91 such collectors);
+    the largest group is the 8 victims of HDFC10000336."""
+    f = client.get("/api/flow").json()
+    assert (f["club_victims"], f["club_collectors"], f["club_top_collector"]) == (262, 91, "HDFC10000336")
+    assert len(f["club_top_victims"]) == 8 and f["club_top_victims"] == sorted(f["club_top_victims"])
+
+
 # ---- saved datasets: upload, live analysis, switch ----
 def _wait_done(client, ds_id, timeout=120):
     import time

@@ -1,4 +1,4 @@
-import { DownloadSimple, FileText, LockSimple, Printer, ShieldCheck, ShieldWarning, Sparkle, SpinnerGap, X } from '@phosphor-icons/react'
+import { DownloadSimple, FileText, FileZip, LockSimple, Printer, ShieldCheck, ShieldWarning, Sparkle, SpinnerGap, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '../api'
@@ -14,7 +14,8 @@ const FIELDS: [keyof CaseInfo, string, string][] = [
   ['sections', 'Sections of law', 'Sections 318(4), 319(2), 61(2) BNS r/w 66C, 66D IT Act'],
 ]
 
-/** Case particulars on the left; the case diary and one freeze notice per bank on the right, ready to print.
+/** Case particulars on the left; the FIR draft, the case diary and one freeze notice per bank on the right, ready to
+ *  print, and the complete case file as one ZIP.
  *  Every account, IFSC, transaction ID and amount in them is checked against the evidence before they are shown. */
 export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; seeds: number[] | null; onClose: () => void; onDone?: () => void }) {
   const [form, setForm] = useState<CaseInfo>({ use_llm: true, io_rank: 'Sub-Inspector' })
@@ -55,7 +56,8 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
     }).catch(() => setAllHtml('<p>Could not load the notices.</p>'))
   }, [view, out, allHtml])
 
-  const url = !out ? null : view === 'diary' ? out.diary_url : out.notices.find((n) => n.bank_prefix === view)?.url ?? null
+  const url = !out ? null : view === 'diary' ? out.diary_url : view === 'fir' ? out.files.fir ?? null
+    : out.notices.find((n) => n.bank_prefix === view)?.url ?? null
   const fit = () => {
     const d = frame.current?.contentDocument
     if (d?.body && frame.current) frame.current.style.height = `${d.documentElement.scrollHeight + 8}px`
@@ -66,7 +68,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
     if (!html) return
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
-    a.download = `${view === 'diary' ? 'case_diary' : view === 'all' ? 'freeze_notices' : `freeze_notice_${view}`}_${victim}.html`
+    a.download = `${view === 'diary' ? 'case_diary' : view === 'fir' ? 'fir_draft' : view === 'all' ? 'freeze_notices' : `freeze_notice_${view}`}_${victim}.html`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -81,7 +83,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
           <div className="docs-title"><FileText size={20} /><b>Case documents</b>
             <button className="btn ghost sm" onClick={onClose} aria-label="Close"><X size={16} /></button></div>
           <p className="muted small">Victim <span className="mono strong">{victim}</span>. Fill in the case particulars, then prepare the
-            case diary and a freeze notice for each bank.</p>
+            FIR draft, the case diary and a freeze notice for each bank. All are drafts for your verification.</p>
           {FIELDS.map(([k, label, ph]) => (
             <label key={k} className="gfield"><span>{label}</span>
               <input value={(form[k] as string | undefined) ?? ''} placeholder={ph} onChange={(e) => set(k, e.target.value)} /></label>
@@ -110,6 +112,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
         <div className="docs-main">
           <div className="docs-tabs" role="tablist" aria-label="Documents">
             <button role="tab" aria-selected={view === 'diary'} className="chip" onClick={() => setView('diary')}>Case diary</button>
+            {out?.files.fir && <button role="tab" aria-selected={view === 'fir'} className="chip" onClick={() => setView('fir')}>FIR draft</button>}
             {out && out.notices.length > 0 && (
               <button role="tab" aria-selected={view === 'all'} className="chip" onClick={() => setView('all')}>All freeze notices ({out.notices.length})</button>
             )}
@@ -119,6 +122,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
                 Notice: {n.bank_name} <span className="muted">{inr(n.hold_paise)}</span></button>
             ))}
             <span className="sp" />
+            {out && <a className="btn" href={`/api/docs/${out.case_id}/case_file.zip`} download><FileZip size={15} /> Complete case file (ZIP)</a>}
             <button className="btn" onClick={save} disabled={!out}><DownloadSimple size={15} /> Save HTML</button>
             <button className="btn primary" onClick={print} disabled={!out}><Printer size={15} /> Print / PDF</button>
           </div>
@@ -127,7 +131,7 @@ export function DocsModal({ victim, seeds, onClose, onDone }: { victim: string; 
               : !out ? <p className="paper-msg">{err ? 'Fix the problem on the left, then prepare again.' : 'Preparing…'}</p>
               : view === 'all' ? (allHtml ? <iframe ref={frame} title="All freeze notices" srcDoc={allHtml} onLoad={fit} scrolling="no" />
                                           : <p className="paper-msg"><SpinnerGap size={18} className="spin" /> Loading the notices…</p>)
-              : url && <iframe key={url} ref={frame} title={view === 'diary' ? 'Case diary' : `Freeze notice ${view}`} src={url} onLoad={fit} scrolling="no" />}
+              : url && <iframe key={url} ref={frame} title={view === 'diary' ? 'Case diary' : view === 'fir' ? 'FIR draft' : `Freeze notice ${view}`} src={url} onLoad={fit} scrolling="no" />}
           </div>
         </div>
       </div>

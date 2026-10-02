@@ -136,6 +136,22 @@ def test_document_api(sample_db, tmp_path, monkeypatch):
             assert c.get(n["url"]).status_code == 200
         assert c.get(f"/api/docs/{out['case_id']}/..%2F..%2Fpyproject.toml").status_code == 404
         assert c.get("/api/docs/not-a-case/diary.html").status_code == 404
+        # FIR draft (Section 173 BNSS): checked by the same firewall, names the victim, the loss and the accused accounts
+        fir = c.get(out["files"]["fir"])
+        assert fir.status_code == 200 and "Section 173 BNSS" in fir.text and "Draft format for the officer" in fir.text
+        assert "KKBK10000000" in fir.text and "ICIC10000335" in fir.text and "₹4,55,541.61" in fir.text
+        # complete case file: every document, the evidence, the manifest and the trail as CSV
+        import io
+        import zipfile
+        z = c.get(f"/api/docs/{out['case_id']}/case_file.zip")
+        assert z.status_code == 200 and z.headers["content-type"] == "application/zip"
+        zf = zipfile.ZipFile(io.BytesIO(z.content))
+        names = set(zf.namelist())
+        assert {"fir.html", "diary.html", "evidence.json", "manifest.json", "money_trail.csv", "README.txt"} <= names
+        assert any(n.startswith("notice_") for n in names)
+        trail = zf.read("money_trail.csv").decode("utf-8-sig").splitlines()
+        assert trail[0].startswith("ref,date_time,transaction_id") and len(trail) == 1 + 11
+        assert c.get("/api/docs/not-a-case/case_file.zip").status_code == 404
     finally:
         engine_mod._engine = old
 

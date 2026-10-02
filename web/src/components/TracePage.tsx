@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, DownloadSimple, FileText, Graph, MagnifyingGlass, Path as PathIcon, SpinnerGap } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, DownloadSimple, FileText, Graph, MagnifyingGlass, Path as PathIcon, SpinnerGap, UsersThree } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { accountHint, inr, toEpoch } from '../format'
@@ -103,7 +103,7 @@ export function TracePage({ account, seeds, reasons }: Props) {
     <>
       <button className="btn sm" onClick={downloadCsv}><DownloadSimple size={15} /> Download trail (CSV)</button>
       <button className="btn sm" disabled={!collector} onClick={() => collector && go({ name: 'ring', account: collector })}><Graph size={15} /> View fraud network</button>
-      <button className="btn cta" onClick={() => setDocs(true)}><FileText size={16} /> Prepare case diary and freeze notices</button>
+      <button className="btn cta" onClick={() => setDocs(true)}><FileText size={16} /> Prepare FIR, case diary and freeze notices</button>
     </>
   )
   const nSeeds = trace?.edges.filter((e) => e.rule === 'seed').length ?? 0
@@ -123,6 +123,7 @@ export function TracePage({ account, seeds, reasons }: Props) {
               {[1, 2, 3, 4].map((h) => <option key={h} value={h}>{h} transfer{h > 1 ? 's' : ''} away</option>)}
             </select></label>
           <button className="btn primary big" disabled={busy}>{busy ? <SpinnerGap size={16} className="spin" /> : <PathIcon size={16} />} Trace funds</button>
+          <a className="btn big" href="#traceall" title="Trace several complainants at once and see the accounts they share"><UsersThree size={16} /> Several victims</a>
           <span className="sp" />
           <label className="gfield victim-pick"><span>Or choose an identified victim</span>
             <select value="" onChange={(e) => e.target.value && submit(e.target.value)}>

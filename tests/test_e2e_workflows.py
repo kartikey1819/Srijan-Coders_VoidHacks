@@ -128,7 +128,7 @@ def test_w4_time_slider_reveals_money_step_by_step(page, base):
 
 def _generate(page, base, use_llm: bool) -> str:
     open_trace(page, base)
-    page.get_by_role("button", name="Prepare case diary and freeze notices").click()
+    page.get_by_role("button", name="Prepare FIR, case diary and freeze notices").click()
     page.locator(".verify").wait_for(timeout=60_000)              # the first draft is prepared on opening
     page.get_by_label("FIR / Case No.").fill("0123/2026")
     box = page.get_by_role("checkbox", name="Draft the narrative with the local language model", exact=False)
@@ -264,6 +264,9 @@ def test_dashboard_first_view_shows_where_the_money_went(page, base):
     assert "All 1,073 suspect accounts are connected" in page.locator(".cf-notes").inner_text()
     box = flow.bounding_box()
     assert box["y"] + box["height"] <= 900            # the whole panel is in the first view
+    acts = page.locator(".cf-acts li")
+    assert acts.count() == 3, acts.all_inner_texts()
+    assert "Freeze" in acts.nth(0).inner_text() and "notices" in acts.nth(1).inner_text() and "Club" in acts.nth(2).inner_text()
     page.locator(".cf-st.l2").click()
     page.get_by_role("heading", name="Suspect Accounts").wait_for()
     assert "role=L2" in page.url
@@ -383,3 +386,61 @@ def test_ring_transfer_flow_panel(page, base):
     assert page.locator(".edge-flow table.tbl tbody tr").count() >= 1
     page.get_by_role("button", name="Back to the journey").click()
     page.get_by_role("heading", name="Money came from (4)").wait_for()
+
+
+def _ring_victims(base, n=3):
+    import json
+    import urllib.request
+    ring = json.load(urllib.request.urlopen(f"{base}/api/ring/{L1}"))
+    victims = {x["account"] for x in ring["nodes"] if x["role"] == "VICTIM"}
+    return sorted({e["src"] for e in ring["edges"] if e["dst"] == L1 and e["src"] in victims})[:n]   # they all paid L1
+
+
+def test_several_victims_traced_together_with_shared_accounts(page, base):
+    """Expected: pasting several complainants traces them all at once; their trails sit side by side by layer; the
+    collector they share is named and the complaints are offered for clubbing; one combined CSV holds every trail;
+    each victim's documents open from its column."""
+    vs = _ring_victims(base)
+    page.goto(f"{base}/#traceall")
+    page.get_by_label("Victim account numbers").fill(", ".join(vs) + "  junk 123")
+    page.get_by_text("3 account numbers found").wait_for()
+    page.get_by_role("button", name="Trace all").click()
+    page.locator(".vcol").nth(2).wait_for(timeout=30_000)
+    assert page.locator(".vcol").count() == 3
+    assert all(v in page.url for v in vs)
+    page.get_by_role("heading", name="These complaints may be clubbed").wait_for()
+    assert L1 in page.locator(".gpanel", has_text="These complaints may be clubbed").inner_text()
+    for i in range(3):
+        assert page.locator(".vcol").nth(i).locator("li.shared", has_text=L1).count() == 1
+    with page.expect_download() as dl:
+        page.get_by_role("button", name="Combined trails (CSV)").click()
+    rows = open(dl.value.path(), encoding="utf-8").read().splitlines()
+    assert rows[0].startswith("victim,time,transaction_id") and {r.split(",")[0] for r in rows[1:]} == set(vs)
+    page.locator(".vcol").first.get_by_role("button", name="Documents").click()
+    page.get_by_role("dialog", name="Case documents").wait_for()
+
+
+def test_fir_draft_and_complete_case_file(page, base):
+    """Expected: the documents dialog adds an FIR draft (Section 173 BNSS) tab and a complete case file download."""
+    _generate(page, base, use_llm=False)
+    page.get_by_role("tab", name="FIR draft").click()
+    page.wait_for_function("(document.querySelector('.paper iframe') || {}).src && document.querySelector('.paper iframe').src.includes('fir.html')")
+    href = page.get_by_role("link", name="Complete case file (ZIP)").get_attribute("href")
+    assert href.endswith("/case_file.zip")
+
+
+def test_account_panel_explains_the_score(page, base):
+    """Expected: an account's panel shows how its score was reached, check by check, with points."""
+    page.goto(f"{base}/#ring={L1}")
+    why = page.locator(".score-why")
+    why.wait_for(timeout=20_000)
+    text = why.inner_text()
+    assert "How the score of" in text and "Passes money on fast" in text and "/ 60" in text
+
+
+def test_dashboard_action_traces_the_largest_group_together(page, base):
+    """Expected: the Dashboard's third action traces the victims who share a collector, together."""
+    page.goto(f"{base}/#overview")
+    page.locator(".cf-acts a", has_text="Trace these").click()
+    page.locator(".vcol").nth(1).wait_for(timeout=30_000)
+    assert "#traceall=" in page.url and page.locator(".vcol").count() >= 2
