@@ -52,6 +52,11 @@ export function CaseFlow({ f, stats, days, banks }: { f: FlowSummary; stats: DQS
             {days.length > 0 && <>{days[0]} to {days[days.length - 1]} · </>}
             {secs !== null && <>analysed in {secs.toFixed(1)} s {secs <= 60 ? '(within the 60 s target)' : '(above the 60 s target)'}</>}
           </p>
+          <a className="cf-total" href="#flagged" title="Open the suspect accounts">
+            <span className="cf-total-n"><CountUp value={f.suspects} format={(x) => n(Math.round(x))} /></span>
+            <span className="cf-total-l"><b>mule accounts detected</b>
+              <small>{stats ? `${((100 * f.suspects) / Math.max(1, stats.accounts)).toFixed(1)}% of ${n(stats.accounts)} accounts · ` : ''}{n(L1.accounts)} · {n(L2.accounts)} · {n(L3.accounts)} by layer</small></span>
+          </a>
         </header>
         <div className="cf-chain">
           {stations.map((s, i) => {

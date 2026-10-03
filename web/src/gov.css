@@ -645,7 +645,7 @@ body { font-size: var(--fs); line-height: 1.5; }
 .vcol footer .ok small { font-weight: 400; color: var(--ink-2); }
 .vcol footer .row { flex-wrap: wrap; }
 .vcol.bad header { background: var(--sheet); }
-.vcol.bad p { padding: 10px 14px; color: var(--bad, #b42318); }
+.vcol.bad p { padding: 10px 14px; color: var(--held); }
 @media (max-width: 990px) { .multi-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } .multi-sum > div { border-left: 0; border-top: 1px solid var(--rule); } }
 @media (max-width: 700px) { .multi-pick { grid-template-columns: minmax(0, 1fr); } }
 
@@ -891,3 +891,18 @@ body { font-size: var(--fs); line-height: 1.5; }
 .trace-body .j-gap { padding: 0 2px; }
 @media (max-width: 1440px) { .trace-body .j-st { width: 140px; } .trace-body .j-wrap { min-width: 230px; } }
 @media (max-width: 1300px) { .trace-body .j-st { width: 134px; } .trace-body .j-wrap { min-width: 234px; } .trace-body .j-sub { font-size: 10.5px; } }
+
+/* Dashboard: total mules detected, top right of the money panel */
+.cf-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; }
+.cf-head > h2, .cf-head > p { grid-column: 1; }
+.cf-total { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--held) 35%, transparent); border-radius: 10px;
+  background: color-mix(in srgb, var(--held) 7%, var(--sheet)); color: var(--ink); text-decoration: none;
+  transition: transform 160ms var(--ease); }
+.cf-total:active { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) { .cf-total:hover { border-color: var(--held); } }
+.cf-total-n { font-size: 26px; font-weight: 700; line-height: 1; color: var(--held); font-variant-numeric: tabular-nums; }
+.cf-total-l { display: flex; flex-direction: column; line-height: 1.25; }
+.cf-total-l b { font-size: 13.5px; }
+.cf-total-l small { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .cf-head { grid-template-columns: minmax(0, 1fr); } .cf-total { grid-column: 1; grid-row: auto; margin-top: 8px; justify-self: start; } }
