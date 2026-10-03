@@ -45,7 +45,7 @@ cd web && npm install && npm run build && cd ..          # build the UI once
 python -m abhedya serve --data data/VoidHacks8_MuleAccount_2M_Transactions.csv
 ```
 
-Open <http://127.0.0.1:8000>. `serve --data` analyses the file first if it has not been analysed yet (checked by
+`serve --data` analyses the file first if it has not been analysed yet (checked by
 SHA-256), then serves. The CSV is treated as evidence: it is only ever read, never modified.
 
 | Command | What it does |
