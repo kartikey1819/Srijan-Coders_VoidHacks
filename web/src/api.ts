@@ -14,6 +14,7 @@ const enc = encodeURIComponent
 
 export const api = {
   stats: () => req<DQSummary>('/api/stats'),
+  health: () => req<{ ok: boolean; demo?: boolean }>('/api/health'),
   overview: () => req<Overview>('/api/overview'),
   flow: () => req<FlowSummary>('/api/flow'),
   datasets: () => req<DatasetInfo[]>('/api/datasets'),

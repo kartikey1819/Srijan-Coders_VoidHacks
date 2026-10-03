@@ -41,6 +41,7 @@ def main(argv: list[str] | None = None) -> None:
     srv.add_argument("--data", type=Path,
                      help="transaction CSV; ingested automatically when the database is missing or stale")
     srv.add_argument("--port", type=int, default=8000)
+    srv.add_argument("--host", default="127.0.0.1", help="address to listen on (0.0.0.0 for a container)")
     srv.add_argument("--db", type=Path, default=config.DB_PATH)
     a = ap.parse_args(argv)
 
@@ -77,7 +78,7 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(f"no database at {a.db}: run `python -m abhedya serve --data <file.csv>`")
         if not (config.WEB_DIST / "index.html").exists():
             print("note: the web UI is not built (cd web && npm install && npm run build); the API still works")
-        print(f"Abhedya-Chakra on http://127.0.0.1:{a.port}  (offline; Ctrl+C to stop)")
+        print(f"Abhedya-Chakra on http://{a.host}:{a.port}  (Ctrl+C to stop)")
         os.environ["ABHEDYA_DB"] = str(a.db)
         # one worker: DuckDB allows a single process per database file
-        uvicorn.run("abhedya.api.app:app", host="127.0.0.1", port=a.port, workers=1, log_level="warning")
+        uvicorn.run("abhedya.api.app:app", host=a.host, port=a.port, workers=1, log_level="warning")

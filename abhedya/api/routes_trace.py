@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api")
 
 @router.get("/health")
 def health() -> dict:
-    return {"ok": True, "data_sha256": get_engine().data_sha256}
+    return {"ok": True, "data_sha256": get_engine().data_sha256, "demo": config.DEMO}
 
 
 @router.get("/stats", response_model=DQSummary)

@@ -16,6 +16,8 @@ const fmtN = (n: number) => Math.round(n).toLocaleString('en-IN')
 export function DataInUse({ stats }: { stats: DQSummary | null }) {
   const [sets, setSets] = useState<DatasetInfo[]>([])
   const [open, setOpen] = useState(false)
+  const [demo, setDemo] = useState(false)          // the public online demo hides uploading
+  useEffect(() => { api.health().then((h) => setDemo(!!h.demo)).catch(() => undefined) }, [])
   useEffect(() => {
     const load = () => api.datasets().then(setSets).catch(() => undefined)
     load()
@@ -34,7 +36,7 @@ export function DataInUse({ stats }: { stats: DQSummary | null }) {
         </select>
       ) : <b className="diu-name" title={active?.name}>{active?.name ?? '…'}</b>}
       <div className="diu-meta">{stats ? <>{fmtN(stats.rows)} transactions · {fmtN(stats.accounts)} accounts</> : 'Loading…'}</div>
-      <button className="btn primary" onClick={() => setOpen(true)}><UploadSimple size={16} /> Upload new file</button>
+      {!demo && <button className="btn primary" onClick={() => setOpen(true)}><UploadSimple size={16} /> Upload new file</button>}
       {open && createPortal(
         <>
           <div className="scrim" onClick={() => setOpen(false)} />

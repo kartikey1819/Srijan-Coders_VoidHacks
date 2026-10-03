@@ -11,7 +11,9 @@ AUDIT_LOG = DATA_DIR / "audit.jsonl"
 MANIFEST_PATH = DATA_DIR / "case_manifest.json"
 CASES_DIR = ROOT / "cases"
 FIXTURE_DIR = ROOT / "contracts" / "fixtures"
-WEB_DIST = Path(os.environ.get("ABHEDYA_WEB_DIST", ROOT / "web" / "dist"))   # a staged build can be served or tested
+WEB_DIST = Path(os.environ.get("ABHEDYA_WEB_DIST", ROOT / "web" / "dist"))
+# public online demo: uploading, switching and removing cases are refused (the workstation itself runs offline)
+DEMO = os.environ.get("ABHEDYA_DEMO", "") == "1"   # a staged build can be served or tested
 DEFAULT_CSV = DATA_DIR / "VoidHacks8_MuleAccount_2M_Transactions.csv"
 
 # ---- trace ----

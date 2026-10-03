@@ -3,10 +3,18 @@ import re
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from abhedya import config
 from abhedya import datasets
 from contracts.models import DatasetInfo, DatasetProgress
 
 router = APIRouter(prefix="/api")
+
+
+def _not_in_demo() -> None:
+    """The public online demo keeps its one case: no uploads, switching or removal."""
+    if config.DEMO:
+        raise HTTPException(status_code=403, detail="Uploading and changing cases is switched off in the online demo. "
+                                                    "Run Abhedya-Chakra locally to analyse your own files.")
 _ID = re.compile(r"^(official|[0-9a-f]{12})$")
 
 
@@ -23,6 +31,7 @@ def list_datasets():
 
 @router.post("/datasets", response_model=DatasetProgress, status_code=202)
 async def upload(request: Request, name: str = Query("upload.csv", max_length=200)):
+    _not_in_demo()
     """The request body is the CSV itself (application/octet-stream), written to disk chunk by chunk."""
     w = datasets.UploadWriter(name)
     try:
@@ -51,6 +60,7 @@ def get_progress(ds_id: str):
 
 @router.post("/datasets/{ds_id}/activate", response_model=DatasetInfo)
 def activate(ds_id: str):
+    _not_in_demo()
     try:
         return datasets.activate(_check(ds_id))
     except FileNotFoundError as e:
@@ -59,6 +69,7 @@ def activate(ds_id: str):
 
 @router.delete("/datasets/{ds_id}", response_model=list[DatasetInfo])
 def remove(ds_id: str):
+    _not_in_demo()
     """Removes a case (database, graph cache, stored copy). The official CSV itself is never deleted."""
     try:
         return datasets.remove(_check(ds_id))

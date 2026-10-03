@@ -26,6 +26,7 @@ export default function App() {
   useEffect(() => { try { localStorage.setItem('abhedya.sideMin', sideMin ? '1' : '0') } catch { /* ignore */ } }, [sideMin])
   const [stats, setStats] = useState<DQSummary | null>(null)
   const [down, setDown] = useState(false)
+  const [demo, setDemo] = useState(false)
   const [reasons, setReasons] = useState<Record<string, string>>({})
   const [sets, setSets] = useState<DatasetInfo[]>([])
   // The sidebar links reopen the last traced / last viewed account; remembered while rendering a new route.
@@ -36,6 +37,7 @@ export default function App() {
 
   useEffect(() => {
     api.stats().then(setStats).catch(() => setDown(true))
+    api.health().then((h) => setDemo(!!h.demo)).catch(() => {})
     api.reasons().then(setReasons).catch(() => setReasons({}))
     api.datasets().then(setSets).catch(() => setSets([]))
     const refresh = () => api.datasets().then(setSets).catch(() => undefined)
@@ -102,7 +104,7 @@ export default function App() {
                 <div><dt>Accounts</dt><dd>{stats.accounts.toLocaleString('en-IN')}</dd></div>
               </dl>
             ) : down ? <div className="sf-bad">The analysis engine is not reachable.</div> : <div>Loading…</div>}
-            <div className="sf-note">Offline · data stays on this computer</div>
+            <div className="sf-note">{demo ? 'Online demo · the workstation itself runs offline' : 'Offline · data stays on this computer'}</div>
           </div>
         </nav>
         <main id="main">
