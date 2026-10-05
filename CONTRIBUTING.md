@@ -1,7 +1,7 @@
 # Abhedya-Chakra: contributor guide
 
 Offline money-mule investigation workstation for Void Hacks 8.0. Stack: Python 3.12, DuckDB, NumPy and FastAPI; React (SVG views, optional 3D globe) in `web/`.
-Read `plan/00_OVERVIEW.md` (the contracts) and `DATA_HANDLING.md` before coding. A's progress is tracked in `A_TASKLIST.md`.
+Read `plan/00_OVERVIEW.md` (the contracts) and `DATA_HANDLING.md` before coding. A's progress is tracked in `plan/A_TASKLIST.md`.
 
 ## Ownership: edit only your own folders
 - **A:** `abhedya/{ingest,graph,audit}/`, `abhedya/api/app.py`, `abhedya/api/routes_trace.py`, `abhedya/{engine,cli,config}.py`, `contracts/`, `tools/make_sample.py`, `bench/`, `tests/test_{ingest,trace,api}.py`

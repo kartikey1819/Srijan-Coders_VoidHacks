@@ -20,7 +20,7 @@ DEFAULT_CSV = DATA_DIR / "VoidHacks8_MuleAccount_2M_Transactions.csv"
 MAX_HOPS = 4
 PT_WINDOW_S = (180, 900)                 # statement: dispersed "within 3 to 15 minutes"
 AMOUNT_MATCH_MIN = 0.90                  # statement: ">= 90% of incoming funds dispersed"
-ATTRIBUTION_ORDER = ("window", "amount_match", "oldest")  # chosen by measurement, see A6 in A_TASKLIST.md
+ATTRIBUTION_ORDER = ("window", "amount_match", "oldest")  # chosen by measurement, see A6 in plan/A_TASKLIST.md
 FREEZE_MIN_PAISE = 100                   # hold only accounts holding >= Rs 1 of victim money
 SEED_MIN_SCORE = 40                      # default loss = the victim's transfers to accounts scored >= this (MEDIUM+);
                                          # none such: all of the victim's outgoing transfers

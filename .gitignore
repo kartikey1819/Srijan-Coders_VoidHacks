@@ -29,3 +29,10 @@ Thumbs.db
 
 # design tooling scratch (decision-page logs)
 .impeccable/questions/
+
+# large dataset at repo root and stray build output
+VoidHacks8_MuleAccount_2M_Transactions.csv
+*.csv
+!data/sample.csv
+frontend/node_modules/
+frontend/dist/

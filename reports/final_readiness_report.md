@@ -150,7 +150,7 @@ Investigation, warm (p50 / max):
    synthetic and much cleaner than the independent data.
 
 ## 10. Bugs found in this phase: 20 found, 19 fixed, 1 partly fixed
-Bugs 1–15 are listed in `A_TASKLIST.md`: input robustness, keyword dependence, smurfing false positives, wallet
+Bugs 1–15 are listed in `plan/A_TASKLIST.md`: input robustness, keyword dependence, smurfing false positives, wallet
 top-up, funnels (partly), drain false positives, 5-account rings, raw payment mode reaching the model, validator gaps,
 20× detection slowdown, and a BOM-corrupted config. Found in the last part of this phase:
 

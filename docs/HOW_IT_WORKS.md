@@ -683,7 +683,7 @@ and either clean or tainted-and-spendable. The outflow spends them by the rules 
 The first rule with candidates is the **deciding** rule for that outflow. Clean lots compete on equal terms in rules 1
 and 2. That matters when a shared mule later forwards *another* victim's money: the window and amount rules match that
 outflow to the other victim's inflow instead of draining this victim's leftover. The order was chosen by measurement
-(the comment in `config.py` points to task A6 in `A_TASKLIST.md`).
+(the comment in `config.py` points to task A6 in `plan/A_TASKLIST.md`).
 
 Each outgoing transfer that carries any tainted money becomes a trace edge with:
 
